@@ -1569,7 +1569,7 @@ function openContentForm(existing = null) {
     h("input", {
       class: "form-input",
       type: "text",
-      placeholder: "예) 파판도7 (FRU)",
+      placeholder: "예) 절 케프카 토벌전",
       value: existing?.name || "",
     }),
   );
