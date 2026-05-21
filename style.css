@@ -902,14 +902,38 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .timeline-layout { max-width: 100%; }
 
 /* ── Pinned nav tabs ──────────────────────────────────── */
-.nav-pinned-tab { position: relative; max-width: 160px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.nav-pinned-tab::before { content: "★ "; font-size: 10px; color: var(--primary); }
+.nav-pinned-tab {
+  position: relative;
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: linear-gradient(135deg, var(--primary-light) 0%, color-mix(in srgb, var(--primary) 12%, white) 100%);
+  border: 1.5px solid var(--primary);
+  border-radius: 20px !important;
+  padding: 3px 12px 3px 9px !important;
+  font-weight: 700;
+  color: var(--primary) !important;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+.nav-pinned-tab::before { content: "★ "; font-size: 11px; color: #f5a623; }
+.nav-pinned-tab.active {
+  background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 75%, #000) 100%);
+  color: #fff !important;
+  border-color: transparent;
+}
+.nav-pinned-tab.active::before { color: #ffe082; }
 .pin-tab-name { display: inline; }
-.pin-tab-diff { font-size: 10px; opacity: .7; margin-left: 2px; }
+.pin-tab-diff { font-size: 10px; opacity: .75; margin-left: 2px; }
 
 /* ── Pin button ────────────────────────────────────────── */
-.btn-icon.pin-tab-btn { color: #aaa; }
-.btn-icon.pin-tab-btn.active { color: #f5a623; }
+.btn-icon.pin-tab-btn { color: #ccc; font-size: 16px; line-height: 1; transition: color .15s, transform .15s; }
+.btn-icon.pin-tab-btn:hover { color: #f5a623; transform: scale(1.2); }
+.btn-icon.pin-tab-btn.active { color: #f5a623; text-shadow: 0 0 6px #f5a62380; }
+
+/* ── Card title row (pin left + title) ─────────────────── */
+.content-card-title-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.content-card-title-row .content-card-title { margin-bottom: 0; flex: 1; min-width: 0; }
 
 /* ── Inline-edit select ────────────────────────────────── */
 .inline-select { font-size: 12px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--foreground); }
