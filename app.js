@@ -1396,14 +1396,26 @@ function showModal(
         "취소",
       ),
     );
-  if (onConfirm)
-    footer.append(
-      h(
-        "button",
-        { class: "btn btn-primary", onclick: onConfirm },
-        confirmLabel,
-      ),
+  if (onConfirm) {
+    const confirmBtn = h(
+      "button",
+      { class: "btn btn-primary", onclick: onConfirm },
+      confirmLabel,
     );
+    footer.append(confirmBtn);
+
+    // Enter 키로 저장 지원 (textarea 제외)
+    box.addEventListener("keydown", function _enterSave(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        const tag = document.activeElement?.tagName?.toLowerCase();
+        if (tag !== "textarea" && tag !== "button" && tag !== "select") {
+          e.preventDefault();
+          box.removeEventListener("keydown", _enterSave);
+          onConfirm();
+        }
+      }
+    });
+  }
 
   box.innerHTML = "";
   box.append(header, body, footer);
@@ -1569,7 +1581,7 @@ function openContentForm(existing = null) {
     h("input", {
       class: "form-input",
       type: "text",
-      placeholder: "예) 절 케프카 토벌전",
+      placeholder: "예) 파판도7 (FRU)",
       value: existing?.name || "",
     }),
   );
@@ -2564,12 +2576,15 @@ function buildTimelineRow(
 
   // 직업군 필터 + 직업군별 그룹핑
   const filtered = (() => {
+    if (mitSubFilter) {
+      // 서브필터(직업)가 선택된 경우 — 직군 필터와 무관하게 우선 적용
+      const byClass = assignedMits.filter((m) => m.jobClass === mitSubFilter);
+      return byClass;
+    }
     if (!mitFilter || mitFilter === "all") return assignedMits;
-    const byGroup = assignedMits.filter(
+    return assignedMits.filter(
       (m) => (m.jobGroup || "기타") === mitFilter,
     );
-    if (!mitSubFilter) return byGroup;
-    return byGroup.filter((m) => m.jobClass === mitSubFilter);
   })();
   const mitsByGroup = {};
   filtered.forEach((m) => {
@@ -6073,7 +6088,6 @@ function openGlobalBackupModal() {
       version: 2,
       exportedAt: new Date().toISOString(),
       contents,
-      globalMits: GlobalMit.list(),
       links: Links.list(),
       perContent: contents.map((c) => ({
         contentId: c.id,
@@ -6111,7 +6125,7 @@ function openGlobalBackupModal() {
       h(
         "p",
         { style: "font-size:12px;color:var(--muted-fg);margin:4px 0 8px;" },
-        `등록된 공략 ${Contents.list().length}개 · 외생기 ${GlobalMit.list().length}개 전체를 백업합니다.`,
+        `등록된 공략 ${Contents.list().length}개 · 링크 데이터를 백업합니다. (외생기 라이브러리는 별도 보관됩니다.)`,
       ),
       h(
         "div",
@@ -6142,7 +6156,7 @@ function openGlobalBackupModal() {
       h(
         "p",
         { style: "font-size:12px;color:var(--muted-fg);margin:4px 0 8px;" },
-        "⚠️ 복원 시 현재 저장된 모든 공략 · 외생기 · 링크 데이터가 백업 파일로 덮어씌워집니다.",
+        "⚠️ 복원 시 현재 저장된 모든 공략 · 링크 데이터가 백업 파일로 덮어씌워집니다. (외생기 라이브러리는 유지됩니다.)",
       ),
       h(
         "button",
@@ -6198,7 +6212,6 @@ function openGlobalBackupModal() {
                   )
                     return;
                   DB.set("ff14_contents", data.contents || []);
-                  DB.set("ff14_global_mits", data.globalMits || []);
                   DB.set("ff14_links", data.links || []);
                   (data.perContent || []).forEach((pc) => {
                     DB.set(`ff14_timeline_${pc.contentId}`, pc.timeline || []);
@@ -7071,6 +7084,26 @@ function openShortcutHelp() {
       "🔒",
       "오답노트 잠금",
       "오답노트 카드의 잠금 버튼을 누르면 수정이 불가능해져요. 다시 누르면 해제돼요.",
+    ),
+    tip(
+      "🧩",
+      "외생기 라이브러리",
+      "상단 메뉴 '외생기 라이브러리'에서 직업별 외생기/생존기를 미리 등록해두면, 타임라인에서 + 버튼으로 빠르게 배치할 수 있어요.",
+    ),
+    tip(
+      "🔍",
+      "타임라인 직업 필터",
+      "타임라인 상단에 배치된 외생기가 여러 직업에 걸쳐 있으면 직업별 필터 탭이 나타나요. '기공사만' 등을 클릭하면 해당 직업 스킬만 표시됩니다.",
+    ),
+    tip(
+      "🖼️",
+      "상세 공략 이미지 캡션",
+      "상세 공략 탭에서 이미지를 추가하면 사진 아래 캡션(설명글)을 입력할 수 있어요.",
+    ),
+    tip(
+      "📁",
+      "백업 / 복원",
+      "메인 화면 💾 백업 버튼으로 공략·링크 데이터를 JSON 파일로 저장·복원할 수 있어요. 외생기 라이브러리는 별도로 유지되며 백업에 포함되지 않습니다.",
     ),
   );
 
