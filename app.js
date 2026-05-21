@@ -67,7 +67,7 @@ const PRESET_MITS = [
     jobGroup: "탱커",
     jobClass: "나이트",
     isCommon: true,
-    skillCategory: "외생기",
+    skillCategory: "생존기",
     color: "#4D96FF",
     imageUrl: _R("01_PLD", "Rampart.png"),
   },
@@ -191,7 +191,7 @@ const PRESET_MITS = [
     name: "지옥행",
     jobGroup: "탱커",
     jobClass: "전사",
-    skillCategory: "무적기",
+    skillCategory: "생존기",
     color: "#C7CEEA",
     imageUrl: _S("02_WAR", "Damnation.png"),
   },
@@ -1651,7 +1651,22 @@ function renderHome(main) {
               new Date(c.createdAt).toLocaleDateString("ko-KR"),
             ),
           ),
-          h("div", { class: "content-card-title" }, c.name),
+          h("div", { class: "content-card-title-row" },
+            h(
+              "button",
+              {
+                class: "btn-icon pin-tab-btn" + (PinnedTabs.isPinned(c.id) ? " active" : ""),
+                title: PinnedTabs.isPinned(c.id) ? "탭 고정 해제" : "탭에 고정",
+                onclick: (e) => {
+                  e.stopPropagation();
+                  PinnedTabs.toggle(c.id);
+                  rebuild();
+                },
+              },
+              "★",
+            ),
+            h("div", { class: "content-card-title" }, c.name),
+          ),
           c.description
             ? h("div", { class: "content-card-desc" }, c.description)
             : null,
@@ -1666,18 +1681,6 @@ function renderHome(main) {
                 style: "margin-left:auto;display:flex;gap:4px;",
                 onclick: (e) => e.stopPropagation(),
               },
-              h(
-                "button",
-                {
-                  class: "btn-icon pin-tab-btn" + (PinnedTabs.isPinned(c.id) ? " active" : ""),
-                  title: PinnedTabs.isPinned(c.id) ? "탭 고정 해제" : "탭에 고정",
-                  onclick: () => {
-                    PinnedTabs.toggle(c.id);
-                    rebuild();
-                  },
-                },
-                "★",
-              ),
               h(
                 "button",
                 {
@@ -1942,13 +1945,10 @@ function renderContentDetail(main, contentId) {
     setTab(detailTab);
     const isMove = GlobalMode.get() === "move";
     const isDelete = GlobalMode.get() === "delete";
-    const isEdit = GlobalMode.get() === "edit";
     moveModeBtn.classList.toggle("mode-active", isMove);
     deleteModeBtn.classList.toggle("mode-active", isDelete);
-    editModeBtn.classList.toggle("mode-active", isEdit);
     moveModeBtn.style.color = isMove ? "var(--primary)" : "";
     deleteModeBtn.style.color = isDelete ? "var(--destructive)" : "";
-    editModeBtn.style.color = isEdit ? "var(--primary)" : "";
     updateEditCursor();
   }
 
@@ -1970,19 +1970,9 @@ function renderContentDetail(main, contentId) {
     },
     "🗑 삭제",
   );
-  const editModeBtn = h(
-    "button",
-    {
-      class: "btn btn-outline btn-sm mode-btn",
-      title: "수정 모드 — 행 클릭 시 인라인 편집",
-      onclick: () => activateMode("edit"),
-    },
-    "✏️ 수정",
-  );
-
   const pickerWrap = headerEl.querySelector(".theme-picker-wrap");
   if (pickerWrap) {
-    pickerWrap.append(moveModeBtn, deleteModeBtn, editModeBtn);
+    pickerWrap.append(moveModeBtn, deleteModeBtn);
   }
 
   // 네비 백업 버튼 연결
@@ -2011,8 +2001,6 @@ function renderContentDetail(main, contentId) {
       moveModeBtn.style.color = "";
       deleteModeBtn.classList.remove("mode-active");
       deleteModeBtn.style.color = "";
-      editModeBtn.classList.remove("mode-active");
-      editModeBtn.style.color = "";
       document.body.classList.remove("edit-mode-cursor");
       setTab(id);
     };
