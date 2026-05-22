@@ -362,19 +362,35 @@ input, textarea, select { font-family: inherit; }
 .note-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
 .note-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; flex-wrap: wrap; }
 .note-phase-badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--primary-light); color: var(--primary); border: 1px solid; border-color: var(--primary); }
-.note-content { font-size: 14px; line-height: 1.8; white-space: pre-wrap; background: var(--muted); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; }
-.note-improvement { font-size: 13px; line-height: 1.7; background: #fff9e6; border-left: 3px solid #f0ad00; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 12px; color: #7a5a00; }
-.note-improvement::before { content: '💡 개선사항'; display: block; font-size: 11px; font-weight: 700; color: #b07a00; margin-bottom: 5px; letter-spacing: .5px; }
 .note-date { font-size: 11px; color: var(--muted-fg); margin-top: 10px; }
+
+/* ── 오답노트 3분할 카드 구조 ────────────────────────── */
+.note-cols-grid { display: grid; gap: 10px; margin-bottom: 10px; align-items: start; }
+.note-cols-2 { grid-template-columns: 1fr 1fr auto; }
+.note-cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 640px) {
+  .note-cols-2, .note-cols-3 { grid-template-columns: 1fr; }
+}
+.note-col-card { background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 120px; }
+.note-col-title { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: .05em; padding-bottom: 6px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.note-col-type-bar { display: flex; gap: 4px; flex-shrink: 0; }
+.note-col-text { flex: 1; min-height: 80px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; line-height: 1.7; outline: none; background: #fff; word-break: break-word; white-space: pre-wrap; font-family: inherit; }
+.note-col-text[contenteditable="true"]:empty:before { content: attr(data-placeholder); color: #bbb; font-size: 12px; pointer-events: none; }
+.note-col-text[contenteditable="true"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+.note-col-text-locked { background: transparent; border-color: transparent; cursor: default; resize: none; padding-left: 0; }
+.note-col-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.note-col-add-ref { display: flex; align-items: flex-start; padding-top: 20px; }
+.note-add-ref-btn { background: transparent; border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; font-weight: 700; color: var(--muted-fg); cursor: pointer; transition: all .15s; width: 100%; text-align: center; }
+.note-add-ref-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
 .note-photos { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
-.note-photo-wrap { position: relative; display: inline-block; }
+.note-photo-wrap { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
 .note-photo { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; transition: opacity .15s; }
 .note-photo:hover { opacity: .85; }
 .note-photo-del { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--destructive); color: #fff; border: none; font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.note-photo-add { width: 120px; height: 90px; border: 2px dashed var(--border); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; font-size: 12px; color: var(--muted-fg); transition: all .15s; }
+.note-photo-add { width: 100px; height: 80px; border: 2px dashed var(--border); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; font-size: 12px; color: var(--muted-fg); transition: all .15s; }
 .note-photo-add:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.note-photo-add div:first-child { font-size: 22px; }
-.note-photo-wrap { display: inline-flex; flex-direction: column; align-items: center; }
+.note-photo-add div:first-child { font-size: 20px; }
 .note-photo-caption { width: 120px; margin-top: 4px; font-size: 11px; background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--fg); padding: 2px 4px; text-align: center; outline: none; border-radius: 0; }
 .note-photo-caption:focus { border-bottom-color: var(--primary); }
 .note-photo-caption-view { background: #f4f4f4; border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: 13px; color: #333; line-height: 1.65; word-break: break-word; width: 100%; box-sizing: border-box; }
