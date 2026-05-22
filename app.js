@@ -36,6 +36,34 @@ document.addEventListener("selectionchange", () => {
   }
 });
 
+// ── 폰트 크기 적용 헬퍼 ────────────────────────────────────
+// execCommand로 생긴 font[size="7"] 에 원하는 크기를 적용하고,
+// 중첩된 font-size 충돌(이전 크기가 안쪽에 남아 우선시되는 문제)을 제거합니다.
+function _applyFontSize(editorEl, sz) {
+  document.execCommand("styleWithCSS", false, true);
+  document.execCommand("fontSize", false, "7");
+
+  // 새로 생긴 font[size="7"] 에 원하는 px 적용
+  editorEl.querySelectorAll('font[size="7"]').forEach((node) => {
+    node.removeAttribute("size");
+    node.style.fontSize = sz + "px";
+    // 안쪽 자손 요소에 남아있는 font-size 제거 (내부 크기가 외부를 덮는 문제 방지)
+    node.querySelectorAll("*").forEach((c) => {
+      if (c.style && c.style.fontSize) c.style.fontSize = "";
+    });
+  });
+
+  // 최종 정리: 에디터 내에서 font-size를 가진 요소의 조상 중
+  // 또 다른 font-size가 있으면 조상 것을 제거 (외부 크기가 내부를 덮는 문제 방지)
+  Array.from(editorEl.querySelectorAll("[style*='font-size']")).forEach((el) => {
+    let p = el.parentElement;
+    while (p && p !== editorEl) {
+      if (p.style && p.style.fontSize) p.style.fontSize = "";
+      p = p.parentElement;
+    }
+  });
+}
+
 // ══════════════════════════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════════════════════════
@@ -4188,20 +4216,18 @@ function renderSectionsTab(container, contentId) {
     class: "rich-select",
     title: "글자 크기",
   });
+  tocFmtSizeSelect.append(h("option", { value: "" }, "크기"));
   ["12", "14", "16", "18", "20", "24"].forEach((s) =>
     tocFmtSizeSelect.append(h("option", { value: s }, s + "px")),
   );
+  tocFmtSizeSelect.value = "";
   tocFmtSizeSelect.onmousedown = () => _saveRichSel();
   tocFmtSizeSelect.onchange = () => {
-    if (!_richFocused) return;
+    const sz = tocFmtSizeSelect.value;
+    tocFmtSizeSelect.value = "";
+    if (!sz || !_richFocused) return;
     _restoreRichSel();
-    document.execCommand("styleWithCSS", false, true);
-    document.execCommand("fontSize", false, "7");
-    _richFocused.querySelectorAll('font[size="7"]').forEach((el) => {
-      el.removeAttribute("size");
-      el.style.fontSize = tocFmtSizeSelect.value + "px";
-    });
-    tocFmtSizeSelect.selectedIndex = 0;
+    _applyFontSize(_richFocused, sz);
   };
   const tocFmtColorInput = h("input", {
     type: "color",
@@ -4263,21 +4289,17 @@ function renderSectionsTab(container, contentId) {
       h("div", { class: "toolbox-sep" }),
       h(
         "div",
-        { style: "display:flex;gap:3px;flex-wrap:wrap;padding:2px 4px;" },
-        tocRichBtn(
-          "B",
-          "볼드 (Ctrl+B)",
-          () => document.execCommand("bold"),
-          "font-weight:bold;",
-        ),
-        tocRichBtn(
-          "U",
-          "밑줄 (Ctrl+U)",
-          () => document.execCommand("underline"),
-          "text-decoration:underline;",
-        ),
+        { style: "display:flex;gap:3px;flex-wrap:wrap;padding:2px 4px;align-items:center;" },
+        tocRichBtn("B", "볼드 (Ctrl+B)", () => document.execCommand("bold"), "font-weight:bold;"),
+        tocRichBtn("U", "밑줄 (Ctrl+U)", () => document.execCommand("underline"), "text-decoration:underline;"),
         tocFmtSizeSelect,
         tocFmtColorInput,
+        h("span", { class: "rich-toolbar-sep" }),
+        tocRichBtn("≡←", "왼쪽 정렬", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("justifyLeft"); } }),
+        tocRichBtn("≡≡", "가운데 정렬", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("justifyCenter"); } }),
+        tocRichBtn("≡→", "오른쪽 정렬", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("justifyRight"); } }),
+        h("span", { class: "rich-toolbar-sep" }),
+        tocRichBtn("•≡", "글머리 기호", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("insertUnorderedList"); } }),
       ),
     );
   }
@@ -5118,20 +5140,18 @@ function renderNotes(container, contentId) {
     class: "rich-select",
     title: "글자 크기",
   });
+  noteSizeSelect.append(h("option", { value: "" }, "크기"));
   ["12", "14", "16", "18", "20", "24"].forEach((s) =>
     noteSizeSelect.append(h("option", { value: s }, s + "px")),
   );
+  noteSizeSelect.value = "";
   noteSizeSelect.onmousedown = () => _saveRichSel();
   noteSizeSelect.onchange = () => {
-    if (!_richFocused) return;
+    const sz = noteSizeSelect.value;
+    noteSizeSelect.value = "";
+    if (!sz || !_richFocused) return;
     _restoreRichSel();
-    document.execCommand("styleWithCSS", false, true);
-    document.execCommand("fontSize", false, "7");
-    _richFocused.querySelectorAll('font[size="7"]').forEach((el) => {
-      el.removeAttribute("size");
-      el.style.fontSize = noteSizeSelect.value + "px";
-    });
-    noteSizeSelect.selectedIndex = 0;
+    _applyFontSize(_richFocused, sz);
   };
   const noteColorInput = h("input", {
     type: "color",
@@ -5187,21 +5207,17 @@ function renderNotes(container, contentId) {
     h("div", { class: "toolbox-sep" }),
     h(
       "div",
-      { style: "display:flex;gap:3px;flex-wrap:wrap;padding:2px 4px;" },
-      noteRichExecBtn(
-        "B",
-        "볼드 (Ctrl+B)",
-        () => document.execCommand("bold"),
-        "font-weight:bold;",
-      ),
-      noteRichExecBtn(
-        "U",
-        "밑줄 (Ctrl+U)",
-        () => document.execCommand("underline"),
-        "text-decoration:underline;",
-      ),
+      { style: "display:flex;gap:3px;flex-wrap:wrap;padding:2px 4px;align-items:center;" },
+      noteRichExecBtn("B", "볼드 (Ctrl+B)", () => document.execCommand("bold"), "font-weight:bold;"),
+      noteRichExecBtn("U", "밑줄 (Ctrl+U)", () => document.execCommand("underline"), "text-decoration:underline;"),
       noteSizeSelect,
       noteColorInput,
+      h("span", { class: "rich-toolbar-sep" }),
+      noteRichExecBtn("≡←", "왼쪽 정렬", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("justifyLeft"); } }),
+      noteRichExecBtn("≡≡", "가운데 정렬", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("justifyCenter"); } }),
+      noteRichExecBtn("≡→", "오른쪽 정렬", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("justifyRight"); } }),
+      h("span", { class: "rich-toolbar-sep" }),
+      noteRichExecBtn("•≡", "글머리 기호", () => { if (_richFocused) { _restoreRichSel(); document.execCommand("insertUnorderedList"); } }),
     ),
   );
   toolToggle.onclick = () => {
@@ -5539,19 +5555,18 @@ function openNoteForm(contentId, existing, rebuild) {
     class: "rich-select",
     title: "글자 크기",
   });
+  noteFmtSizeSelect.append(h("option", { value: "" }, "크기"));
   ["12", "14", "16", "18", "20", "24"].forEach((s) =>
     noteFmtSizeSelect.append(h("option", { value: s }, s + "px")),
   );
+  noteFmtSizeSelect.value = "";
   noteFmtSizeSelect.onmousedown = (e) => e.stopPropagation();
   noteFmtSizeSelect.onchange = () => {
-    richNote.focus();
-    document.execCommand("styleWithCSS", false, true);
-    document.execCommand("fontSize", false, "7");
-    richNote.querySelectorAll('font[size="7"]').forEach((el) => {
-      el.removeAttribute("size");
-      el.style.fontSize = noteFmtSizeSelect.value + "px";
-    });
+    const sz = noteFmtSizeSelect.value;
     noteFmtSizeSelect.value = "";
+    if (!sz) return;
+    richNote.focus();
+    _applyFontSize(richNote, sz);
   };
   const noteFmtColorInput = h("input", {
     type: "color",
@@ -5567,21 +5582,17 @@ function openNoteForm(contentId, existing, rebuild) {
 
   const noteFormToolbar = h(
     "div",
-    { class: "rich-toolbar", style: "margin-bottom:6px;" },
-    noteFormRichBtn(
-      "B",
-      "볼드 (Ctrl+B)",
-      () => document.execCommand("bold"),
-      "font-weight:bold;",
-    ),
-    noteFormRichBtn(
-      "U",
-      "밑줄 (Ctrl+U)",
-      () => document.execCommand("underline"),
-      "text-decoration:underline;",
-    ),
+    { class: "rich-toolbar", style: "margin-bottom:6px;align-items:center;" },
+    noteFormRichBtn("B", "볼드 (Ctrl+B)", () => document.execCommand("bold"), "font-weight:bold;"),
+    noteFormRichBtn("U", "밑줄 (Ctrl+U)", () => document.execCommand("underline"), "text-decoration:underline;"),
     noteFmtSizeSelect,
     noteFmtColorInput,
+    h("span", { class: "rich-toolbar-sep" }),
+    noteFormRichBtn("≡←", "왼쪽 정렬", () => { richNote.focus(); document.execCommand("justifyLeft"); }),
+    noteFormRichBtn("≡≡", "가운데 정렬", () => { richNote.focus(); document.execCommand("justifyCenter"); }),
+    noteFormRichBtn("≡→", "오른쪽 정렬", () => { richNote.focus(); document.execCommand("justifyRight"); }),
+    h("span", { class: "rich-toolbar-sep" }),
+    noteFormRichBtn("•≡", "글머리 기호", () => { richNote.focus(); document.execCommand("insertUnorderedList"); }),
   );
 
   const richImprove = h("div", {
@@ -5615,19 +5626,18 @@ function openNoteForm(contentId, existing, rebuild) {
     class: "rich-select",
     title: "글자 크기",
   });
+  improveSizeSelect.append(h("option", { value: "" }, "크기"));
   ["12", "14", "16", "18", "20", "24"].forEach((s) =>
     improveSizeSelect.append(h("option", { value: s }, s + "px")),
   );
+  improveSizeSelect.value = "";
   improveSizeSelect.onmousedown = (e) => e.stopPropagation();
   improveSizeSelect.onchange = () => {
-    richImprove.focus();
-    document.execCommand("styleWithCSS", false, true);
-    document.execCommand("fontSize", false, "7");
-    richImprove.querySelectorAll('font[size="7"]').forEach((el) => {
-      el.removeAttribute("size");
-      el.style.fontSize = improveSizeSelect.value + "px";
-    });
+    const sz = improveSizeSelect.value;
     improveSizeSelect.value = "";
+    if (!sz) return;
+    richImprove.focus();
+    _applyFontSize(richImprove, sz);
   };
   const improveColorInput = h("input", {
     type: "color",
@@ -5643,21 +5653,17 @@ function openNoteForm(contentId, existing, rebuild) {
 
   const improveToolbar = h(
     "div",
-    { class: "rich-toolbar", style: "margin-bottom:6px;" },
-    improveRichBtn(
-      "B",
-      "볼드 (Ctrl+B)",
-      () => document.execCommand("bold"),
-      "font-weight:bold;",
-    ),
-    improveRichBtn(
-      "U",
-      "밑줄 (Ctrl+U)",
-      () => document.execCommand("underline"),
-      "text-decoration:underline;",
-    ),
+    { class: "rich-toolbar", style: "margin-bottom:6px;align-items:center;" },
+    improveRichBtn("B", "볼드 (Ctrl+B)", () => document.execCommand("bold"), "font-weight:bold;"),
+    improveRichBtn("U", "밑줄 (Ctrl+U)", () => document.execCommand("underline"), "text-decoration:underline;"),
     improveSizeSelect,
     improveColorInput,
+    h("span", { class: "rich-toolbar-sep" }),
+    improveRichBtn("≡←", "왼쪽 정렬", () => { richImprove.focus(); document.execCommand("justifyLeft"); }),
+    improveRichBtn("≡≡", "가운데 정렬", () => { richImprove.focus(); document.execCommand("justifyCenter"); }),
+    improveRichBtn("≡→", "오른쪽 정렬", () => { richImprove.focus(); document.execCommand("justifyRight"); }),
+    h("span", { class: "rich-toolbar-sep" }),
+    improveRichBtn("•≡", "글머리 기호", () => { richImprove.focus(); document.execCommand("insertUnorderedList"); }),
   );
 
   const body = h(
@@ -7313,7 +7319,7 @@ function openShortcutHelp() {
             h("td", { style: "width:36%;padding:5px 8px 5px 0;vertical-align:top;" },
               h("kbd", { style: "display:inline-block;padding:2px 8px;border:1px solid #ccc;border-radius:5px;background:#f5f5f5;font-size:12px;font-family:monospace;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.1);" }, key),
             ),
-            h("td", { style: "padding:5px 0;font-size:13px;color:#444;vertical-align:top;" }, desc),
+            h("td", { style: "padding:5px 0;font-size:12px;color:var(--muted-fg);vertical-align:top;line-height:1.55;" }, desc),
           ),
         ),
       ),
@@ -7324,8 +7330,8 @@ function openShortcutHelp() {
     return h("div", { style: "display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;background:var(--primary-light);margin-bottom:8px;" },
       h("span", { style: "font-size:18px;flex-shrink:0;" }, icon),
       h("div", {},
-        h("div", { style: "font-weight:700;font-size:13px;margin-bottom:2px;" }, title),
-        h("div", { style: "font-size:12px;color:#555;line-height:1.5;" }, desc),
+        h("div", { style: "font-weight:700;font-size:13px;margin-bottom:3px;color:var(--foreground);" }, title),
+        h("div", { style: "font-size:12px;color:var(--muted-fg);line-height:1.55;" }, desc),
       ),
     );
   }
@@ -7357,9 +7363,6 @@ function openShortcutHelp() {
     tip("↕", "이동 모드", "공략 상세 화면 우측 상단 ↕ 이동 버튼 → 드래그 핸들(⠿)로 타임라인 행·오답노트 순서를 바꿀 수 있어요."),
     tip("🗑", "삭제 모드", "🗑 삭제 버튼을 누르면 체크박스가 나타나요. 여러 항목을 선택 후 한꺼번에 삭제할 수 있어요."),
     tip("📊", "구글 시트 불러오기", "타임라인 도구모음에서 구글 시트 URL·시트명·범위를 입력하면 타임라인을 자동으로 채울 수 있어요."),
-    tip("🔒", "오답노트 잠금", "오답노트 카드의 잠금 버튼을 누르면 수정이 불가능해져요. 다시 누르면 해제돼요."),
-    tip("◀▶", "타임라인 이동 바", "타임라인 상단 이동 바의 ◀ 버튼으로 접고 ▶ 버튼으로 펼칠 수 있어요. 구분선(──)이 있을 때만 표시돼요."),
-    tip("🖼️", "상세 공략 이미지 캡션", "상세 공략 탭에서 이미지를 추가하면 사진 아래 캡션(설명글)을 입력할 수 있어요."),
 
     groupHeader("🧩 외생기 라이브러리"),
     tip("🧩", "외생기 라이브러리", "상단 메뉴 '외생기 라이브러리'에서 직업별 외생기/생존기를 미리 등록해두면, 타임라인에서 + 버튼으로 빠르게 배치할 수 있어요."),
