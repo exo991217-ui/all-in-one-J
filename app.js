@@ -37,30 +37,20 @@ document.addEventListener("selectionchange", () => {
 });
 
 // ── 폰트 크기 적용 헬퍼 ────────────────────────────────────
-// execCommand로 생긴 font[size="7"] 에 원하는 크기를 적용하고,
-// 중첩된 font-size 충돌(이전 크기가 안쪽에 남아 우선시되는 문제)을 제거합니다.
+// styleWithCSS=false → 항상 <font size="7"> 마커 생성 (브라우저 일관성 보장)
+// 마커 자신에 원하는 크기를 적용하고, 마커 "안쪽" 자손의 충돌 font-size만 제거합니다.
+// (조상 font-size는 건드리지 않음 → 선택 안 된 인접 텍스트 영향 방지)
 function _applyFontSize(editorEl, sz) {
-  document.execCommand("styleWithCSS", false, true);
+  document.execCommand("styleWithCSS", false, false);
   document.execCommand("fontSize", false, "7");
 
-  // 새로 생긴 font[size="7"] 에 원하는 px 적용
-  editorEl.querySelectorAll('font[size="7"]').forEach((node) => {
-    node.removeAttribute("size");
-    node.style.fontSize = sz + "px";
-    // 안쪽 자손 요소에 남아있는 font-size 제거 (내부 크기가 외부를 덮는 문제 방지)
-    node.querySelectorAll("*").forEach((c) => {
+  editorEl.querySelectorAll('font[size="7"]').forEach((marker) => {
+    marker.removeAttribute("size");
+    marker.style.fontSize = sz + "px";
+    // 마커 내부 자손의 font-size만 제거 (외부 크기가 내부를 이기는 경우 방지)
+    marker.querySelectorAll("[style]").forEach((c) => {
       if (c.style && c.style.fontSize) c.style.fontSize = "";
     });
-  });
-
-  // 최종 정리: 에디터 내에서 font-size를 가진 요소의 조상 중
-  // 또 다른 font-size가 있으면 조상 것을 제거 (외부 크기가 내부를 덮는 문제 방지)
-  Array.from(editorEl.querySelectorAll("[style*='font-size']")).forEach((el) => {
-    let p = el.parentElement;
-    while (p && p !== editorEl) {
-      if (p.style && p.style.fontSize) p.style.fontSize = "";
-      p = p.parentElement;
-    }
   });
 }
 
@@ -2774,6 +2764,7 @@ function buildTimelineRow(
   // ── 구분선 렌더링 ──────────────────────────────────────
   if (entry.type === "divider") {
     const theme = (Contents.get(contentId) || {}).themeColor || "#89CFF0";
+    const bgColor = entry.color || theme;
     const row = h("tr", {
       class: "divider-row",
       "data-entry-id": String(entry.id),
@@ -2783,7 +2774,7 @@ function buildTimelineRow(
     const cell = h("td", {
       class: "divider-row-cell",
       colspan: String(colCount),
-      style: `background:${theme};`,
+      style: `background:${bgColor};`,
     });
     if (moveMode) {
       cell.prepend(
@@ -2974,6 +2965,49 @@ function buildTimelineRow(
     return td;
   });
 
+  // ── 더블클릭 셀 편집 헬퍼 ────────────────────────────────
+  const canDblClick = !locked && !moveMode && !deleteMode;
+  function _addCellDblClick(td, colKey) {
+    if (!canDblClick) return;
+    td.title = "더블클릭: 셀 편집";
+    td.style.cursor = "text";
+    td.ondblclick = (e) => {
+      e.stopPropagation();
+      activateCellEdit(td, entry, contentId, colKey, rebuild);
+    };
+  }
+
+  _addCellDblClick(timeCell, "startTime");
+  _addCellDblClick(endTimeCell, "endTime");
+
+  const phaseCell = h(
+    "td",
+    { "data-col-key": "phase" },
+    entry.phase && entry.phase.trim() ? entry.phase : "-",
+  );
+  _addCellDblClick(phaseCell, "phase");
+
+  const skillCell = h("td", { "data-col-key": "skillType" }, skillDisplay);
+  _addCellDblClick(skillCell, "skillType");
+
+  const notesCell = h(
+    "td",
+    { "data-col-key": "notes", class: "text-sm text-muted" },
+    entry.notes || "-",
+  );
+  _addCellDblClick(notesCell, "notes");
+
+  const memoCell = h(
+    "td",
+    {
+      "data-col-key": "memo",
+      class: "text-sm text-muted",
+      style: "max-width:160px",
+    },
+    entry.memo || "-",
+  );
+  _addCellDblClick(memoCell, "memo");
+
   const row = h(
     "tr",
     {
@@ -2989,30 +3023,59 @@ function buildTimelineRow(
       : null,
     timeCell,
     endTimeCell,
-    h(
-      "td",
-      { "data-col-key": "phase" },
-      entry.phase && entry.phase.trim() ? entry.phase : "-",
-    ),
-    h("td", { "data-col-key": "skillType" }, skillDisplay),
-    h(
-      "td",
-      { "data-col-key": "notes", class: "text-sm text-muted" },
-      entry.notes || "-",
-    ),
+    phaseCell,
+    skillCell,
+    notesCell,
     mitCell,
-    h(
-      "td",
-      {
-        "data-col-key": "memo",
-        class: "text-sm text-muted",
-        style: "max-width:160px",
-      },
-      entry.memo || "-",
-    ),
+    memoCell,
     ...customTds,
   );
   return row;
+}
+
+function activateCellEdit(td, entry, contentId, colKey, rebuild) {
+  let inp;
+  if (colKey === "skillType") {
+    inp = h("select", { class: "inline-select" });
+    [{ value: "", label: "(없음)" }, ...SKILL_TYPES.map((t) => ({ value: t, label: t }))].forEach(({ value, label }) => {
+      const opt = h("option", { value }, label);
+      if ((entry.skillType || "") === value) opt.selected = true;
+      inp.append(opt);
+    });
+  } else {
+    const vals = {
+      startTime: entry.startTime || entry.time || "",
+      endTime: entry.endTime || "",
+      phase: entry.phase || "",
+      notes: entry.notes || "",
+      memo: entry.memo || "",
+    };
+    inp = h("input", {
+      class: "inline-input",
+      type: "text",
+      value: vals[colKey] || "",
+      style: "width:100%;min-width:60px;",
+    });
+  }
+  const commit = () => {
+    inp.onblur = null;
+    const v = inp.value !== undefined ? String(inp.value).trim() : "";
+    const upd = {};
+    if (colKey === "startTime") upd.startTime = v || entry.startTime || entry.time;
+    else if (colKey === "skillType") upd.skillType = inp.value || undefined;
+    else upd[colKey] = v || undefined;
+    Timeline.update(contentId, entry.id, upd);
+    rebuild();
+  };
+  td.innerHTML = "";
+  td.style.padding = "0";
+  td.append(inp);
+  requestAnimationFrame(() => { inp.focus(); if (inp.select) inp.select(); });
+  inp.onblur = commit;
+  inp.onkeydown = (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    if (e.key === "Escape") { inp.onblur = null; rebuild(); }
+  };
 }
 
 function activateTimelineRowEdit(tr, entry, contentId, customCols, rebuild) {
@@ -3234,12 +3297,25 @@ function openTimelineForm(contentId, existing, rebuild) {
 }
 
 function openDividerForm(contentId, rebuild, existing) {
+  const themeColor = (Contents.get(contentId) || {}).themeColor || "#89CFF0";
   const labelInput = h("input", {
     class: "form-input",
     type: "text",
     placeholder: "예) 1페이즈",
     value: existing?.label || "",
   });
+  const colorInput = h("input", {
+    type: "color",
+    value: existing?.color || themeColor,
+    style: "width:48px;height:32px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;",
+    title: "구분선 배경 색상",
+  });
+  const resetBtn = h("button", {
+    class: "btn btn-ghost btn-sm",
+    type: "button",
+    title: "테마 색상으로 초기화",
+    onclick: () => { colorInput.value = themeColor; },
+  }, "↩ 테마");
   const form = h(
     "div",
     {},
@@ -3249,14 +3325,25 @@ function openDividerForm(contentId, rebuild, existing) {
       h("label", { class: "form-label" }, "구분선 제목"),
       labelInput,
     ),
+    h(
+      "div",
+      { class: "form-group", style: "margin-top:10px;" },
+      h("label", { class: "form-label" }, "배경 색상"),
+      h("div", { style: "display:flex;gap:8px;align-items:center;margin-top:4px;" },
+        colorInput,
+        resetBtn,
+      ),
+    ),
   );
   showModal(existing ? "구분선 수정" : "구분선 추가", form, {
     onConfirm: () => {
       const label = labelInput.value.trim();
+      const color = colorInput.value;
       const data = {
         type: "divider",
         label: label || "──────",
         phase: label || "──────",
+        color: color !== themeColor ? color : undefined,
       };
       if (existing) Timeline.update(contentId, existing.id, data);
       else Timeline.create(contentId, data);
@@ -4224,10 +4311,10 @@ function renderSectionsTab(container, contentId) {
   tocFmtSizeSelect.onmousedown = () => _saveRichSel();
   tocFmtSizeSelect.onchange = () => {
     const sz = tocFmtSizeSelect.value;
-    tocFmtSizeSelect.value = "";
-    if (!sz || !_richFocused) return;
+    if (!sz || !_richFocused) { tocFmtSizeSelect.value = ""; return; }
     _restoreRichSel();
     _applyFontSize(_richFocused, sz);
+    tocFmtSizeSelect.value = sz;
   };
   const tocFmtColorInput = h("input", {
     type: "color",
@@ -4381,7 +4468,7 @@ function renderSectionsTab(container, contentId) {
   }
 
   let deleteMode = GlobalMode.get() === "delete";
-  const moveMode = GlobalMode.get() === "move";
+  let moveMode = GlobalMode.get() === "move";
   let selectedIds = new Set();
 
   function updateDeleteBtn() {
@@ -4394,6 +4481,8 @@ function renderSectionsTab(container, contentId) {
     rebuildToolBtns();
     mainArea.innerHTML = "";
     selectedIds = new Set();
+    deleteMode = GlobalMode.get() === "delete";
+    moveMode = GlobalMode.get() === "move";
     const editMode = GlobalMode.get() === "edit";
     const sections = Sections.list(contentId)
       .slice()
@@ -5148,10 +5237,10 @@ function renderNotes(container, contentId) {
   noteSizeSelect.onmousedown = () => _saveRichSel();
   noteSizeSelect.onchange = () => {
     const sz = noteSizeSelect.value;
-    noteSizeSelect.value = "";
-    if (!sz || !_richFocused) return;
+    if (!sz || !_richFocused) { noteSizeSelect.value = ""; return; }
     _restoreRichSel();
     _applyFontSize(_richFocused, sz);
+    noteSizeSelect.value = sz;
   };
   const noteColorInput = h("input", {
     type: "color",
@@ -5563,10 +5652,10 @@ function openNoteForm(contentId, existing, rebuild) {
   noteFmtSizeSelect.onmousedown = (e) => e.stopPropagation();
   noteFmtSizeSelect.onchange = () => {
     const sz = noteFmtSizeSelect.value;
-    noteFmtSizeSelect.value = "";
     if (!sz) return;
     richNote.focus();
     _applyFontSize(richNote, sz);
+    noteFmtSizeSelect.value = sz;
   };
   const noteFmtColorInput = h("input", {
     type: "color",
@@ -5634,10 +5723,10 @@ function openNoteForm(contentId, existing, rebuild) {
   improveSizeSelect.onmousedown = (e) => e.stopPropagation();
   improveSizeSelect.onchange = () => {
     const sz = improveSizeSelect.value;
-    improveSizeSelect.value = "";
     if (!sz) return;
     richImprove.focus();
     _applyFontSize(richImprove, sz);
+    improveSizeSelect.value = sz;
   };
   const improveColorInput = h("input", {
     type: "color",
@@ -7363,6 +7452,9 @@ function openShortcutHelp() {
     tip("↕", "이동 모드", "공략 상세 화면 우측 상단 ↕ 이동 버튼 → 드래그 핸들(⠿)로 타임라인 행·오답노트 순서를 바꿀 수 있어요."),
     tip("🗑", "삭제 모드", "🗑 삭제 버튼을 누르면 체크박스가 나타나요. 여러 항목을 선택 후 한꺼번에 삭제할 수 있어요."),
     tip("📊", "구글 시트 불러오기", "타임라인 도구모음에서 구글 시트 URL·시트명·범위를 입력하면 타임라인을 자동으로 채울 수 있어요."),
+    tip("🔒", "오답노트 잠금", "오답노트 카드의 잠금 버튼을 누르면 수정이 불가능해져요. 다시 누르면 해제돼요."),
+    tip("◀▶", "타임라인 이동 바", "타임라인 상단 이동 바의 ◀ 버튼으로 접고 ▶ 버튼으로 펼칠 수 있어요. 구분선(──)이 있을 때만 표시돼요."),
+    tip("🖼️", "상세 공략 이미지 캡션", "상세 공략 탭에서 이미지를 추가하면 사진 아래 캡션(설명글)을 입력할 수 있어요."),
 
     groupHeader("🧩 외생기 라이브러리"),
     tip("🧩", "외생기 라이브러리", "상단 메뉴 '외생기 라이브러리'에서 직업별 외생기/생존기를 미리 등록해두면, 타임라인에서 + 버튼으로 빠르게 배치할 수 있어요."),
