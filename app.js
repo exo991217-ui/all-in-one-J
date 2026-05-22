@@ -1,5 +1,41 @@
 "use strict";
 
+// ══ Rich-text 선택영역 전역 추적기 ═══════════════════════════
+let _richFocused = null;
+let _richRange = null;
+
+function _saveRichSel() {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && _richFocused) {
+    try { _richRange = sel.getRangeAt(0).cloneRange(); } catch (e) {}
+  }
+}
+function _restoreRichSel() {
+  if (!_richFocused) return false;
+  try { _richFocused.focus(); } catch (e) {}
+  if (_richRange) {
+    try {
+      const sel = window.getSelection();
+      if (sel) { sel.removeAllRanges(); sel.addRange(_richRange); }
+    } catch (e) {}
+  }
+  return true;
+}
+
+document.addEventListener("focusin", (e) => {
+  if (e.target && e.target.contentEditable === "true") _richFocused = e.target;
+});
+document.addEventListener("selectionchange", () => {
+  if (!_richFocused) return;
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    try {
+      const node = sel.getRangeAt(0).commonAncestorContainer;
+      if (_richFocused.contains(node)) _richRange = sel.getRangeAt(0).cloneRange();
+    } catch (e) {}
+  }
+});
+
 // ══════════════════════════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════════════════════════
@@ -603,15 +639,17 @@ const PRESET_MITS = [
     imageUrl: _S("21_SGE", "Pepsis.png"),
   },
   // ── 근거리 딜러 공통 (Role Action) ─────────────────────
-  {
+  ...[
+    "몽크", "용기사", "닌자", "사무라이", "리퍼", "바이퍼",
+  ].map((cls) => ({
     name: "견제",
     jobGroup: "근거리 딜러",
-    jobClass: "몽크",
+    jobClass: cls,
     isCommon: true,
     skillCategory: "외생기",
     color: "#FFB3C6",
     imageUrl: _R("05_MNK", "Feint.png"),
-  },
+  })),
   // ── 몽크 (MNK) ────────────────────────────────────────
   {
     name: "만트라",
@@ -919,7 +957,13 @@ const DB = {
     }
   },
   set(key, data) {
-    localStorage.setItem(key, JSON.stringify(data));
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      if (e && (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED" || e.code === 22)) {
+        alert("⚠️ 저장 공간이 부족합니다!\n\n이미지가 너무 크거나 데이터가 많아서 저장에 실패했어요.\n\n💡 해결방법:\n· 이미지를 더 작은 파일로 줄여서 다시 올려보세요\n· 사용하지 않는 공략 데이터를 삭제해 주세요\n\n현재 변경사항은 저장되지 않았습니다.");
+      }
+    }
   },
   nextId(arr) {
     return arr.length ? Math.max(...arr.map((i) => i.id)) + 1 : 1;
@@ -1299,6 +1343,55 @@ let currentRoute = null;
 // ══════════════════════════════════════════════════════════
 // EDIT LOG
 // ══════════════════════════════════════════════════════════
+
+function _logDiff(curr, prev, tab) {
+  if (!prev || !prev.length) return "첫 스냅샷";
+  if (!curr || !curr.length) return "(전체 비어있음)";
+  const added = curr.filter((c) => !prev.find((p) => p.id === c.id));
+  const removed = prev.filter((p) => !curr.find((c) => c.id === p.id));
+  const modified = curr.filter((c) => {
+    const p = prev.find((p) => p.id === c.id);
+    return p && JSON.stringify(c) !== JSON.stringify(p);
+  });
+  const parts = [];
+  if (added.length) parts.push(`+${added.length}개 추가`);
+  if (removed.length) parts.push(`-${removed.length}개 삭제`);
+  if (modified.length) {
+    if (tab === "timeline") {
+      const details = modified.slice(0, 2).map((c) => {
+        const p = prev.find((p) => p.id === c.id);
+        const fs = [];
+        if (c.startTime !== p.startTime) fs.push(`시간 ${p.startTime || "?"}→${c.startTime || "?"}`);
+        if (c.phase !== p.phase) fs.push(`기술명 "${p.phase || ""}"→"${c.phase || ""}"`);
+        if (c.skillType !== p.skillType) fs.push(`구분 ${p.skillType || "없음"}→${c.skillType || "없음"}`);
+        if (c.notes !== p.notes) fs.push("비고 변경");
+        if (c.memo !== p.memo) fs.push("메모 변경");
+        return fs.length ? `[${c.startTime || "?"}] ${fs.join(", ")}` : null;
+      }).filter(Boolean);
+      if (details.length) parts.push(details.join(" / "));
+      else parts.push(`${modified.length}개 행 수정`);
+      if (modified.length > 2) parts.push(`외 ${modified.length - 2}개`);
+    } else if (tab === "sections") {
+      const details = modified.slice(0, 2).map((c) => {
+        const p = prev.find((p) => p.id === c.id);
+        if (c.title !== p.title) return `"${p.title || ""}"→"${c.title || ""}"`;
+        return `"${c.title}" 내용 변경`;
+      }).filter(Boolean);
+      if (details.length) parts.push(details.join(" / "));
+      else parts.push(`${modified.length}개 블록 수정`);
+    } else {
+      const details = modified.slice(0, 2).map((c) => {
+        const p = prev.find((p) => p.id === c.id);
+        if (c.phase !== p.phase) return `페이즈 "${p.phase || ""}"→"${c.phase || ""}"`;
+        return "내용 변경";
+      }).filter(Boolean);
+      if (details.length) parts.push(details.join(" / "));
+      else parts.push(`${modified.length}개 수정`);
+    }
+  }
+  return parts.length ? parts.join(" / ") : "변경 없음";
+}
+
 const EditLog = {
   _key(contentId, tab) { return `ff14_log_${contentId}_${tab}`; },
   list(contentId, tab) {
@@ -1313,7 +1406,7 @@ const EditLog = {
     const logs = this.list(contentId, tab);
     if (logs.length && JSON.stringify(logs[0].data) === dataStr) return;
     logs.unshift({ ts: Date.now(), data: JSON.parse(dataStr) });
-    if (logs.length > 10) logs.length = 10;
+    if (logs.length > 5) logs.length = 5;
     localStorage.setItem(this._key(contentId, tab), JSON.stringify(logs));
   },
   restore(contentId, tab, data) {
@@ -1336,21 +1429,15 @@ const EditLog = {
       return;
     }
     const logList = h("div", { style: "display:flex;flex-direction:column;gap:8px;max-height:62vh;overflow-y:auto;padding-right:4px;" });
-    logs.forEach((log) => {
+    logs.forEach((log, idx) => {
       const d = new Date(log.ts);
       const label = `${d.toLocaleDateString("ko-KR")} ${d.toLocaleTimeString("ko-KR")}`;
       const count = log.data.length;
-      const preview = h("div", { style: "font-size:11px;color:var(--muted-fg);margin-top:5px;padding:4px 6px;background:var(--surface);border-radius:5px;border-left:3px solid var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" });
-      if (tab === "timeline") {
-        const ents = log.data.filter((e) => e.type !== "divider").slice(0, 4);
-        preview.textContent = ents.length ? ents.map((e) => `${e.startTime || e.time || "?"} ${e.phase || "—"}`).join("  /  ") + (count > 4 ? " …" : "") : "(비어있음)";
-      } else if (tab === "sections") {
-        const secs = log.data.slice(0, 4);
-        preview.textContent = secs.length ? secs.map((s) => s.title).join("  /  ") + (count > 4 ? " …" : "") : "(비어있음)";
-      } else {
-        const nts = log.data.slice(0, 3);
-        preview.textContent = nts.length ? nts.map((n) => (n.content || "").replace(/<[^>]+>/g, "").trim().slice(0, 25) || "(내용 없음)").join("  /  ") + (count > 3 ? " …" : "") : "(비어있음)";
-      }
+      const prevLog = logs[idx + 1];
+      const diffText = _logDiff(log.data, prevLog ? prevLog.data : null, tab);
+      const diffEl = h("div", {
+        style: "font-size:11px;color:var(--muted-fg);margin-top:5px;padding:4px 8px;background:var(--primary-pale);border-radius:5px;border-left:3px solid var(--primary);line-height:1.5;",
+      }, diffText);
       const restoreBtn = h("button", { class: "btn btn-primary btn-sm" }, "복구");
       restoreBtn.onclick = () => {
         if (!confirm(`"${label}" 시점으로 복구할까요?\n현재 데이터는 새 로그 항목으로 저장됩니다.`)) return;
@@ -1364,7 +1451,7 @@ const EditLog = {
           h("div", { style: "flex:1;min-width:0;" },
             h("div", { style: "font-weight:700;font-size:13px;" }, label),
             h("div", { style: "font-size:11px;color:var(--muted-fg);margin-top:1px;" }, `항목 ${count}개`),
-            preview,
+            diffEl,
           ),
           restoreBtn,
         ),
@@ -1933,46 +2020,7 @@ function renderContentDetail(main, contentId) {
   }
 
   function updateEditCursor() {
-    if (GlobalMode.get() === "edit") {
-      document.body.classList.add("edit-mode-cursor");
-    } else {
-      document.body.classList.remove("edit-mode-cursor");
-    }
-  }
-
-  function activateMode(m) {
-    GlobalMode.set(m);
-    setTab(detailTab);
-    const isMove = GlobalMode.get() === "move";
-    const isDelete = GlobalMode.get() === "delete";
-    moveModeBtn.classList.toggle("mode-active", isMove);
-    deleteModeBtn.classList.toggle("mode-active", isDelete);
-    moveModeBtn.style.color = isMove ? "var(--primary)" : "";
-    deleteModeBtn.style.color = isDelete ? "var(--destructive)" : "";
-    updateEditCursor();
-  }
-
-  const moveModeBtn = h(
-    "button",
-    {
-      class: "btn btn-outline btn-sm mode-btn",
-      title: "이동 모드",
-      onclick: () => activateMode("move"),
-    },
-    "↕ 이동",
-  );
-  const deleteModeBtn = h(
-    "button",
-    {
-      class: "btn btn-outline btn-sm mode-btn",
-      title: "삭제 모드",
-      onclick: () => activateMode("delete"),
-    },
-    "🗑 삭제",
-  );
-  const pickerWrap = headerEl.querySelector(".theme-picker-wrap");
-  if (pickerWrap) {
-    pickerWrap.append(moveModeBtn, deleteModeBtn);
+    document.body.classList.toggle("edit-mode-cursor", GlobalMode.get() === "edit");
   }
 
   // 네비 백업 버튼 연결
@@ -1997,10 +2045,6 @@ function renderContentDetail(main, contentId) {
     );
     btn.onclick = () => {
       GlobalMode.reset();
-      moveModeBtn.classList.remove("mode-active");
-      moveModeBtn.style.color = "";
-      deleteModeBtn.classList.remove("mode-active");
-      deleteModeBtn.style.color = "";
       document.body.classList.remove("edit-mode-cursor");
       setTab(id);
     };
@@ -2073,6 +2117,27 @@ function renderTimelineTab(container, contentId) {
 
     // ── 도구박스 빌드 ───────────────────────────────────────
     const toolboxBody = h("div", { class: "toolbox-body" });
+
+    // ── 모드 버튼 3-블록 행 (수정/이동/삭제) ─────────────
+    const _tModeRow = h("div", { class: "toolbox-mode-row" });
+    [
+      ["✏️", "수정 모드 — 셀 클릭으로 행 편집", "edit"],
+      ["↕️", "이동 모드 — 드래그로 순서 변경", "move"],
+      ["🗑️", "삭제 모드 — 항목 선택 삭제", "delete"],
+    ].forEach(([icon, title, mode]) => {
+      const active = GlobalMode.get() === mode;
+      const btn = h("button", {
+        class: "toolbox-mode-btn" + (active ? " mode-active" : ""),
+        title,
+      }, icon);
+      btn.onclick = () => {
+        GlobalMode.set(mode);
+        document.body.classList.toggle("edit-mode-cursor", GlobalMode.get() === "edit");
+        rebuild();
+      };
+      _tModeRow.append(btn);
+    });
+    toolboxBody.append(_tModeRow, h("div", { class: "toolbox-sep" }));
 
     toolboxBody.append(
       h(
@@ -2918,22 +2983,6 @@ function buildTimelineRow(
       entry.memo || "-",
     ),
     ...customTds,
-    locked
-      ? h("td", {})
-      : h(
-          "td",
-          { style: "width:36px;text-align:center;padding:0 4px;" },
-          h(
-            "button",
-            {
-              class: "btn-icon",
-              title: "수정",
-              style: "font-size:13px;",
-              onclick: () => activateTimelineRowEdit(row, entry, contentId, customCols, rebuild),
-            },
-            "✏️",
-          ),
-        ),
   );
   return row;
 }
@@ -3338,8 +3387,10 @@ function openMitPicker(contentId, entryId, rebuild) {
     });
 
     const mits = className
-      ? (byGroup[groupName] || []).filter((m) => m.jobClass === className)
-      : byGroup[groupName] || [];
+      ? (byGroup[groupName] || []).filter(
+          (m) => m.jobClass === className || m.isCommon,
+        )
+      : (byGroup[groupName] || []).filter((m) => m.isCommon);
 
     if (!mits.length) {
       itemsWrap.append(
@@ -3401,25 +3452,28 @@ function openMitPicker(contentId, entryId, rebuild) {
     const grid = h("div", { class: "picker-class-grid" });
 
     const allMitsInGroup = byGroup[groupName] || [];
-    const allAssigned = allMitsInGroup.filter((m) =>
+    const commonMits = allMitsInGroup.filter((m) => m.isCommon);
+    const commonAssigned = commonMits.filter((m) =>
       Mits.isAssigned(contentId, entryId, m.id),
     ).length;
     const allCard = h(
       "div",
-      { class: "picker-class-card" + (allAssigned ? " has-assigned" : "") },
-      h("div", { class: "picker-class-icon" }, "전체"),
-      h("div", { class: "picker-class-name" }, "전체 보기"),
+      { class: "picker-class-card" + (commonAssigned ? " has-assigned" : "") },
+      h("div", { class: "picker-class-icon" }, "공통"),
+      h("div", { class: "picker-class-name" }, "전체 공통"),
       h(
         "div",
         { class: "picker-class-count" },
-        allAssigned ? `✅ ${allAssigned}개` : `${allMitsInGroup.length}개`,
+        commonAssigned ? `✅ ${commonAssigned}개` : `${commonMits.length}개`,
       ),
     );
     allCard.onclick = () => showMitList(groupName, null);
     grid.append(allCard);
 
     classes.forEach((cls) => {
-      const clsMits = allMitsInGroup.filter((m) => m.jobClass === cls);
+      const clsMits = allMitsInGroup.filter(
+        (m) => m.jobClass === cls || m.isCommon,
+      );
       const clsAssigned = clsMits.filter((m) =>
         Mits.isAssigned(contentId, entryId, m.id),
       ).length;
@@ -4137,10 +4191,13 @@ function renderSectionsTab(container, contentId) {
   ["12", "14", "16", "18", "20", "24"].forEach((s) =>
     tocFmtSizeSelect.append(h("option", { value: s }, s + "px")),
   );
+  tocFmtSizeSelect.onmousedown = () => _saveRichSel();
   tocFmtSizeSelect.onchange = () => {
+    if (!_richFocused) return;
+    _restoreRichSel();
     document.execCommand("styleWithCSS", false, true);
     document.execCommand("fontSize", false, "7");
-    document.querySelectorAll('.cell-richtext font[size="7"]').forEach((el) => {
+    _richFocused.querySelectorAll('font[size="7"]').forEach((el) => {
       el.removeAttribute("size");
       el.style.fontSize = tocFmtSizeSelect.value + "px";
     });
@@ -4152,12 +4209,36 @@ function renderSectionsTab(container, contentId) {
     title: "글자 색상",
     value: "#333333",
   });
-  tocFmtColorInput.oninput = () =>
+  tocFmtColorInput.onmousedown = () => _saveRichSel();
+  tocFmtColorInput.oninput = () => {
+    if (!_richFocused) return;
+    _restoreRichSel();
     document.execCommand("foreColor", false, tocFmtColorInput.value);
+  };
 
   const sectionToolBody = h("div", { class: "toolbox-body" });
   function rebuildToolBtns() {
     sectionToolBody.innerHTML = "";
+    // ── 모드 버튼 3-블록 행 ──────────────────────────────
+    const _sModeRow = h("div", { class: "toolbox-mode-row" });
+    [
+      ["✏️", "수정 모드 — 제목 클릭으로 편집", "edit"],
+      ["↕️", "이동 모드 — 블록 순서 변경", "move"],
+      ["🗑️", "삭제 모드 — 항목 선택 삭제", "delete"],
+    ].forEach(([icon, title, mode]) => {
+      const active = GlobalMode.get() === mode;
+      const btn = h("button", {
+        class: "toolbox-mode-btn" + (active ? " mode-active" : ""),
+        title,
+      }, icon);
+      btn.onclick = () => {
+        GlobalMode.set(mode);
+        document.body.classList.toggle("edit-mode-cursor", GlobalMode.get() === "edit");
+        rebuild();
+      };
+      _sModeRow.append(btn);
+    });
+    sectionToolBody.append(_sModeRow, h("div", { class: "toolbox-sep" }));
     sectionToolBody.append(
       h(
         "button",
@@ -4288,6 +4369,7 @@ function renderSectionsTab(container, contentId) {
 
   function rebuild() {
     EditLog.snapshot(contentId, "sections");
+    rebuildToolBtns();
     mainArea.innerHTML = "";
     selectedIds = new Set();
     const editMode = GlobalMode.get() === "edit";
@@ -4483,39 +4565,7 @@ function buildPhaseBlock(
       ),
     );
   } else {
-    actions = h(
-      "div",
-      { class: "section-phase-actions" },
-      h(
-        "button",
-        {
-          class: "btn-icon",
-          title: "수정",
-          onclick: () => {
-            const inp = document.createElement("input");
-            inp.className = "inline-input";
-            inp.type = "text";
-            inp.value = section.title;
-            inp.style.cssText = "font-size:inherit;font-weight:inherit;width:100%;max-width:400px;";
-            titleEl.innerHTML = "";
-            titleEl.appendChild(inp);
-            inp.focus();
-            inp.select();
-            const save = () => {
-              const title = inp.value.trim();
-              if (title) Sections.update(contentId, section.id, { title });
-              rebuild();
-            };
-            inp.onblur = save;
-            inp.onkeydown = (e) => {
-              if (e.key === "Enter") { e.preventDefault(); inp.onblur = null; save(); }
-              if (e.key === "Escape") { inp.onblur = null; rebuild(); }
-            };
-          },
-        },
-        "✏️",
-      ),
-    );
+    actions = h("div", { class: "section-phase-actions" });
   }
 
   block.append(titleEl, actions);
@@ -4588,42 +4638,7 @@ function buildSectionBlock(
           "▼",
         ),
       )
-    : h(
-        "div",
-        { class: "section-actions" },
-        lockBtn,
-        h(
-          "button",
-          {
-            class: "btn-icon",
-            title: "수정",
-            onclick: () => {
-              const titleH3 = header.querySelector(".section-block-title");
-              if (!titleH3) return;
-              const inp = document.createElement("input");
-              inp.className = "inline-input";
-              inp.type = "text";
-              inp.value = section.title;
-              inp.style.cssText = "font-size:inherit;font-weight:inherit;width:100%;max-width:400px;font-family:inherit;";
-              titleH3.innerHTML = "";
-              titleH3.appendChild(inp);
-              inp.focus();
-              inp.select();
-              const save = () => {
-                const title = inp.value.trim();
-                if (title) Sections.update(contentId, section.id, { title });
-                rebuild();
-              };
-              inp.onblur = save;
-              inp.onkeydown = (e) => {
-                if (e.key === "Enter") { e.preventDefault(); inp.onblur = null; save(); }
-                if (e.key === "Escape") { inp.onblur = null; rebuild(); }
-              };
-            },
-          },
-          "✏️",
-        ),
-      );
+    : h("div", { class: "section-actions" }, lockBtn);
 
   const header = h(
     "div",
@@ -5106,15 +5121,16 @@ function renderNotes(container, contentId) {
   ["12", "14", "16", "18", "20", "24"].forEach((s) =>
     noteSizeSelect.append(h("option", { value: s }, s + "px")),
   );
+  noteSizeSelect.onmousedown = () => _saveRichSel();
   noteSizeSelect.onchange = () => {
+    if (!_richFocused) return;
+    _restoreRichSel();
     document.execCommand("styleWithCSS", false, true);
     document.execCommand("fontSize", false, "7");
-    document
-      .querySelectorAll('[data-rich-note] font[size="7"]')
-      .forEach((el) => {
-        el.removeAttribute("size");
-        el.style.fontSize = noteSizeSelect.value + "px";
-      });
+    _richFocused.querySelectorAll('font[size="7"]').forEach((el) => {
+      el.removeAttribute("size");
+      el.style.fontSize = noteSizeSelect.value + "px";
+    });
     noteSizeSelect.selectedIndex = 0;
   };
   const noteColorInput = h("input", {
@@ -5123,12 +5139,39 @@ function renderNotes(container, contentId) {
     title: "글자 색상",
     value: "#333333",
   });
-  noteColorInput.oninput = () =>
+  noteColorInput.onmousedown = () => _saveRichSel();
+  noteColorInput.oninput = () => {
+    if (!_richFocused) return;
+    _restoreRichSel();
     document.execCommand("foreColor", false, noteColorInput.value);
+  };
 
-  const toolBody = h(
-    "div",
-    { class: "toolbox-body" },
+  const toolBody = h("div", { class: "toolbox-body" });
+  const _nModeRow = h("div", { class: "toolbox-mode-row" });
+  function updateNoteModeRow() {
+    _nModeRow.innerHTML = "";
+    [
+      ["✏️", "수정 모드 — 카드 클릭으로 편집", "edit"],
+      ["↕️", "이동 모드 — 드래그로 순서 변경", "move"],
+      ["🗑️", "삭제 모드 — 항목 선택 삭제", "delete"],
+    ].forEach(([icon, title, mode]) => {
+      const active = GlobalMode.get() === mode;
+      const btn = h("button", {
+        class: "toolbox-mode-btn" + (active ? " mode-active" : ""),
+        title,
+      }, icon);
+      btn.onclick = () => {
+        GlobalMode.set(mode);
+        document.body.classList.toggle("edit-mode-cursor", GlobalMode.get() === "edit");
+        rebuild();
+      };
+      _nModeRow.append(btn);
+    });
+  }
+  updateNoteModeRow();
+  toolBody.append(
+    _nModeRow,
+    h("div", { class: "toolbox-sep" }),
     h(
       "button",
       {
@@ -5189,6 +5232,7 @@ function renderNotes(container, contentId) {
 
   function rebuild() {
     EditLog.snapshot(contentId, "notes");
+    updateNoteModeRow();
     notesMain.innerHTML = "";
     selectedIds = new Set();
     const deleteMode = GlobalMode.get() === "delete";
@@ -5364,20 +5408,6 @@ function buildNoteCard(note, contentId, rebuild) {
     { style: "display:flex;gap:6px;margin-left:auto;align-items:center;" },
     lockBtn,
   );
-
-  if (!locked) {
-    btnGroup.prepend(
-      h(
-        "button",
-        {
-          class: "btn-icon",
-          title: "수정",
-          onclick: () => openNoteForm(contentId, note, rebuild),
-        },
-        "✏️",
-      ),
-    );
-  }
 
   const header = h(
     "div",
@@ -7312,21 +7342,21 @@ function openShortcutHelp() {
       ["Esc (입력 중)", "타임라인 인라인 편집 취소"],
     ]),
     kbSection("🖱️ 마우스 조작", [
-      ["행 클릭 ✏️", "타임라인 행 인라인 편집"],
-      ["셀 더블클릭", "타임라인 특정 셀만 인라인 편집"],
+      ["✏️ 수정 모드", "도구모음 ✏️ 클릭 → 연필 커서 활성화 → 행·블록·카드 클릭하여 수정 (같은 버튼 재클릭으로 해제)"],
+      ["↕️ 이동 모드", "도구모음 ↕️ 클릭 → 드래그 핸들(⠿)로 순서 변경"],
+      ["🗑️ 삭제 모드", "도구모음 🗑️ 클릭 → 체크박스로 항목 선택 후 삭제"],
+      ["셀 더블클릭", "타임라인 특정 셀만 빠르게 수정"],
       ["드래그 (이동 모드)", "타임라인 / 오답노트 순서 변경"],
     ]),
 
     groupHeader("🏠 메인"),
-    tip("💾", "전체 백업 / 복원", "메인 화면 → 💾 백업/복원 버튼으로 모든 공략·외생기·링크를 JSON 파일로 저장하고 복원할 수 있어요."),
-    tip("📁", "백업 / 복원", "메인 화면 💾 백업 버튼으로 공략·링크 데이터를 JSON 파일로 저장·복원할 수 있어요. 외생기 라이브러리는 별도로 유지되며 백업에 포함되지 않습니다."),
+    tip("💾", "백업 / 복원", "메인 화면 💾 백업 버튼으로 공략·링크 데이터를 JSON 파일로 저장·복원할 수 있어요. 외생기 라이브러리는 별도로 유지되며 백업에 포함되지 않습니다."),
     tip("★", "공략 탭 고정", "공략 카드의 ★ 버튼을 눌러 자주 쓰는 공략을 상단 탭에 고정할 수 있어요."),
 
     groupHeader("📋 공략 목록"),
     tip("↕", "이동 모드", "공략 상세 화면 우측 상단 ↕ 이동 버튼 → 드래그 핸들(⠿)로 타임라인 행·오답노트 순서를 바꿀 수 있어요."),
     tip("🗑", "삭제 모드", "🗑 삭제 버튼을 누르면 체크박스가 나타나요. 여러 항목을 선택 후 한꺼번에 삭제할 수 있어요."),
     tip("📊", "구글 시트 불러오기", "타임라인 도구모음에서 구글 시트 URL·시트명·범위를 입력하면 타임라인을 자동으로 채울 수 있어요."),
-    tip("⚡", "이전 설정으로 입력 채우기", '구글 시트 불러오기 화면에서, 저장된 URL·시트·범위·매핑을 한 번에 자동 채워줍니다. 입력만 채울 뿐 실제 붙여넣기는 "타임라인에 붙여넣기" 버튼을 눌러야 해요.'),
     tip("🔒", "오답노트 잠금", "오답노트 카드의 잠금 버튼을 누르면 수정이 불가능해져요. 다시 누르면 해제돼요."),
     tip("◀▶", "타임라인 이동 바", "타임라인 상단 이동 바의 ◀ 버튼으로 접고 ▶ 버튼으로 펼칠 수 있어요. 구분선(──)이 있을 때만 표시돼요."),
     tip("🖼️", "상세 공략 이미지 캡션", "상세 공략 탭에서 이미지를 추가하면 사진 아래 캡션(설명글)을 입력할 수 있어요."),
