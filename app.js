@@ -1595,13 +1595,36 @@ function mitIcon(item, size = 28) {
   return el;
 }
 
+// ── 이미지 압축 헬퍼 (localStorage 용량 절약) ─────────────────────────────
+async function compressImageFile(file, maxW = 1200, maxH = 1200, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 function showModal(
   titleText,
   bodyEl,
   { onConfirm, confirmLabel = "저장", noCancelBtn = false } = {},
 ) {
   const overlay = document.getElementById("modal-overlay");
-  const box = document.getElementById("modal-content");
+  const oldBox = document.getElementById("modal-content");
+  // 누적된 keydown 이벤트 리스너를 초기화하기 위해 box를 복제 (구분선/시트 팝업 중복 오류 수정)
+  const box = oldBox.cloneNode(false);
+  oldBox.replaceWith(box);
 
   const header = h(
     "div",
@@ -5094,21 +5117,19 @@ function buildCellEditor(
         contentEl = h("div", { class: "locked-empty-img" }, "🖼️ 사진 없음");
       }
     }
-    fileInput.onchange = (e) => {
+    fileInput.onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        updateCellField(
-          cell.id,
-          row,
-          contentId,
-          sectionId,
-          { imageData: ev.target.result, type: "image" },
-          rebuildRows,
-        );
-      };
-      reader.readAsDataURL(file);
+      try {
+        const data = await compressImageFile(file, 1200, 1200, 0.75);
+        updateCellField(cell.id, row, contentId, sectionId, { imageData: data, type: "image" }, rebuildRows);
+      } catch (_) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          updateCellField(cell.id, row, contentId, sectionId, { imageData: ev.target.result, type: "image" }, rebuildRows);
+        };
+        reader.readAsDataURL(file);
+      }
     };
     if (!locked) cellEl.append(fileInput);
   }
@@ -5285,7 +5306,16 @@ function renderNotes(container, contentId) {
       "button",
       {
         class: "toolbox-btn toolbox-btn-primary",
-        onclick: () => openNoteForm(contentId, null, rebuild),
+        onclick: () => {
+          Notes.create(contentId, {
+            content: "",
+            contentType: "text",
+            improvementType: "text",
+            referenceType: "text",
+            hasReference: false,
+          });
+          rebuild();
+        },
       },
       "+ 오답 추가",
     ),
@@ -5425,11 +5455,6 @@ function renderNotes(container, contentId) {
 
       if (editMode && !note.locked) {
         card.classList.add("edit-mode-row");
-        card.style.cursor = "pointer";
-        card.addEventListener("click", (e) => {
-          if (e.target.closest("button,a,input,select,textarea,[contenteditable]")) return;
-          openNoteForm(contentId, note, rebuild);
-        });
       }
 
       if (moveMode) {
@@ -5490,114 +5515,168 @@ function renderNotes(container, contentId) {
 
 function buildNoteCard(note, contentId, rebuild) {
   const locked = !!note.locked;
-  const card = h("div", {
-    class: "note-card" + (locked ? " note-card-locked" : ""),
-  });
 
-  const lockBtn = h(
-    "button",
-    {
-      class: "btn btn-sm " + (locked ? "btn-primary" : "btn-outline"),
-      style: "font-size:12px;",
-      title: locked ? "잠금 해제" : "잠금 (수정/삭제 방지)",
-      onclick: () => {
-        Notes.update(contentId, note.id, { locked: !locked });
-        rebuild();
-      },
-    },
-    locked ? "🔓 잠금 해제" : "🔒 잠금",
-  );
+  // 하위 호환: 기존 photos → contentPhotos로 취급
+  function getPhotos(field) {
+    if (field === "content") return note.contentPhotos || note.photos || [];
+    if (field === "improvement") return note.improvementPhotos || [];
+    if (field === "reference") return note.referencePhotos || [];
+    return [];
+  }
 
-  const btnGroup = h(
-    "div",
-    { style: "display:flex;gap:6px;margin-left:auto;align-items:center;" },
-    lockBtn,
-  );
+  function saveField(data) {
+    Notes.update(contentId, note.id, data);
+  }
 
-  const header = h(
-    "div",
-    { class: "note-card-header" },
+  // 컬럼 카드 빌더 (틀린 부분 / 개선점 / 참고 공통)
+  function buildColumn(title, textField, photoField, typeField, placeholder) {
+    const type = note[typeField] || "text";
+    const photos = getPhotos(textField);
+    const col = h("div", { class: "note-col-card" });
+    col.append(h("div", { class: "note-col-title" }, title));
+
+    if (!locked) {
+      col.append(h("div", { class: "note-col-type-bar" },
+        h("button", {
+          class: "cell-type-btn" + (type === "text" ? " active" : ""),
+          onclick: () => { saveField({ [typeField]: "text" }); rebuild(); },
+        }, "텍스트"),
+        h("button", {
+          class: "cell-type-btn" + (type === "photo" ? " active" : ""),
+          onclick: () => { saveField({ [typeField]: "photo" }); rebuild(); },
+        }, "사진"),
+      ));
+    }
+
+    if (type === "text") {
+      const textEl = h("div", {
+        class: "note-col-text" + (locked ? " note-col-text-locked" : ""),
+        contenteditable: locked ? "false" : "true",
+        "data-placeholder": placeholder,
+      });
+      textEl.innerHTML = note[textField] || "";
+      if (!locked) {
+        textEl.oninput = () => saveField({ [textField]: textEl.innerHTML });
+      }
+      col.append(textEl);
+    } else {
+      const photosWrap = h("div", { class: "note-col-photos" });
+      photos.forEach((p) => {
+        const wrap = h("div", { class: "note-photo-wrap" });
+        const img = h("img", {
+          src: p.imageData,
+          class: "note-photo",
+          onclick: () => window.open(p.imageData, "_blank"),
+        });
+        wrap.append(img);
+        if (!locked) {
+          const del = h("button", {
+            class: "note-photo-del",
+            onclick: () => {
+              const updated = getPhotos(textField).filter((ph) => ph.id !== p.id);
+              saveField({ [photoField]: updated });
+              rebuild();
+            },
+          }, "×");
+          wrap.append(del);
+        }
+        photosWrap.append(wrap);
+      });
+      if (!locked) {
+        const fi = h("input", { type: "file", accept: "image/*", style: "display:none" });
+        const addBtn = h("div", { class: "note-photo-add", onclick: () => fi.click() },
+          h("div", {}, "📷"),
+          h("div", {}, "사진 추가"),
+        );
+        fi.onchange = async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const data = await compressImageFile(file, 1200, 1200, 0.75);
+            const cur = getPhotos(textField);
+            saveField({ [photoField]: [...cur, { id: Date.now(), imageData: data }] });
+            rebuild();
+          } catch (_) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const cur = getPhotos(textField);
+              saveField({ [photoField]: [...cur, { id: Date.now(), imageData: ev.target.result }] });
+              rebuild();
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        photosWrap.append(fi, addBtn);
+      } else if (!photos.length) {
+        photosWrap.append(h("div", { class: "locked-empty-img" }, "🖼️ 사진 없음"));
+      }
+      col.append(photosWrap);
+    }
+    return col;
+  }
+
+  const card = h("div", { class: "note-card" + (locked ? " note-card-locked" : "") });
+
+  const lockBtn = h("button", {
+    class: "btn btn-sm " + (locked ? "btn-primary" : "btn-outline"),
+    style: "font-size:12px;",
+    title: locked ? "잠금 해제" : "잠금 (수정/삭제 방지)",
+    onclick: () => { Notes.update(contentId, note.id, { locked: !locked }); rebuild(); },
+  }, locked ? "🔓 잠금 해제" : "🔒 잠금");
+
+  const header = h("div", { class: "note-card-header" },
     note.phase ? h("span", { class: "note-phase-badge" }, note.phase) : null,
     locked ? h("span", { class: "note-locked-badge" }, "🔒 잠김") : null,
-    btnGroup,
+    h("div", { style: "display:flex;gap:6px;margin-left:auto;align-items:center;" }, lockBtn),
   );
+  card.append(header);
 
-  const content = h("div", { class: "note-content" });
-  content.innerHTML = note.content || "";
-
-  const photos = h("div", { class: "note-photos" });
-  (note.photos || []).forEach((p) => {
-    const wrap = h("div", { class: "note-photo-wrap" });
-    const img = h("img", {
-      src: p.imageData,
-      class: "note-photo",
-      onclick: () => window.open(p.imageData, "_blank"),
-    });
-    wrap.append(img);
-    if (!locked) {
-      const del = h(
-        "button",
-        {
-          class: "note-photo-del",
-          onclick: () => {
-            Notes.removePhoto(contentId, note.id, p.id);
-            rebuild();
-          },
-        },
-        "×",
-      );
-      const captionInput = h("input", {
-        class: "note-photo-caption",
-        type: "text",
-        placeholder: "사진 설명...",
-        value: p.caption || "",
-      });
-      captionInput.onblur = () =>
-        Notes.updatePhotoCaption(contentId, note.id, p.id, captionInput.value);
-      captionInput.onkeydown = (e) => {
-        if (e.key === "Enter") captionInput.blur();
-      };
-      wrap.append(del, captionInput);
-    } else if (p.caption) {
-      wrap.append(h("div", { class: "note-photo-caption-view" }, p.caption));
-    }
-    photos.append(wrap);
-  });
-
+  // 잠금 해제 상태: 페이즈 입력
   if (!locked) {
-    const fileInput = h("input", {
-      type: "file",
-      accept: "image/*",
-      style: "display:none",
+    const phaseInput = h("input", {
+      class: "form-input",
+      type: "text",
+      placeholder: "페이즈/구간 (선택)",
+      value: note.phase || "",
+      style: "margin-bottom:10px;font-size:13px;",
     });
-    const addPhoto = h(
-      "div",
-      { class: "note-photo-add", onclick: () => fileInput.click() },
-      h("div", {}, "📷"),
-      h("div", {}, "사진 추가"),
-    );
-    fileInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        Notes.addPhoto(contentId, note.id, ev.target.result);
+    phaseInput.onblur = () => {
+      const newVal = phaseInput.value.trim() || undefined;
+      if (newVal !== (note.phase || undefined)) {
+        Notes.update(contentId, note.id, { phase: newVal });
         rebuild();
-      };
-      reader.readAsDataURL(file);
+      }
     };
-    photos.append(fileInput, addPhoto);
+    card.append(phaseInput);
   }
 
-  let improvementEl = null;
-  if (note.improvement) {
-    improvementEl = h("div", { class: "note-improvement" });
-    improvementEl.innerHTML = note.improvement;
+  // 3분할 그리드
+  const hasRef = !!note.hasReference;
+  const grid = h("div", { class: "note-cols-grid " + (hasRef ? "note-cols-3" : "note-cols-2") });
+  grid.append(buildColumn("틀린 부분", "content", "contentPhotos", "contentType", "내가 틀린 내용이나 잘못 이해한 부분을 적어보세요..."));
+  grid.append(buildColumn("개선점", "improvement", "improvementPhotos", "improvementType", "어떻게 개선해야 하는지, 기억할 점을 적어보세요..."));
+
+  if (hasRef) {
+    const refCol = buildColumn("참고", "reference", "referencePhotos", "referenceType", "추가 설명, 이미지, 참고 링크 등...");
+    if (!locked) {
+      refCol.append(h("button", {
+        class: "btn btn-ghost btn-sm",
+        style: "font-size:11px;color:var(--destructive);margin-top:4px;",
+        onclick: () => { Notes.update(contentId, note.id, { hasReference: false }); rebuild(); },
+      }, "✕ 참고 삭제"));
+    }
+    grid.append(refCol);
+  } else if (!locked) {
+    const addRefWrap = h("div", { class: "note-col-add-ref" });
+    addRefWrap.append(h("button", {
+      class: "note-add-ref-btn",
+      onclick: () => { Notes.update(contentId, note.id, { hasReference: true }); rebuild(); },
+    }, "+ 참고 항목 추가"));
+    grid.append(addRefWrap);
   }
 
-  card.append(header, content);
-  if (improvementEl) card.append(improvementEl);
-  card.append(photos, h("div", { class: "note-date" }, note.createdAt));
+  card.append(grid);
+  card.append(h("div", { class: "note-date" }, note.createdAt));
   return card;
 }
 
