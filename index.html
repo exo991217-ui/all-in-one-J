@@ -3,53 +3,14 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>나만의 가계부 + 여행 플래너</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234CAF82'/><text y='68' x='50' text-anchor='middle' font-size='60' font-family='Arial,sans-serif'>✈️</text></svg>">
+  <title>장산</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234CAF82'/><rect x='8' y='28' width='84' height='44' rx='9' fill='white' opacity='.97'/><rect x='8' y='38' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><rect x='76' y='38' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><rect x='8' y='54' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><rect x='76' y='54' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><circle cx='50' cy='50' r='14' fill='none' stroke='%234CAF82' stroke-width='2' opacity='.2'/><text y='57' x='50' text-anchor='middle' font-size='24' font-family='Arial,sans-serif' fill='%234CAF82' font-weight='900'>%E2%82%A9</text></svg>">
   <link rel="stylesheet" href="style.css"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="firebase-sync.js"></script>
-
-  <!-- ✈️ SVG 아이콘 심볼 (여행 플래너용) -->
-  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-    <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-    </symbol>
-    <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="3 6 5 6 21 6"/>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-    </symbol>
-    <symbol id="icon-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-      <circle cx="12" cy="10" r="3"/>
-    </symbol>
-    <symbol id="icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-    </symbol>
-    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="20 6 9 17 4 12"/>
-    </symbol>
-    <symbol id="icon-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-      <polyline points="15 3 21 3 21 9"/>
-      <line x1="10" y1="14" x2="21" y2="3"/>
-    </symbol>
-    <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </symbol>
-    <symbol id="icon-unlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-      <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
-    </symbol>
-  </svg>
 </head>
 <body>
 
@@ -57,9 +18,9 @@
 <div id="fb-login-overlay">
   <div class="fb-login-card">
     <div class="fb-login-logo">
-      <div class="logo-circle" style="width:56px;height:56px;font-size:24px;border-radius:18px;">✈</div>
+      <div class="logo-circle" style="width:56px;height:56px;font-size:24px;border-radius:18px;">가</div>
     </div>
-    <h2 class="fb-login-title">나만의 가계부 + 여행 플래너</h2>
+    <h2 class="fb-login-title">나만의 가계부</h2>
     <p class="fb-login-sub">Google 계정으로 로그인하면<br>모든 기기에서 데이터가 동기화돼요 ☁️</p>
     <button id="fb-login-btn" class="fb-google-btn" onclick="FB_GOOGLE_LOGIN()">
       <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.5 1.2 8.9 3.2l6.6-6.6C35.5 2.5 30.1 0 24 0 14.7 0 6.7 5.5 2.9 13.5l7.7 6C12.4 13.2 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.8 37.2 46.5 31.3 46.5 24.5z"/><path fill="#FBBC05" d="M10.6 28.5c-.5-1.5-.8-3-.8-4.5s.3-3 .8-4.5l-7.7-6C1 16.5 0 20.1 0 24s1 7.5 2.9 10.5l7.7-6z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2.2 14.9-5.8l-7.5-5.8c-2 1.4-4.6 2.2-7.4 2.2-6.2 0-11.4-4.2-13.3-9.8l-7.7 6C6.7 42.5 14.7 48 24 48z"/></svg>
@@ -77,7 +38,7 @@
       <div class="logo-circle">가</div>
       <div class="logo-text">
         <div class="logo-title">나만의 가계부</div>
-        <div class="logo-sub">My Budget + Travel 🌸✈️</div>
+        <div class="logo-sub">My Budget 🌸</div>
       </div>
     </div>
     <ul class="nav-list">
@@ -113,17 +74,20 @@
         <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
         마감 아카이브
       </li>
-
-      <!-- ✈️ 여행 플래너 그룹 -->
-      <li class="nav-item-group" id="nav-group-travel">
-        <div class="nav-group-header" id="travel-nav-header" onclick="toggleTravelNavGroup()">
-          <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.62 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.53 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      <!-- 여행 플래너 그룹 -->
+      <li class="nav-item-group" id="nav-travel-group">
+        <div class="nav-group-header" onclick="App.toggleNavGroup('travel')">
+          <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013 6.76a2 2 0 011.35-1.86h2.82a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 12.21a16 16 0 006.29 6.29l1.36-1.36a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 19.09z"/><path d="M18 2l4 4-4 4"/><path d="M22 6H14a4 4 0 00-4 4v0"/></svg>
           여행 플래너
-          <span class="nav-group-arrow" id="travel-nav-arrow">›</span>
+          <span class="nav-group-arrow" id="nav-travel-arrow">∨</span>
         </div>
-        <ul class="nav-submenu" id="travel-submenu">
-          <li class="nav-sub-item active" id="travel-sub-home" onclick="switchToTravel('home')">🗺️ 내 여행</li>
-          <li class="nav-sub-item" id="travel-sub-bucket" onclick="switchToTravel('bucket')">⭐ 버킷플레이스</li>
+        <ul class="nav-submenu" id="nav-travel-submenu" style="display:none;">
+          <li class="nav-sub-item" data-tab="travel-my" onclick="App.switchTab('travel-my')">
+            🗺️ 내 여행
+          </li>
+          <li class="nav-sub-item" data-tab="travel-bucket" onclick="App.switchTab('travel-bucket')">
+            ⭐ 버킷플레이스
+          </li>
         </ul>
       </li>
 
@@ -144,7 +108,7 @@
 
   <main class="main-content">
 
-    <!-- ===== 가계부 탭들 (기존 탭 콘텐츠 placeholder - app.js가 렌더링함) ===== -->
+    <!-- ===== DASHBOARD ===== -->
     <section class="tab-content active" id="tab-dashboard">
       <div class="page-header">
         <div>
@@ -160,8 +124,14 @@
           </div>
         </div>
       </div>
+
+      <!-- 2-column layout -->
       <div class="dash-layout">
+
+        <!-- LEFT MAIN COLUMN -->
         <div class="dash-main-col">
+
+          <!-- 잔여 예산 배너 (저축률 우측 포함) -->
           <div class="budget-banner dash-banner-flex" id="dash-budget-banner">
             <div class="banner-left">
               <div class="banner-tag">✨ 잔여 예산</div>
@@ -174,57 +144,108 @@
               <div class="banner-sr-amt" id="dash-banner-sr-amt">저축금액 0원</div>
             </div>
           </div>
+
+          <!-- 수입/지출/잔액/건수 -->
           <div class="dash-ledger-grid">
-            <div class="dash-ledger-box green"><div class="dash-ledger-label"><span class="dlb-icon green"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>수입</div><div class="dash-ledger-val" id="dash-led-income">0원</div></div>
-            <div class="dash-ledger-box red"><div class="dash-ledger-label"><span class="dlb-icon red"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg></span>지출</div><div class="dash-ledger-val" id="dash-led-expense">0원</div></div>
-            <div class="dash-ledger-box blue"><div class="dash-ledger-label"><span class="dlb-icon blue"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>잔액</div><div class="dash-ledger-val" id="dash-led-balance">0원</div></div>
-            <div class="dash-ledger-box purple"><div class="dash-ledger-label"><span class="dlb-icon purple"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>건수</div><div class="dash-ledger-val" id="dash-led-count">0건</div></div>
+            <div class="dash-ledger-box green">
+              <div class="dash-ledger-label">
+                <span class="dlb-icon green">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </span>
+                수입
+              </div>
+              <div class="dash-ledger-val" id="dash-led-income">0원</div>
+            </div>
+            <div class="dash-ledger-box red">
+              <div class="dash-ledger-label">
+                <span class="dlb-icon red">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+                </span>
+                지출
+              </div>
+              <div class="dash-ledger-val" id="dash-led-expense">0원</div>
+            </div>
+            <div class="dash-ledger-box blue">
+              <div class="dash-ledger-label">
+                <span class="dlb-icon blue">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </span>
+                잔액
+              </div>
+              <div class="dash-ledger-val" id="dash-led-balance">0원</div>
+            </div>
+            <div class="dash-ledger-box purple">
+              <div class="dash-ledger-label">
+                <span class="dlb-icon purple">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                </span>
+                건수
+              </div>
+              <div class="dash-ledger-val" id="dash-led-count">0건</div>
+            </div>
           </div>
+
+          <!-- 변동 지출 도넛 차트 -->
           <div class="dash-var-card" id="dash-var-card">
             <div class="dash-var-header" onclick="App.toggleDashVarSection()">
-              <div class="dash-var-title-row"><span class="dash-var-icon">🛒</span><span class="dash-var-label">변동 지출</span><span class="dash-var-total" id="dash-variable-total">0원</span></div>
-              <div class="dash-var-mode-btns" onclick="event.stopPropagation()"><button class="dvm-btn active" id="dvm-btn-current" onclick="App.setDashVarMode('current')">이번달</button><button class="dvm-btn" id="dvm-btn-avg3" onclick="App.setDashVarMode('avg3')">3개월 평균</button></div>
+              <div class="dash-var-title-row">
+                <span class="dash-var-icon">🛒</span>
+                <span class="dash-var-label">변동 지출</span>
+                <span class="dash-var-total" id="dash-variable-total">0원</span>
+              </div>
+              <div class="dash-var-mode-btns" onclick="event.stopPropagation()">
+                <button class="dvm-btn active" id="dvm-btn-current" onclick="App.setDashVarMode('current')">이번달</button>
+                <button class="dvm-btn" id="dvm-btn-avg3" onclick="App.setDashVarMode('avg3')">3개월 평균</button>
+              </div>
               <span class="expand-arrow" id="dash-var-arrow">∨</span>
             </div>
             <div class="dash-var-body" id="dash-var-body">
               <div class="dash-donut-row">
-                <div class="dash-donut-svg-wrap"><div id="dash-donut-svg"></div><div id="dash-donut-tip" class="dash-donut-tip" style="display:none;"></div></div>
+                <div class="dash-donut-svg-wrap">
+                  <div id="dash-donut-svg"></div>
+                  <!-- 툴팁 -->
+                  <div id="dash-donut-tip" class="dash-donut-tip" style="display:none;"></div>
+                </div>
                 <div id="dash-donut-legend" class="dash-donut-legend"></div>
               </div>
             </div>
           </div>
+
+          <!-- 자산 현황 -->
           <div class="section-title" style="margin-top:20px;">자산 현황</div>
-          <div class="dash-cards" id="dash-asset-section-wrap">
-            <div class="dash-row" onclick="App.toggleDashSection('asset')"><span class="dash-row-label">💰 자산</span><span class="dash-row-val" id="dash-asset-total">0원</span><span class="expand-arrow" id="dash-asset-arrow">∨</span></div>
-            <div class="dash-collapse" id="dash-asset-body"></div>
-            <div class="dash-row" onclick="App.toggleDashSection('stock')"><span class="dash-row-label">📈 주식</span><span class="dash-row-val" id="dash-stock-total">0원</span><span class="expand-arrow" id="dash-stock-arrow">∨</span></div>
-            <div class="dash-collapse" id="dash-stock-body"></div>
-            <div class="dash-row" style="cursor:default;font-weight:700;"><span class="dash-row-label">🏦 총 자산</span><span class="dash-row-val" id="dash-total-asset" style="color:var(--green);font-size:1.05rem;">0원</span></div>
-          </div>
-          <div class="section-title" style="margin-top:20px;">구독 / 고정 지출</div>
-          <div class="dash-cards" id="dash-sub-section-wrap">
-            <div class="dash-row" onclick="App.toggleDashSection('sub')"><span class="dash-row-label">🔄 구독 서비스</span><span class="dash-row-val" id="dash-sub-total">0원/월</span><span class="expand-arrow" id="dash-sub-arrow">∨</span></div>
-            <div class="dash-collapse" id="dash-sub-body"></div>
-          </div>
-          <div id="dash-auto-notice" style="display:none;margin-top:16px;"></div>
-          <div id="dash-weekly-wrap" style="margin-top:20px;"></div>
-        </div>
-        <div class="dash-side-col">
-          <div class="section-title">예산 현황</div>
-          <div class="dash-cards" id="dash-budget-section-wrap">
-            <div class="dash-row" onclick="App.toggleDashSection('budget')"><span class="dash-row-label">📊 예산 카테고리</span><span class="dash-row-val" id="dash-budget-used">0원</span><span class="expand-arrow" id="dash-budget-arrow">∨</span></div>
-            <div class="dash-collapse" id="dash-budget-body"></div>
-          </div>
-          <div class="section-title" style="margin-top:16px;">절약 / 저축 현황</div>
           <div class="dash-cards">
-            <div class="dash-row" onclick="App.toggleDashSection('savings')"><span class="dash-row-label">🎯 저축 목표</span><span class="dash-row-val" id="dash-savings-pct">0%</span><span class="expand-arrow" id="dash-savings-arrow">∨</span></div>
-            <div class="dash-collapse" id="dash-savings-body"></div>
+            <div class="dash-row" onclick="App.toggleDashSection('asset')">
+              <div class="dash-row-left"><span class="dash-icon">🏦</span><span>총 자산</span></div>
+              <div class="dash-row-right">
+                <span class="dash-value purple" id="dash-asset-total">0원</span>
+                <span class="expand-arrow" id="dash-asset-arrow">∨</span>
+              </div>
+            </div>
+            <div class="dash-expand" id="dash-asset-expand"></div>
+            <div class="dash-row" onclick="App.toggleDashSection('stock')">
+              <div class="dash-row-left"><span class="dash-icon">📈</span><span>주식 평가액</span></div>
+              <div class="dash-row-right">
+                <span class="dash-value teal" id="dash-stock-total">0원</span>
+                <span class="expand-arrow" id="dash-stock-arrow">∨</span>
+              </div>
+            </div>
+            <div class="dash-expand" id="dash-stock-expand"></div>
           </div>
-          <div class="section-title" style="margin-top:16px;">이달의 메모</div>
-          <div class="dash-memo-card" id="dash-memo-card"></div>
-          <div id="dash-ssb-wrap" style="margin-top:16px;"></div>
+
+        </div><!-- /dash-main-col -->
+
+        <!-- RIGHT COLUMN: 최근 내역 -->
+        <div class="dash-right-col">
+          <div class="dash-recent-header">
+            <span class="dash-recent-title">최근 내역</span>
+          </div>
+          <div class="dash-recent-list" id="dash-recent-list">
+            <div style="color:var(--text-sub);font-size:13px;text-align:center;padding:32px 0;">내역 없음</div>
+          </div>
+          <button class="dash-more-btn" onclick="App.switchTab('ledger')">더 보기 ↓</button>
         </div>
-      </div>
+
+      </div><!-- /dash-layout -->
     </section>
 
     <!-- ===== INCOME / EXPENSE ===== -->
@@ -344,7 +365,6 @@
       </div>
     </section>
 
-    <!-- ===== CREDIT CARD
     <!-- ===== CREDIT CARD + INSTALLMENT ===== -->
     <section class="tab-content" id="tab-credit">
       <div class="page-header">
@@ -406,7 +426,6 @@
       </div>
     </section>
 
-    <!-- ===== ASSETS
     <!-- ===== ASSETS ===== -->
     <section class="tab-content" id="tab-assets">
       <div class="page-header">
@@ -443,7 +462,6 @@
       </div>
     </section>
 
-    <!-- ===== 캘린더
     <!-- ===== 캘린더 ===== -->
     <section class="tab-content" id="tab-calendar">
       <div class="page-header">
@@ -500,7 +518,6 @@
       <div id="savings-goals-container" style="display:none"></div>
     </section>
 
-    <!-- ===== LEDGER
     <!-- ===== LEDGER ===== -->
     <section class="tab-content" id="tab-ledger">
       <div class="page-header">
@@ -582,473 +599,33 @@
       <div id="ledger-list"></div>
     </section>
 
-    <!-- ===== ANALYSIS
-    <section class="tab-content" id="tab-analysis"><div id="analysis-content"></div></section>
-    <section class="tab-content" id="tab-archive"><div id="archive-content"></div></section>
-    <section class="tab-content" id="tab-settings"><div id="settings-content"></div></section>
+    <!-- ===== ANALYSIS ===== -->
+    <section class="tab-content" id="tab-analysis">
+      <div id="analysis-content"></div>
+    </section>
 
-    <!-- ===== ✈️ 여행 플래너 탭 ===== -->
-    <section class="tab-content" id="tab-travel">
+    <section class="tab-content" id="tab-archive">
+      <div id="archive-content"></div>
+    </section>
 
-      <!-- 서브탭 바 -->
-      <div class="travel-subtab-bar">
-        <button class="travel-subtab active" id="travel-subtab-home" onclick="showTravelPage('home')">🗺️ 내 여행</button>
-        <button class="travel-subtab" id="travel-subtab-bucket" onclick="showTravelPage('bucket')">⭐ 버킷플레이스</button>
-      </div>
+    <section class="tab-content" id="tab-settings">
+      <div id="settings-content"></div>
+    </section>
 
-      <!-- ====== HOME PAGE ====== -->
-      <div id="travel-page-home" class="travel-page active">
-        <div class="home-layout">
-          <div class="home-left">
-            <div class="home-header">
-              <div>
-                <h1 class="page-title">내 여행 🗺️</h1>
-                <p class="page-sub">나만의 여행 기록을 관리해요</p>
-              </div>
-              <button class="btn btn-primary" onclick="toggleCreateTrip()">＋ 새 여행</button>
-            </div>
+    <!-- ===== 여행 플래너 — 내 여행 ===== -->
+    <section class="tab-content" id="tab-travel-my">
+      <div id="travel-my-content"></div>
+    </section>
 
-            <div id="trip-create-panel" class="inline-panel hidden">
-              <div class="inline-panel-title">✈️ 새 여행 만들기</div>
-              <div class="form-row">
-                <div class="form-group full"><label>여행 제목 *</label><input type="text" id="ct-title" placeholder="예: 삿포로 여행" /></div>
-              </div>
-              <div class="form-row">
-                <div class="form-group"><label>나라</label><input type="text" id="ct-country" placeholder="예: 일본" /></div>
-                <div class="form-group"><label>도시</label><input type="text" id="ct-city" placeholder="예: 삿포로" /></div>
-              </div>
-              <div class="form-row">
-                <div class="form-group"><label>시작일</label><input type="date" id="ct-start" /></div>
-                <div class="form-group"><label>종료일</label><input type="date" id="ct-end" /></div>
-              </div>
-              <div class="form-row">
-                <div class="form-group"><label>동행자</label><input type="text" id="ct-companions" placeholder="예: 혼자, 친구 2명" /></div>
-              </div>
-              <div class="panel-actions">
-                <button class="btn btn-ghost btn-sm" onclick="toggleCreateTrip()">취소</button>
-                <button class="btn btn-primary btn-sm" onclick="createTrip()">만들기</button>
-              </div>
-            </div>
-
-            <div class="chip-bar">
-              <button class="chip chip-special" onclick="showPackingTips(this)">📦 준비물과 팁</button>
-              <button class="chip active" onclick="filterTrips('all',this)">전체</button>
-              <button class="chip" onclick="filterTrips('overseas',this)">해외여행 🌍</button>
-              <button class="chip" onclick="filterTrips('domestic',this)">국내여행 🏔️</button>
-            </div>
-
-            <div id="trips-container"></div>
-
-            <!-- 준비물과 팁 패널 -->
-            <div id="packing-tips-panel" class="hidden">
-              <div class="pt-subtab-bar">
-                <button class="pt-subtab active" onclick="showPTSubtab('packing',this)">🧳 준비물</button>
-                <button class="pt-subtab" onclick="showPTSubtab('tips',this)">💡 유용한 팁</button>
-              </div>
-              <div id="pt-packing" class="pt-section">
-                <div class="packing-grid">
-                  <div class="packing-col">
-                    <div class="packing-col-header">
-                      <span>🧳 공통 준비물</span>
-                      <div class="packing-bulk-actions">
-                        <button class="packing-bulk-btn" onclick="checkAllPacking('common')">전체 체크</button>
-                        <button class="packing-bulk-btn packing-bulk-btn-clear" onclick="uncheckAllPacking('common')">전체 해제</button>
-                        <button id="packing-lock-btn-common" class="packing-bulk-btn packing-bulk-btn-clear" onclick="togglePackingLock('common')">🔒 잠금</button>
-                        <span class="packing-progress" id="packing-progress-common">0 / 0</span>
-                      </div>
-                    </div>
-                    <div id="packing-list-common" class="packing-list"></div>
-                    <button id="packing-add-btn-common" class="packing-add-btn" onclick="addPackingItem('common')">＋ 항목 추가</button>
-                  </div>
-                  <div class="packing-col">
-                    <div class="packing-col-header">
-                      <span>✈️ 해외 준비물</span>
-                      <div class="packing-bulk-actions">
-                        <button class="packing-bulk-btn" onclick="checkAllPacking('overseas')">전체 체크</button>
-                        <button class="packing-bulk-btn packing-bulk-btn-clear" onclick="uncheckAllPacking('overseas')">전체 해제</button>
-                        <button id="packing-lock-btn-overseas" class="packing-bulk-btn packing-bulk-btn-clear" onclick="togglePackingLock('overseas')">🔒 잠금</button>
-                        <span class="packing-progress" id="packing-progress-overseas">0 / 0</span>
-                      </div>
-                    </div>
-                    <div id="packing-list-overseas" class="packing-list"></div>
-                    <button id="packing-add-btn-overseas" class="packing-add-btn" onclick="addPackingItem('overseas')">＋ 항목 추가</button>
-                  </div>
-                </div>
-              </div>
-              <div id="pt-tips" class="pt-section" style="display:none">
-                <div class="tips-header-bar">
-                  <h3 class="tips-section-title">💡 유용한 팁</h3>
-                  <button class="btn-tip-write" onclick="openTipCompose()">＋ 글 작성</button>
-                </div>
-                <div id="tip-compose" class="tip-compose hidden">
-                  <input type="text" id="tip-title-input" class="tip-form-input" placeholder="제목을 입력하세요" />
-                  <div class="tip-tag-input-row">
-                    <input type="text" id="tip-tag-input" class="tip-form-input tip-tag-field" placeholder="태그 입력 후 Enter (예: 일본  공항)" onkeydown="onTipTagKey(event)" />
-                    <div id="tip-tag-preview" class="tip-tag-preview"></div>
-                  </div>
-                  <textarea id="tip-content-input" class="tip-form-textarea" placeholder="내용을 작성하세요..."></textarea>
-                  <div class="tip-compose-actions">
-                    <button class="btn btn-ghost btn-sm" onclick="closeTipCompose()">취소</button>
-                    <button class="btn-tip-write" onclick="saveTip()">저장</button>
-                  </div>
-                </div>
-                <div id="tip-tag-filter-bar" class="tip-tag-filter-bar"></div>
-                <div id="tips-list" class="tips-list"></div>
-              </div>
-            </div>
-          </div><!-- end home-left -->
-
-          <!-- 우측: 여행 계획 패널 -->
-          <div class="home-right">
-            <div class="plan-panel-wrap">
-              <div class="plan-panel-header">
-                <span class="plan-panel-title">📅 계획된 여행 일정</span>
-                <button class="btn btn-primary btn-sm" onclick="openAddPlanForm()">＋ 추가</button>
-              </div>
-              <div id="plan-add-form" class="plan-add-form hidden">
-                <div class="plan-add-form-inner">
-                  <div class="plan-add-row">
-                    <div class="form-group full"><label>장소 *</label><input type="text" id="plan-add-place" placeholder="예: 도쿄, 일본" /></div>
-                  </div>
-                  <div class="plan-add-row">
-                    <div class="form-group"><label>시작일</label><input type="date" id="plan-add-start" /></div>
-                    <div class="form-group"><label>종료일</label><input type="date" id="plan-add-end" /></div>
-                  </div>
-                  <div class="plan-add-row">
-                    <div class="form-group full"><label>누구와?</label><input type="text" id="plan-add-companions" placeholder="예: 혼자, 친구 2명" /></div>
-                  </div>
-                  <div class="plan-add-actions">
-                    <button class="btn btn-ghost btn-sm" onclick="closeAddPlanForm()">취소</button>
-                    <button class="btn btn-primary btn-sm" onclick="saveNewPlan()">추가</button>
-                  </div>
-                </div>
-              </div>
-              <div id="plan-list" class="plan-list"></div>
-            </div>
-          </div><!-- end home-right -->
-        </div><!-- end home-layout -->
-      </div><!-- end travel-page-home -->
-
-      <!-- ====== TRIP DETAIL PAGE ====== -->
-      <div id="travel-page-trip" class="travel-page">
-        <button class="back-btn" onclick="showTravelPage('home')">← 목록으로</button>
-
-        <!-- Trip Info (Editable) -->
-        <div class="trip-info-card">
-          <div class="trip-info-title-row">
-            <input class="trip-info-title" id="trip-title-input" value="" onblur="saveTripField('title', this.value)" />
-            <span class="edit-hint">클릭해서 수정</span>
-          </div>
-          <div class="trip-info-grid">
-            <div class="info-item">
-              <label>📅 시작일</label>
-              <input class="info-editable date-input" type="date" id="trip-start-input" onblur="saveTripField('startDate', this.value)" />
-            </div>
-            <div class="info-item">
-              <label>📅 종료일</label>
-              <input class="info-editable date-input" type="date" id="trip-end-input" onblur="saveTripField('endDate', this.value)" />
-            </div>
-            <div class="info-item">
-              <label>👥 동행자</label>
-              <input class="info-editable" id="trip-companions-input" placeholder="혼자" onblur="saveTripField('companions', this.value)" />
-            </div>
-            <div class="info-item">
-              <label>📍 여행지</label>
-              <div class="info-location-row">
-                <input class="info-editable" id="trip-location-input" placeholder="도시, 나라" onblur="saveTripFieldLocation(this.value)" />
-                <button class="map-entry-btn" id="map-entry-btn" onclick="onMapEntryBtnClick()" title="지도 연결">
-                  <svg width="15" height="15"><use href="#icon-map"/></svg>
-                </button>
-              </div>
-            </div>
-            <div class="info-item">
-              <label>💰 총 경비</label>
-              <strong id="trip-budget-display" style="font-size:0.9rem;font-weight:800;color:#4CAF82">0원</strong>
-            </div>
-          </div>
-          <div class="currency-row">
-            <label>💱 환율</label>
-            <select id="currency-select" style="width:auto;padding:5px 10px" onchange="onCurrencyChange(this.value)">
-              <option value="">외화 선택 안함</option>
-              <option value="JPY">엔화 (JPY)</option>
-              <option value="EUR">유로 (EUR)</option>
-              <option value="USD">달러 (USD)</option>
-              <option value="CNY">위안 (CNY)</option>
-              <option value="THB">바트 (THB)</option>
-              <option value="VND">동 (VND)</option>
-              <option value="AUD">호주달러 (AUD)</option>
-            </select>
-            <span class="rate-display hidden" id="rate-display">
-              1<span id="currency-symbol"></span> = <span class="rate-value" id="rate-value-display" onclick="editRate()">-</span>원
-            </span>
-          </div>
-        </div>
-
-        <!-- 예약 목록 -->
-        <div class="card">
-          <div class="card-header"><h3>🎫 예약 목록</h3></div>
-          <div class="card-body res-card-body">
-            <div class="res-3col">
-              <div class="res-col">
-                <div class="res-col-header"><span>✈️ 항공</span><button class="res-col-add-btn" onclick="openResForm('항공')" title="항공 추가">＋</button></div>
-                <div id="res-form-항공" class="res-add-form hidden"></div>
-                <div id="res-list-항공"><div class="empty-msg" style="padding:14px 0;font-size:0.8rem">항공 예약 없음</div></div>
-              </div>
-              <div class="res-col">
-                <div class="res-col-header"><span>🏨 숙소</span><button class="res-col-add-btn" onclick="openResForm('숙소')" title="숙소 추가">＋</button></div>
-                <div id="res-form-숙소" class="res-add-form hidden"></div>
-                <div id="res-list-숙소"><div class="empty-msg" style="padding:14px 0;font-size:0.8rem">숙소 예약 없음</div></div>
-              </div>
-              <div class="res-col">
-                <div class="res-col-header"><span>📋 기타</span><button class="res-col-add-btn" onclick="openResForm('기타')" title="기타 추가">＋</button></div>
-                <div id="res-form-기타" class="res-add-form hidden"></div>
-                <div id="res-list-기타"><div class="empty-msg" style="padding:14px 0;font-size:0.8rem">기타 예약 없음</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 여행 일정 -->
-        <div class="section-card">
-          <div class="section-header">
-            <span class="section-title">📅 여행 일정</span>
-            <div class="section-toolbar">
-              <div class="view-toggle">
-                <button class="btn btn-outline btn-sm view-active" id="view-table-btn" onclick="setView('table')">목록</button>
-                <button class="btn btn-outline btn-sm" id="view-time-btn" onclick="setView('timetable')">시간표</button>
-              </div>
-              <button class="btn btn-outline btn-sm" style="margin-left:6px;font-size:.78rem" onclick="exportTripSummary()" title="시간표를 이미지로 저장">📷 여행 요약</button>
-            </div>
-          </div>
-          <div class="section-body">
-            <div id="schedule-table-view">
-              <div class="table-wrap">
-                <table class="data-table" id="schedule-table">
-                  <thead>
-                    <tr>
-                      <th style="width:72px">분류</th><th style="width:54px">날짜</th><th style="width:54px">시간</th>
-                      <th style="width:140px">장소</th><th>내용</th><th style="width:90px">교통편</th>
-                      <th style="width:120px">비고</th><th style="width:32px;text-align:center">지도</th>
-                      <th style="width:32px;padding:4px;text-align:center"></th>
-                    </tr>
-                  </thead>
-                  <tbody id="schedule-tbody"></tbody>
-                </table>
-              </div>
-              <div id="schedule-add-wrap" class="add-form-wrap hidden">
-                <div class="add-form-inner">
-                  <div class="add-form-row">
-                    <select id="sch-add-cat" style="min-width:72px"><option value="">분류</option></select>
-                    <input type="date" id="sch-add-date" class="date-input" />
-                    <input type="time" id="sch-add-time" />
-                    <input type="text" id="sch-add-loc" placeholder="장소" />
-                    <input type="text" id="sch-add-content" placeholder="내용" style="flex:2" />
-                    <input type="text" id="sch-add-trans" placeholder="교통편" style="max-width:90px" />
-                    <input type="text" id="sch-add-notes" placeholder="비고" style="max-width:110px" />
-                    <input type="text" id="sch-add-mapurl" placeholder="지도 링크 또는 &lt;iframe&gt; 코드" style="max-width:160px" />
-                  </div>
-                  <div class="add-form-actions">
-                    <button class="btn btn-ghost btn-sm" onclick="toggleScheduleAddForm()">취소</button>
-                    <button class="btn btn-primary btn-sm" onclick="saveScheduleRow()">저장</button>
-                  </div>
-                </div>
-              </div>
-              <div class="section-add-btn-row">
-                <button class="btn btn-outline btn-sm" onclick="toggleScheduleAddForm()" id="sch-add-toggle-btn">＋ 추가</button>
-              </div>
-            </div>
-            <div id="schedule-timetable-view" class="hidden"></div>
-          </div>
-        </div>
-
-        <!-- 지출 내역 -->
-        <div class="section-card">
-          <div class="section-header">
-            <span class="section-title">💸 지출 내역</span>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div class="summary-row">
-                <span id="expense-summary-display" class="summary-val">합계 0원</span>
-                <span class="hint" id="rate-hint"></span>
-              </div>
-            </div>
-          </div>
-          <div class="section-body">
-            <div class="table-wrap">
-              <table class="data-table" id="expense-table">
-                <thead>
-                  <tr>
-                    <th style="width:72px">분류</th><th style="width:62px">날짜</th><th style="min-width:140px">제목</th>
-                    <th style="text-align:right;width:90px">원화</th><th style="text-align:right;width:80px" id="foreign-col-header">외화</th>
-                    <th style="width:32px;padding:4px;text-align:center"></th>
-                  </tr>
-                </thead>
-                <tbody id="expense-tbody"></tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="3"><strong>합계</strong></td>
-                    <td style="text-align:right" id="total-krw-display"><strong>0원</strong></td>
-                    <td style="text-align:right" id="total-foreign-display"></td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            <div id="expense-add-wrap" class="add-form-wrap hidden">
-              <div class="add-form-inner">
-                <div class="add-form-row">
-                  <select id="exp-add-cat" style="min-width:72px"><option value="">분류</option></select>
-                  <input type="date" id="exp-add-date" class="date-input" />
-                  <input type="text" id="exp-add-title" placeholder="제목 *" style="flex:2" />
-                  <input type="number" id="exp-add-krw" placeholder="원화" oninput="autoCalcForeign()" style="text-align:right;width:90px" />
-                  <input type="number" id="exp-add-foreign" placeholder="외화" oninput="autoCalcKrw()" style="text-align:right;width:80px" />
-                </div>
-                <div class="add-form-actions">
-                  <button class="btn btn-ghost btn-sm" onclick="toggleExpenseAddForm()">취소</button>
-                  <button class="btn btn-primary btn-sm" onclick="saveExpenseRow()">저장</button>
-                </div>
-              </div>
-            </div>
-            <div class="section-add-btn-row">
-              <button class="btn btn-outline btn-sm" onclick="toggleExpenseAddForm()">＋ 추가</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 가고 싶은 곳 -->
-        <div class="section-card">
-          <div class="section-header">
-            <span class="section-title">⭐ 가고싶은 곳</span>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="text" id="trip-bucket-region" placeholder="지역 검색" style="width:120px;padding:6px 11px;font-size:0.79rem;border-radius:8px;border:1.5px solid #e5e7eb" oninput="onTripBucketFilterChange()" />
-              <button class="btn btn-primary btn-sm" onclick="openTripBucketModal()">＋ 추가</button>
-            </div>
-          </div>
-          <div class="section-body" style="padding:16px 18px">
-            <div id="trip-bucket-board" class="wish-grid"></div>
-          </div>
-        </div>
-      </div><!-- end travel-page-trip -->
-
-      <!-- ====== BUCKET PAGE ====== -->
-      <div id="travel-page-bucket" class="travel-page">
-        <div class="home-header">
-          <div>
-            <h1 class="page-title">버킷플레이스 ⭐</h1>
-            <p class="page-sub">가보고 싶은 장소를 모아두는 곳</p>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="openBucketAddModal()">＋ 추가</button>
-        </div>
-        <div class="bucket-region-tabs">
-          <button class="region-tab active" onclick="setBucketRegionTab('all',this)">전체</button>
-          <button class="region-tab" onclick="setBucketRegionTab('domestic',this)">🏔️ 국내</button>
-          <button class="region-tab" onclick="setBucketRegionTab('overseas',this)">🌍 해외</button>
-        </div>
-        <div class="bucket-list-wrap">
-          <table class="bucket-list-table" id="bucket-list-table">
-            <thead>
-              <tr>
-                <th style="width:26px">✓</th>
-                <th class="col-sortable" data-col="category">유형<button class="col-menu-btn" onclick="toggleColMenu('category',this)">⋮</button><div class="col-dropdown" id="col-dd-category"></div></th>
-                <th class="col-sortable" data-col="country">나라<button class="col-menu-btn" onclick="toggleColMenu('country',this)">⋮</button><div class="col-dropdown" id="col-dd-country"></div></th>
-                <th class="col-sortable" data-col="region">지역<button class="col-menu-btn" onclick="toggleColMenu('region',this)">⋮</button><div class="col-dropdown" id="col-dd-region"></div></th>
-                <th class="col-sortable" data-col="placeName">장소<button class="col-menu-btn" onclick="toggleColMenu('placeName',this)">⋮</button><div class="col-dropdown" id="col-dd-placeName"></div></th>
-                <th class="col-sortable" data-col="season">계절<button class="col-menu-btn" onclick="toggleColMenu('season',this)">⋮</button><div class="col-dropdown" id="col-dd-season"></div></th>
-                <th>비고</th>
-                <th style="width:32px;padding:4px;text-align:center"></th>
-              </tr>
-            </thead>
-            <tbody id="bucket-list-tbody"></tbody>
-          </table>
-        </div>
-      </div><!-- end travel-page-bucket -->
-
-    </section><!-- end tab-travel -->
+    <!-- ===== 여행 플래너 — 버킷플레이스 ===== -->
+    <section class="tab-content" id="tab-travel-bucket">
+      <div id="travel-bucket-content"></div>
+    </section>
 
   </main>
 </div>
 
-<!-- ===== 가계부 모달들 ===== -->
-<div id="modal-overlay" class="modal-backdrop" onclick="App.closeModal()"></div>
-<div class="modal" id="modal-bcsync">
-  <div class="modal-header">🔗 가계부 카테고리 연동 — <span id="bcsync-cat-name"></span></div>
-  <input type="hidden" id="bcsync-cat-id"/>
-  <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;line-height:1.6;">선택한 가계부 카테고리의 지출 합계를 이 예산 항목의 실지출로 자동 반영합니다.<br>여러 카테고리를 동시에 선택할 수 있습니다.</div>
-  <div id="bcsync-body" class="bcsync-body"></div>
-  <div class="modal-actions"><button class="btn-cancel" onclick="App.closeModal()">취소</button><button class="btn-save" onclick="App.saveBudgetCatSync()">저장</button></div>
-</div>
-<div class="modal" id="modal-budget-auto">
-  <div class="modal-header">✨ 예산 자동 설정</div>
-  <div id="modal-budget-auto-body"></div>
-  <div class="modal-actions"><button class="btn-cancel" onclick="App.closeModal()">취소</button><button class="btn-save" onclick="App.applyBudgetSuggestions()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>이 예산으로 설정</button></div>
-</div>
-<div class="modal" id="modal-budget">
-  <div class="modal-header">📊 예산 카테고리 <span id="modal-budget-edit-label">추가</span></div>
-  <input type="hidden" id="modal-budget-id"/>
-  <div class="form-group"><label>카테고리 이름</label><input type="text" id="mb-name" class="form-input" placeholder="식비, 생필품, 카페..."/></div>
-  <div class="form-group"><label>예산 금액 (원)</label><input type="text" inputmode="numeric" id="mb-budget" class="form-input" placeholder="200,000" oninput="App.numInputFmt(this)"/></div>
-  <div class="savings-classify-row" style="margin-bottom:12px;"><input type="checkbox" id="mb-synced" checked/><label for="mb-synced" style="cursor:pointer;font-size:13px;">🔗 동기화 — 선택 달 이후 모든 달에 동일 예산 적용 (이전 달 유지)</label></div>
-  <div id="mb-food-manual-row" style="display:none;flex-direction:column;gap:8px;margin-bottom:12px;padding:12px;background:var(--green-light);border-radius:10px;border:1.5px solid #4CAF8222;">
-    <div style="font-size:12px;color:var(--green);font-weight:700;">🍽️ 식비 특별 설정</div>
-    <div class="savings-classify-row" style="margin:0;background:white;border-radius:8px;padding:8px 10px;border:1.5px solid #4CAF8233;"><input type="checkbox" id="mb-food-cal-sync"/><div style="display:flex;flex-direction:column;gap:2px;"><label for="mb-food-cal-sync" style="cursor:pointer;font-size:13px;font-weight:700;color:#2E7D32;">🗓️ 캘린더 연동</label><span style="font-size:11px;color:var(--text-sub);">식비 캘린더 합계를 이달 실제 지출로 반영합니다</span></div></div>
-    <div class="savings-classify-row" style="margin:0;"><input type="checkbox" id="mb-food-budget-manual"/><label for="mb-food-budget-manual" style="cursor:pointer;font-size:12px;color:var(--text-sub);">직접 설정 — 위 예산 금액을 사용합니다 (캘린더 무시)</label></div>
-  </div>
-  <div class="modal-actions"><button class="btn-cancel" onclick="App.closeModal()">취소</button><button class="btn-save" onclick="App.saveBudgetCategory()">저장</button></div>
-</div>
-<div class="modal" id="modal-cal">
-  <div class="modal-header">🗓️ 일정 <span id="modal-cal-month-label"></span></div>
-  <input type="hidden" id="modal-cal-month"/>
-  <input type="hidden" id="modal-cal-id"/>
-  <div class="cal-food-hint" id="cal-food-hint" style="display:none;background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--green);"></div>
-  <div class="form-group"><label>내용</label><input type="text" id="mc-event-name" class="form-input" placeholder="카메라 적금"/></div>
-  <div class="form-group"><label>목표 금액 (원, 선택)</label><input type="text" inputmode="numeric" id="mc-event-amount" class="form-input" placeholder="50,000" oninput="App.numInputFmt(this)"/></div>
-  <div class="form-group" id="mc-saved-group"><label>실 저축금액 (원, 선택)</label><input type="text" inputmode="numeric" id="mc-event-saved" class="form-input" placeholder="실제 저축한 금액" oninput="App.numInputFmt(this)"/></div>
-  <div class="form-group" style="display:flex;align-items:center;gap:10px;background:var(--purple-light);border-radius:10px;padding:10px 14px;"><input type="checkbox" id="mc-is-plan" style="width:16px;height:16px;accent-color:#5E4BC4;cursor:pointer;flex-shrink:0;"/><label for="mc-is-plan" style="font-size:13px;font-weight:700;color:#5E4BC4;cursor:pointer;margin:0;">[계획] 뱃지로 표시 — 연간 캘린더에 계획 항목으로 등록됩니다</label></div>
-  <div class="modal-actions"><button class="btn-cancel" onclick="App.closeModal()">취소</button><button class="btn-save" onclick="App.saveCalEvent()">저장</button></div>
-</div>
-<div class="modal" id="modal-savings">
-  <div class="modal-header">🎯 저축 목표 추가</div>
-  <input type="hidden" id="modal-savings-id"/>
-  <div class="form-group"><label>목표명</label><input type="text" id="msg-name" class="form-input" placeholder="호주 여행 적금..."/></div>
-  <div class="form-group"><label>목표 금액 (원)</label><input type="text" inputmode="numeric" id="msg-target" class="form-input" placeholder="5,000,000" oninput="App.numInputFmt(this)"/></div>
-  <div class="form-group"><label>현재 저축액 (원)</label><input type="text" inputmode="numeric" id="msg-saved" class="form-input" placeholder="0" oninput="App.numInputFmt(this)"/></div>
-  <div class="form-group"><label>색상</label>
-    <div class="color-picker-row" style="display:flex;gap:8px;margin-top:6px;">
-      <button class="color-swatch active" data-color="#A29BFE" style="background:#A29BFE;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#A29BFE',this)"></button>
-      <button class="color-swatch" data-color="#43C98A" style="background:#43C98A;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#43C98A',this)"></button>
-      <button class="color-swatch" data-color="#74B9FF" style="background:#74B9FF;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#74B9FF',this)"></button>
-      <button class="color-swatch" data-color="#FD79A8" style="background:#FD79A8;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#FD79A8',this)"></button>
-      <button class="color-swatch" data-color="#FDCB6E" style="background:#FDCB6E;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#FDCB6E',this)"></button>
-      <button class="color-swatch" data-color="#E17055" style="background:#E17055;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#E17055',this)"></button>
-    </div>
-    <input type="hidden" id="msg-color" value="#A29BFE"/>
-  </div>
-  <div class="modal-actions"><button class="btn-cancel" onclick="App.closeModal()">취소</button><button class="btn-save" onclick="App.saveSavingsGoal()">저장</button></div>
-</div>
-<div class="modal" id="modal-auto">
-  <div class="modal-header">⚡ 자동화 <span id="modal-auto-edit-label">추가</span></div>
-  <input type="hidden" id="modal-auto-id"/>
-  <div class="form-group"><label>분류</label><select id="ma2-type" class="form-input"><option value="expense">지출</option><option value="income">수입</option></select></div>
-  <div class="form-group"><label>날짜 (매월 몇 일)</label><input type="number" id="ma2-day" class="form-input" placeholder="15" min="1" max="31"/></div>
-  <div class="form-group"><label>시작 월 (이 달부터 자동 등록)</label><div class="form-row"><input type="number" id="ma2-start-year" class="form-input" placeholder="2026"/><input type="number" id="ma2-start-month" class="form-input" placeholder="1" min="1" max="12"/></div></div>
-  <div class="form-group"><label>카테고리</label><select id="ma2-cat-sel" class="form-input"></select></div>
-  <div class="form-group"><label>메모 #태그</label><input type="text" id="ma2-memo" class="form-input" placeholder="헬스장 회비 #건강"/></div>
-  <div class="form-group"><label>금액 (원)</label><input type="text" inputmode="numeric" id="ma2-amount" class="form-input" placeholder="80,000" oninput="App.numInputFmt(this)"/></div>
-  <div class="modal-actions"><button class="btn-cancel" onclick="App.closeModal()">취소</button><button class="btn-save" onclick="App.saveAuto()">저장</button></div>
-</div>
-<div class="modal modal-wide" id="modal-closeMonth">
-  <div class="modal-header">📋 월 마감 — <span id="cm-month-label"></span></div>
-  <div class="cm-summary" id="cm-summary"></div>
-  <div class="form-group" style="margin-top:14px;"><label>이번 달 소감 (선택)</label><textarea id="cm-note" class="form-input" rows="3" maxlength="150" placeholder="이번 달 소감을 남겨보세요..." style="resize:none;font-family:inherit;"></textarea></div>
-  <div class="modal-actions">
-    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
-    <button class="btn-save" onclick="App.closeMonth()">마감 확정</button>
-  </div>
-</div>
-
-<script src="app.js">
-
-
-<!-- ===== 가계부 모달 (추가 복원) ===== -->
+<!-- ===== MODALS ===== -->
 <div class="modal" id="modal-delete" style="max-width:700px;width:95vw;padding:0;overflow:hidden;max-height:85vh;">
   <div style="display:flex;height:100%;min-height:0;">
     <!-- 왼쪽: 삭제 제외항목 -->
@@ -1087,6 +664,9 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-overlay" onclick="App.closeModal()"></div>
+
+<!-- ===== NATURE SETTINGS MODAL ===== -->
 <div class="modal" id="modal-nature-settings" style="max-width:480px;max-height:85vh;overflow-y:auto;">
   <div class="modal-header" style="position:sticky;top:0;background:var(--white);z-index:1;">
     ⚙ 지출 성격 설정
@@ -1100,8 +680,6 @@
   </div>
 </div>
 
-<div class="modal" id="modal-income"
-
 <div class="modal" id="modal-income">
   <div class="modal-header">💰 수입 <span id="modal-income-edit-label">추가</span></div>
   <input type="hidden" id="modal-income-id"/>
@@ -1113,8 +691,6 @@
     <button class="btn-save" onclick="App.saveIncome()">저장</button>
   </div>
 </div>
-
-<div class="modal" id="modal-fixed"
 
 <div class="modal" id="modal-fixed">
   <div class="modal-header">🏠 고정 지출 <span id="modal-fixed-edit-label">추가</span></div>
@@ -1128,8 +704,6 @@
   </div>
 </div>
 
-<div class="modal" id="modal-variable"
-
 <div class="modal" id="modal-variable">
   <div class="modal-header">🛒 변동 지출 <span id="modal-variable-edit-label">추가</span></div>
   <input type="hidden" id="modal-variable-id"/>
@@ -1141,8 +715,6 @@
     <button class="btn-save" onclick="App.saveVariable()">저장</button>
   </div>
 </div>
-
-<div class="modal" id="modal-credit"
 
 <div class="modal" id="modal-credit">
   <div class="modal-header">💳 신용카드 대금 <span id="mc-edit-label">추가</span></div>
@@ -1165,8 +737,6 @@
   </div>
 </div>
 
-<div class="modal" id="modal-ledger-edit"
-
 <div class="modal" id="modal-ledger-edit">
   <div class="modal-header">📝 가계부 수정</div>
   <input type="hidden" id="mle-key"/>
@@ -1188,8 +758,6 @@
   </div>
 </div>
 
-<div class="modal" id="modal-asset"
-
 <div class="modal" id="modal-asset">
   <div class="modal-header">🏦 자산 <span id="modal-asset-edit-label">추가</span></div>
   <input type="hidden" id="modal-asset-id"/>
@@ -1207,8 +775,6 @@
     <button class="btn-save" onclick="App.saveAsset()">저장</button>
   </div>
 </div>
-
-<div class="modal" id="modal-stock"
 
 <div class="modal" id="modal-stock">
   <div class="modal-header">📈 종목 <span id="modal-stock-edit-label">추가</span></div>
@@ -1258,148 +824,143 @@
   </div>
 </div>
 
-<div class="modal" id="modal-bcsync"
-
-<!-- ===== ✈️ 여행 플래너 모달들 ===== -->
-
-<!-- 가고싶은 곳 추가 (여행 내) -->
-<div id="modal-bucket-trip" class="modal-overlay hidden">
-  <div class="modal">
-    <div class="modal-header"><h2>⭐ 가고싶은 곳 추가</h2><button class="modal-close" onclick="closeTravelModal('modal-bucket-trip')">✕</button></div>
-    <div style="display:flex;flex-direction:column;gap:0">
-      <div class="detail-row required-row"><span class="detail-icon">🗺️</span><label>장소명 *</label><input type="text" id="bk-place" class="detail-input" placeholder="장소 이름" /></div>
-      <div class="detail-row"><span class="detail-icon">🏷️</span><label>유형</label><select id="bk-category" class="detail-input"></select></div>
-      <div class="detail-row"><span class="detail-icon">🌍</span><label>나라</label><input type="text" id="bk-country" class="detail-input" placeholder="미입력" /></div>
-      <div class="detail-row"><span class="detail-icon">📍</span><label>지역</label><input type="text" id="bk-region" class="detail-input" placeholder="미입력" /></div>
-      <div class="detail-row"><span class="detail-icon">📅</span><label>계절</label><select id="bk-season" class="detail-input"><option value="">미입력</option><option>봄</option><option>여름</option><option>가을</option><option>겨울</option><option>연중</option></select></div>
-      <div class="detail-row"><span class="detail-icon">📝</span><label>비고</label><input type="text" id="bk-notes" class="detail-input" placeholder="미입력" /></div>
-      <div class="detail-row"><span class="detail-icon">✅</span><label>방문완료</label><input type="checkbox" id="bk-visited" style="width:18px;height:18px;accent-color:#4CAF82" /></div>
-    </div>
-    <div class="form-actions"><button class="btn btn-ghost btn-sm" onclick="closeTravelModal('modal-bucket-trip')">취소</button><button class="btn btn-primary btn-sm" id="bk-save-btn" onclick="saveTripBucketItem()">추가하기</button></div>
+<div class="modal" id="modal-bcsync">
+  <div class="modal-header">🔗 가계부 카테고리 연동 — <span id="bcsync-cat-name"></span></div>
+  <input type="hidden" id="bcsync-cat-id"/>
+  <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;line-height:1.6;">선택한 가계부 카테고리의 지출 합계를 이 예산 항목의 실지출로 자동 반영합니다.<br>여러 카테고리를 동시에 선택할 수 있습니다.</div>
+  <div id="bcsync-body" class="bcsync-body"></div>
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
+    <button class="btn-save" onclick="App.saveBudgetCatSync()">저장</button>
   </div>
 </div>
 
-<!-- 버킷플레이스 추가 -->
-<div id="modal-bucket-add" class="modal-overlay hidden">
-  <div class="modal">
-    <div class="modal-header"><h2 id="bucket-add-modal-title">⭐ 장소 추가</h2><button class="modal-close" onclick="closeTravelModal('modal-bucket-add')">✕</button></div>
-    <div style="display:flex;flex-direction:column;gap:0">
-      <div class="detail-row required-row"><span class="detail-icon">🗺️</span><label>장소명 *</label><input type="text" id="bam-place" class="detail-input" placeholder="장소 이름" /></div>
-      <div class="detail-row"><span class="detail-icon">🏷️</span><label>유형</label><select id="bam-type" class="detail-input"></select></div>
-      <div class="detail-row"><span class="detail-icon">🌍</span><label>나라</label><input type="text" id="bam-country" class="detail-input" placeholder="미입력" /></div>
-      <div class="detail-row"><span class="detail-icon">📍</span><label>지역</label><input type="text" id="bam-region" class="detail-input" placeholder="미입력" /></div>
-      <div class="detail-row"><span class="detail-icon">📅</span><label>계절</label><select id="bam-season" class="detail-input"><option value="">미입력</option><option>봄</option><option>여름</option><option>가을</option><option>겨울</option><option>연중</option></select></div>
-      <div class="detail-row"><span class="detail-icon">📝</span><label>비고</label><input type="text" id="bam-notes" class="detail-input" placeholder="미입력" /></div>
-      <div class="detail-row"><span class="detail-icon">✅</span><label>방문완료</label><input type="checkbox" id="bam-visited" style="width:18px;height:18px;accent-color:#4CAF82" /></div>
-    </div>
-    <div class="form-actions"><button class="btn btn-ghost btn-sm" onclick="closeTravelModal('modal-bucket-add')">취소</button><button class="btn btn-primary btn-sm" id="bam-save-btn" onclick="saveBucketAddModal()">추가하기</button></div>
+<div class="modal" id="modal-budget-auto">
+  <div class="modal-header">✨ 예산 자동 설정</div>
+  <div id="modal-budget-auto-body"></div>
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
+    <button class="btn-save" onclick="App.applyBudgetSuggestions()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>이 예산으로 설정
+    </button>
   </div>
 </div>
 
-<!-- 지도 보기 -->
-<div id="modal-map-view" class="modal-overlay hidden">
-  <div class="modal map-modal">
-    <div class="modal-header"><h2 id="map-modal-title">🗺️ 지도</h2><button class="modal-close" onclick="closeTravelModal('modal-map-view')">✕</button></div>
-    <a id="map-modal-link-anchor" href="#" target="_blank" rel="noreferrer" class="map-modal-link"></a>
-    <iframe id="map-modal-frame" src="" class="map-modal-frame" loading="lazy" allowfullscreen title="장소 지도"></iframe>
+<div class="modal" id="modal-budget">
+  <div class="modal-header">📊 예산 카테고리 <span id="modal-budget-edit-label">추가</span></div>
+  <input type="hidden" id="modal-budget-id"/>
+  <div class="form-group"><label>카테고리 이름</label><input type="text" id="mb-name" class="form-input" placeholder="식비, 생필품, 카페..."/></div>
+  <div class="form-group"><label>예산 금액 (원)</label><input type="text" inputmode="numeric" id="mb-budget" class="form-input" placeholder="200,000" oninput="App.numInputFmt(this)"/></div>
+  <div class="savings-classify-row" style="margin-bottom:12px;">
+    <input type="checkbox" id="mb-synced" checked/>
+    <label for="mb-synced" style="cursor:pointer;font-size:13px;">🔗 동기화 — 선택 달 이후 모든 달에 동일 예산 적용 (이전 달 유지)</label>
   </div>
-</div>
-
-<!-- 지도 링크 입력 -->
-<div id="modal-map-entry" class="modal-overlay hidden">
-  <div class="modal" style="max-width:500px">
-    <div class="modal-header">
-      <h2><svg width="18" height="18" style="vertical-align:-3px;margin-right:4px"><use href="#icon-map"/></svg>지도 연결</h2>
-      <button class="modal-close" onclick="closeTravelModal('modal-map-entry')">✕</button>
-    </div>
-    <div id="map-entry-iframe-wrap" class="hidden" style="margin-bottom:10px">
-      <iframe id="map-entry-iframe" src="" style="width:100%;height:230px;border:1.5px solid #e5e7eb;border-radius:10px;display:block" loading="lazy" allowfullscreen title="지도 미리보기"></iframe>
-    </div>
-    <div id="map-entry-url-view" class="hidden" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:#F0F9F4;border-radius:8px">
-      <a id="map-entry-preview-link" href="#" target="_blank" rel="noreferrer" style="flex:1;font-size:.8rem;color:#4CAF82;word-break:break-all;min-width:0"></a>
-      <button class="btn btn-ghost btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="startMapLinkEdit()">✏️ 수정</button>
-    </div>
-    <div id="map-entry-empty" style="text-align:center;padding:22px 0 14px;color:#6b7280;font-size:.88rem">
-      <div style="margin-bottom:10px">🗺️ 연결된 지도가 없어요</div>
-      <button class="btn btn-outline btn-sm" onclick="startMapLinkEdit()">+ 지도 링크 추가</button>
-    </div>
-    <div id="map-entry-url-edit" class="hidden" style="margin-bottom:12px">
-      <input id="map-entry-input" type="text" placeholder="구글 지도 링크 또는 &lt;iframe&gt; 코드 붙여넣기" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:.85rem" oninput="updateMapEntryPreview()" />
-      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">
-        <button class="btn btn-ghost btn-sm" onclick="cancelMapLinkEdit()">취소</button>
+  <div id="mb-food-manual-row" style="display:none;flex-direction:column;gap:8px;margin-bottom:12px;padding:12px;background:var(--green-light);border-radius:10px;border:1.5px solid #4CAF8222;">
+    <div style="font-size:12px;color:var(--green);font-weight:700;">🍽️ 식비 특별 설정</div>
+    <div class="savings-classify-row" style="margin:0;background:white;border-radius:8px;padding:8px 10px;border:1.5px solid #4CAF8233;">
+      <input type="checkbox" id="mb-food-cal-sync"/>
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <label for="mb-food-cal-sync" style="cursor:pointer;font-size:13px;font-weight:700;color:#2E7D32;">🗓️ 캘린더 연동</label>
+        <span style="font-size:11px;color:var(--text-sub);">식비 캘린더 합계를 이달 실제 지출로 반영합니다</span>
       </div>
     </div>
-    <div class="form-actions" style="margin-top:0">
-      <button class="btn btn-ghost btn-sm" onclick="closeTravelModal('modal-map-entry')">닫기</button>
-      <button class="btn btn-outline btn-sm" onclick="clearTripMapLink()">연결 해제</button>
-      <button class="btn btn-primary btn-sm" onclick="saveTripMapLink()">저장</button>
+    <div class="savings-classify-row" style="margin:0;">
+      <input type="checkbox" id="mb-food-budget-manual"/>
+      <label for="mb-food-budget-manual" style="cursor:pointer;font-size:12px;color:var(--text-sub);">직접 설정 — 위 예산 금액을 사용합니다 (캘린더 무시)</label>
     </div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
+    <button class="btn-save" onclick="App.saveBudgetCategory()">저장</button>
   </div>
 </div>
 
-<!-- 링크 미리보기 -->
-<div id="modal-link-preview" class="modal-overlay hidden">
-  <div class="modal" style="max-width:540px">
-    <div class="modal-header">
-      <h2><svg width="16" height="16" style="vertical-align:-2px;margin-right:5px"><use href="#icon-link"/></svg>링크</h2>
-      <button class="modal-close" onclick="closeTravelModal('modal-link-preview')">✕</button>
-    </div>
-    <div id="link-iframe-wrap">
-      <p id="link-preview-url" style="font-size:0.76rem;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:10px;max-width:100%"></p>
-      <iframe id="link-preview-frame" src="" class="map-modal-frame" loading="lazy" style="border-radius:12px;border:1.5px solid #e5e7eb"></iframe>
-      <div style="text-align:center;margin-top:14px">
-        <a id="link-preview-anchor" href="#" target="_blank" rel="noreferrer" class="btn btn-primary btn-sm">
-          <svg width="13" height="13"><use href="#icon-external"/></svg>새 탭에서 열기
-        </a>
-      </div>
-    </div>
-    <div id="link-external-card" class="hidden" style="text-align:center;padding:32px 12px 18px">
-      <div style="width:56px;height:56px;border-radius:16px;background:#E8F5EE;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
-        <svg width="28" height="28" style="color:#4CAF82"><use href="#icon-external"/></svg>
-      </div>
-      <p id="link-external-url" style="font-size:0.79rem;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-bottom:20px;padding:0 8px"></p>
-      <a id="link-external-anchor" href="#" target="_blank" rel="noreferrer" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:7px">
-        <svg width="14" height="14"><use href="#icon-external"/></svg>새 탭에서 열기
-      </a>
-    </div>
+<div class="modal" id="modal-cal">
+  <div class="modal-header">🗓️ 일정 <span id="modal-cal-month-label"></span></div>
+  <input type="hidden" id="modal-cal-month"/>
+  <input type="hidden" id="modal-cal-id"/>
+  <div class="cal-food-hint" id="cal-food-hint" style="display:none;background:var(--green-light);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--green);"></div>
+  <div class="form-group"><label>내용</label><input type="text" id="mc-event-name" class="form-input" placeholder="카메라 적금"/></div>
+  <div class="form-group"><label>목표 금액 (원, 선택)</label><input type="text" inputmode="numeric" id="mc-event-amount" class="form-input" placeholder="50,000" oninput="App.numInputFmt(this)"/></div>
+  <div class="form-group" id="mc-saved-group">
+    <label>실 저축금액 (원, 선택)</label>
+    <input type="text" inputmode="numeric" id="mc-event-saved" class="form-input" placeholder="실제 저축한 금액" oninput="App.numInputFmt(this)"/>
+  </div>
+  <div class="form-group" style="display:flex;align-items:center;gap:10px;background:var(--purple-light);border-radius:10px;padding:10px 14px;">
+    <input type="checkbox" id="mc-is-plan" style="width:16px;height:16px;accent-color:#5E4BC4;cursor:pointer;flex-shrink:0;"/>
+    <label for="mc-is-plan" style="font-size:13px;font-weight:700;color:#5E4BC4;cursor:pointer;margin:0;">[계획] 뱃지로 표시 — 연간 캘린더에 계획 항목으로 등록됩니다</label>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
+    <button class="btn-save" onclick="App.saveCalEvent()">저장</button>
   </div>
 </div>
 
-<script>
-// ✈️ 사이드바 여행 그룹 토글
-function toggleTravelNavGroup() {
-  var submenu = document.getElementById('travel-submenu');
-  var arrow = document.getElementById('travel-nav-arrow');
-  var header = document.getElementById('travel-nav-header');
-  var isOpen = submenu.classList.contains('open');
-  submenu.classList.toggle('open', !isOpen);
-  arrow.classList.toggle('open', !isOpen);
-  header.classList.toggle('travel-active', !isOpen);
-  if (!isOpen) {
-    // 여행 탭으로 전환
-    switchToTravel('home');
-  }
-}
+<div class="modal" id="modal-savings">
+  <div class="modal-header">🎯 저축 목표 추가</div>
+  <input type="hidden" id="modal-savings-id"/>
+  <div class="form-group"><label>목표명</label><input type="text" id="msg-name" class="form-input" placeholder="호주 여행 적금..."/></div>
+  <div class="form-group"><label>목표 금액 (원)</label><input type="text" inputmode="numeric" id="msg-target" class="form-input" placeholder="5,000,000" oninput="App.numInputFmt(this)"/></div>
+  <div class="form-group"><label>현재 저축액 (원)</label><input type="text" inputmode="numeric" id="msg-saved" class="form-input" placeholder="0" oninput="App.numInputFmt(this)"/></div>
+  <div class="form-group">
+    <label>색상</label>
+    <div class="color-picker-row" style="display:flex;gap:8px;margin-top:6px;">
+      <button class="color-swatch active" data-color="#A29BFE" style="background:#A29BFE;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#A29BFE',this)"></button>
+      <button class="color-swatch" data-color="#43C98A" style="background:#43C98A;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#43C98A',this)"></button>
+      <button class="color-swatch" data-color="#74B9FF" style="background:#74B9FF;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#74B9FF',this)"></button>
+      <button class="color-swatch" data-color="#FD79A8" style="background:#FD79A8;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#FD79A8',this)"></button>
+      <button class="color-swatch" data-color="#FDCB6E" style="background:#FDCB6E;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#FDCB6E',this)"></button>
+      <button class="color-swatch" data-color="#E17055" style="background:#E17055;width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;" onclick="App.pickSavingsColor('#E17055',this)"></button>
+    </div>
+    <input type="hidden" id="msg-color" value="#A29BFE"/>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
+    <button class="btn-save" onclick="App.saveSavingsGoal()">저장</button>
+  </div>
+</div>
 
-function switchToTravel(page) {
-  // 가계부 탭 비활성화
-  document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
-  // 여행 탭 활성화
-  document.getElementById('tab-travel').classList.add('active');
-  // 서브메뉴 서브아이템 활성화
-  document.querySelectorAll('.nav-sub-item').forEach(function(i) { i.classList.remove('active'); });
-  var subItem = document.getElementById('travel-sub-' + page);
-  if (subItem) subItem.classList.add('active');
-  // 여행 섹션 내 서브페이지 전환
-  if (typeof showTravelPage === 'function') {
-    showTravelPage(page);
-  }
-  // 모바일: 사이드바 닫기
-  if (window.App && window.App.closeSidebar) App.closeSidebar();
-}
-</script>
+<div class="modal" id="modal-auto">
+  <div class="modal-header">⚡ 자동화 <span id="modal-auto-edit-label">추가</span></div>
+  <input type="hidden" id="modal-auto-id"/>
+  <div class="form-group">
+    <label>분류</label>
+    <select id="ma2-type" class="form-input">
+      <option value="expense">지출</option>
+      <option value="income">수입</option>
+    </select>
+  </div>
+  <div class="form-group"><label>날짜 (매월 몇 일)</label><input type="number" id="ma2-day" class="form-input" placeholder="15" min="1" max="31"/></div>
+  <div class="form-group">
+    <label>시작 월 (이 달부터 자동 등록)</label>
+    <div class="form-row">
+      <input type="number" id="ma2-start-year" class="form-input" placeholder="2026"/>
+      <input type="number" id="ma2-start-month" class="form-input" placeholder="1" min="1" max="12"/>
+    </div>
+  </div>
+  <div class="form-group">
+    <label>카테고리</label>
+    <select id="ma2-cat-sel" class="form-input"></select>
+  </div>
+  <div class="form-group"><label>메모 #태그</label><input type="text" id="ma2-memo" class="form-input" placeholder="헬스장 회비 #건강"/></div>
+  <div class="form-group"><label>금액 (원)</label><input type="text" inputmode="numeric" id="ma2-amount" class="form-input" placeholder="80,000" oninput="App.numInputFmt(this)"/></div>
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
+    <button class="btn-save" onclick="App.saveAuto()">저장</button>
+  </div>
+</div>
 
+<div class="modal modal-wide" id="modal-closeMonth">
+  <div class="modal-header">📋 월 마감 — <span id="cm-month-label"></span></div>
+  <div class="cm-summary" id="cm-summary"></div>
+  <div class="form-group" style="margin-top:14px;"><label>이번 달 소감 (선택)</label><textarea id="cm-note" class="form-input" rows="3" maxlength="150" placeholder="이번 달 소감을 남겨보세요..." style="resize:none;font-family:inherit;"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
+    <button class="btn-save" onclick="App.closeMonth()">마감 확정</button>
+  </div>
+</div>
+
+<script src="travel.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
