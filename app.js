@@ -7678,7 +7678,7 @@ const ICON_MAP   = `<svg width="14" height="14"><use href="#icon-map"/></svg>`;
 const ICON_LINK  = `<svg width="14" height="14"><use href="#icon-link"/></svg>`;
 
 // ---- Global State ----
-let travelCurrentUser = null;
+// travelCurrentUser is declared above (line 7630)
 let currentTripId = null;
 let currentTrip = null;
 let scheduleEditId = null;
