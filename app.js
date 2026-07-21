@@ -7337,11 +7337,41 @@ function renderSettings(){
       </div>
     </div>`;
   }).join('');
+  // ── 여행 통계 계산 ──────────────────────────────────────────
+  const _trips = (S.travels && S.travels.trips) || [];
+  const _buckets = (S.travels && S.travels.bucketList) || [];
+  const _tripCount = _trips.length;
+  const _bucketCount = _buckets.length;
+  const _bucketDone = _buckets.filter(b => b.checked).length;
+  const _totalTravelExpense = _trips.reduce((sum, t) => sum + ((t.expenses||[]).reduce((s,e)=>s+(parseFloat(e.amount)||0),0)), 0);
+  const _foreignTrips = _trips.filter(t => t.type === 'foreign').length;
+
+  const _travelCatHtml = window.TravelApp ? TravelApp.renderTravelCategorySettings() : '<div style="color:var(--text-sub);font-size:13px;">여행 플래너 모듈 로딩 중...</div>';
+
   container.innerHTML=`
     <div class="page-header"><div>
       <h1 class="page-title">설정 ⚙️</h1>
       <p class="page-sub">앱 환경 설정, 데이터 관리, 저장 용량을 관리하세요.</p>
     </div></div>
+
+    <!-- 여행 데이터 요약 -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">✈️ 여행 데이터 현황</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+        <div class="cm-stat-box"><div class="cm-stat-label">🗺️ 내 여행</div><div class="cm-stat-val" style="color:#5E4BC4;">${_tripCount}개</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">해외 ${_foreignTrips} · 국내 ${_tripCount-_foreignTrips}</div></div>
+        <div class="cm-stat-box"><div class="cm-stat-label">⭐ 버킷플레이스</div><div class="cm-stat-val" style="color:#FDCB6E;">${_bucketCount}곳</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">완료 ${_bucketDone}곳</div></div>
+        <div class="cm-stat-box"><div class="cm-stat-label">💸 총 여행경비</div><div class="cm-stat-val red">${_totalTravelExpense.toLocaleString('ko-KR')}원</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">전체 여행 합산</div></div>
+        <div class="cm-stat-box"><div class="cm-stat-label">🏆 방문 달성률</div><div class="cm-stat-val green">${_bucketCount>0?Math.round(_bucketDone/_bucketCount*100):0}%</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">버킷플레이스 기준</div></div>
+      </div>
+    </div>
+
+    <!-- 여행 분류 기본값 설정 -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">🏷️ 여행 분류 기본값 설정</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:16px;">일정·지출·버킷의 분류 항목을 원하는 대로 추가·삭제할 수 있어요.</div>
+      ${_travelCatHtml}
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
       <div>
         <!-- 테마 진하기 -->
