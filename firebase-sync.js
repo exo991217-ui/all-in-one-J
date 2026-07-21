@@ -1,6 +1,5 @@
 // ===== FIREBASE SYNC =====
 // Google 로그인 + Firestore 실시간 동기화
-// 통합본: 가계부 + 여행 플래너 공용 Firebase (moneylog-5e2d4)
 
 window.FB_FIREBASE_MODE = true; // app.js 초기 renderAll 억제
 
@@ -17,10 +16,6 @@ const FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 const _auth = firebase.auth();
 const _db   = firebase.firestore();
-
-// 여행 플래너 모듈에서 사용할 수 있도록 전역 노출
-window._travelAuth = _auth;
-window._travelDb   = _db;
 
 let _currentUser = null;
 let _saveTimer   = null;
@@ -114,29 +109,19 @@ _auth.onAuthStateChanged(async (user) => {
 
     _hideOverlay();
 
-    // 가계부 렌더링
+    // 즉시 렌더링 (타이밍 버그 수정: setTimeout 제거)
     if (window.App && window.App.renderAll) {
       try { window.App.renderAll(); } catch(e) { console.error(e); }
     } else {
+      // App이 아직 로드 안 됐으면 DOMContentLoaded 이후 실행
       document.addEventListener('DOMContentLoaded', () => {
         if (window.App && window.App.renderAll) {
           try { window.App.renderAll(); } catch(e) { console.error(e); }
         }
       });
     }
-
-    // 여행 플래너 인증 상태 업데이트
-    if (window.onTravelAuthChange) {
-      window.onTravelAuthChange(user);
-    }
-
   } else {
     _currentUser = null;
     _showOverlay();
-
-    // 여행 플래너 로그아웃 처리
-    if (window.onTravelAuthChange) {
-      window.onTravelAuthChange(null);
-    }
   }
 });
