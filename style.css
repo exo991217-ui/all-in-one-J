@@ -485,8 +485,8 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .import-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1.5px solid var(--border)}
 
 /* ===== MODALS ===== */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(45,45,58,.35);backdrop-filter:blur(4px);z-index:400}
-.modal-overlay.active{display:block}
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(45,45,58,.35);backdrop-filter:blur(4px);z-index:400}
+.modal-backdrop.active{display:block}
 .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:var(--radius);box-shadow:0 20px 60px rgba(0,0,0,.18);padding:28px 30px;min-width:340px;z-index:500;max-height:90vh;overflow-y:auto}
 .modal.active{display:block}
 .modal-header{font-size:18px;font-weight:800;margin-bottom:20px;color:var(--text-main)}
