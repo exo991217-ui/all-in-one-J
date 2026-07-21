@@ -3,6 +3,7 @@
 
 // ===== TRAVEL STATE DEFAULTS =====
 function initTravelState() {
+  if (!window.S || S === null) return;
   if (!S.travels) S.travels = { trips: [], bucketList: [] };
   if (!S.travels.trips) S.travels.trips = [];
   if (!S.travels.bucketList) S.travels.bucketList = [];
@@ -15,10 +16,40 @@ let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable
 let _bucketFilter = '전체';
 
 const TRIP_TYPE_ICONS = { domestic: '🏔', foreign: '✈️' };
-const SCHEDULE_CATEGORIES = ['관광', '식사', '카페', '쇼핑', '체험', '숙소', '교통', '기타'];
-const EXPENSE_CATEGORIES = ['항공', '숙소', '식비', '교통', '쇼핑', '관광', '기타'];
-const WISH_CATEGORIES = ['풍경', '맛집', '카페', '체험', '기념품', '기타'];
-const BUCKET_TYPES = ['풍경', '맛집', '카페', '체험', '기념품', '기타'];
+
+// ── 기본 분류 (localStorage에 저장 가능) ───────────────────────
+const _DEFAULT_CATS = {
+  schedule: ['관광', '식사', '카페', '쇼핑', '체험', '숙소', '교통', '기타'],
+  expense:  ['항공', '숙소', '식비', '교통', '쇼핑', '관광', '기타'],
+  bucket:   ['풍경', '맛집', '카페', '체험', '기념품', '기타'],
+};
+
+function getCategories(type) {
+  try {
+    const stored = localStorage.getItem('travel_cats_' + type);
+    if (stored) return JSON.parse(stored);
+  } catch(e) {}
+  return (_DEFAULT_CATS[type] || []).slice();
+}
+
+function saveCategories(type, cats) {
+  localStorage.setItem('travel_cats_' + type, JSON.stringify(cats));
+}
+
+// 호환성 유지 (기존 코드에서 사용하는 상수명)
+// 아래는 동적으로 읽히므로 직접 참조 대신 getCategories() 사용
+const SCHEDULE_CATEGORIES = _DEFAULT_CATS.schedule;
+const EXPENSE_CATEGORIES  = _DEFAULT_CATS.expense;
+const WISH_CATEGORIES     = _DEFAULT_CATS.bucket;
+const BUCKET_TYPES        = _DEFAULT_CATS.bucket;
+
+// ── 환율 기본값 (외화 자동계산용) ─────────────────────────────
+const DEFAULT_RATES = {
+  JPY: 9.2, EUR: 1500, USD: 1380, AUD: 900,
+  GBP: 1750, CAD: 1010, HKD: 177, SGD: 1030,
+  CNY: 190, THB: 40, VND: 0.055, TWD: 43,
+  MYR: 310, PHP: 24, IDR: 0.088, NZD: 840,
+};
 
 function genTravelId() { return 'tr_' + Date.now() + '_' + Math.floor(Math.random() * 9999); }
 
@@ -56,6 +87,28 @@ function getTripStatusLabel(trip) {
   if (today > end) return 'done';
   if (today >= start && today <= end) return 'ongoing';
   return 'upcoming';
+}
+
+// ── 국기 이모지 + 배경색 ──────────────────────────────────────
+const _COUNTRY_FLAG_MAP = {
+  '한국':'🇰🇷','일본':'🇯🇵','호주':'🇦🇺','프랑스':'🇫🇷','미국':'🇺🇸',
+  '영국':'🇬🇧','이탈리아':'🇮🇹','스페인':'🇪🇸','독일':'🇩🇪','태국':'🇹🇭',
+  '베트남':'🇻🇳','싱가포르':'🇸🇬','홍콩':'🇭🇰','대만':'🇹🇼','중국':'🇨🇳',
+  '캐나다':'🇨🇦','뉴질랜드':'🇳🇿','인도네시아':'🇮🇩','필리핀':'🇵🇭',
+  '말레이시아':'🇲🇾','인도':'🇮🇳','터키':'🇹🇷','포르투갈':'🇵🇹',
+  '네덜란드':'🇳🇱','스위스':'🇨🇭','오스트리아':'🇦🇹','체코':'🇨🇿',
+  '그리스':'🇬🇷','크로아티아':'🇭🇷','폴란드':'🇵🇱','헝가리':'🇭🇺',
+  '멕시코':'🇲🇽','페루':'🇵🇪','브라질':'🇧🇷','아르헨티나':'🇦🇷',
+  '모로코':'🇲🇦','이집트':'🇪🇬','남아공':'🇿🇦','케냐':'🇰🇪',
+};
+
+function getCountryFlag(trip) {
+  if (trip.type === 'domestic') return '🇰🇷';
+  const r = trip.regions || '';
+  for (const [name, flag] of Object.entries(_COUNTRY_FLAG_MAP)) {
+    if (r.includes(name)) return flag;
+  }
+  return '✈️';
 }
 
 function getCountryCode(trip) {
@@ -99,6 +152,7 @@ function getInitials(name) {
 
 // ===== RENDER: 내 여행 탭 =====
 function renderTravelMy() {
+  if (!window.S || S === null) return;
   initTravelState();
   const el = document.getElementById('travel-my-content');
   if (!el) return;
@@ -419,13 +473,13 @@ function renderBookingSection(trip, type, label) {
       ${items.length === 0
         ? `<div class="tp-booking-empty">${label.replace(/[🎫✈️🏨📝]/g,'').trim()} 예약 없음</div>`
         : items.map(b => `
-          <div class="tp-booking-item" onmouseenter="this.querySelector('.tp-item-actions').style.display='flex'" onmouseleave="this.querySelector('.tp-item-actions').style.display='none'">
+          <div class="tp-booking-item tp-hover-parent">
             <div class="tp-booking-info">
               <div class="tp-booking-name">${b.name || b.route || ''}</div>
               <div class="tp-booking-sub">${b.date || b.departDate || ''} ${b.time || b.departTime || ''} ${b.code ? '· ' + b.code : ''}</div>
               ${b.checkin ? `<div class="tp-booking-sub">${b.checkin} ~ ${b.checkout || ''}</div>` : ''}
             </div>
-            <div class="tp-item-actions" style="display:none;gap:4px;">
+            <div class="tp-item-actions tp-hover-actions">
               <button class="icon-btn" onclick="TravelApp.editBooking('${trip.id}','${type}','${b.id}')" title="수정">✏️</button>
               <button class="icon-btn" onclick="TravelApp.deleteBooking('${trip.id}','${type}','${b.id}')" title="삭제">🗑️</button>
             </div>
@@ -453,7 +507,7 @@ function renderScheduleList(trip) {
           ${schedule.length === 0
             ? `<tr><td colspan="9" class="tp-table-empty">📅 아래 "추가" 버튼에서 일정을 추가하세요</td></tr>`
             : schedule.map(s => `
-              <tr onmouseenter="this.querySelector('.tp-row-actions').style.display='flex'" onmouseleave="this.querySelector('.tp-row-actions').style.display='none'">
+              <tr class="tp-hover-parent">
                 <td><span class="tp-scat-badge" style="background:${getSchedCatColor(s.category)}">${s.category||'기타'}</span></td>
                 <td>${s.date||''}</td>
                 <td>${s.time||''}</td>
@@ -463,7 +517,7 @@ function renderScheduleList(trip) {
                 <td>${s.notes||''}</td>
                 <td>${s.mapLink ? `<a href="${s.mapLink}" target="_blank" class="tp-map-link">🗺️</a>` : ''}</td>
                 <td>
-                  <div class="tp-row-actions" style="display:none;gap:4px;">
+                  <div class="tp-row-actions tp-hover-actions">
                     <button class="icon-btn" onclick="TravelApp.editSchedule('${trip.id}','${s.id}')" title="수정">✏️</button>
                     <button class="icon-btn" onclick="TravelApp.deleteSchedule('${trip.id}','${s.id}')" title="삭제">🗑️</button>
                   </div>
@@ -539,7 +593,7 @@ function renderScheduleAddForm(trip) {
   return `
     <div class="tp-schedule-form" id="tp-schedule-form-${trip.id}">
       <select class="tp-form-sel" id="tp-scat-${trip.id}">
-        ${SCHEDULE_CATEGORIES.map(c => `<option>${c}</option>`).join('')}
+        ${getCategories('schedule').map(c => `<option>${c}</option>`).join('')}
       </select>
       <input type="date" class="tp-form-input" id="tp-sdate-${trip.id}" value="${defaultDate}"/>
       <input type="time" class="tp-form-input" id="tp-stime-${trip.id}"/>
@@ -569,27 +623,31 @@ function renderExpenseList(trip) {
   const expenses = (trip.expenses || []).sort((a, b) => (a.date||'').localeCompare(b.date||''));
   const total = expenses.reduce((s, e) => s + (parseFloat(e.amount)||0), 0);
 
+  const rate = parseFloat(trip.exchangeRate) || (trip.currency ? (DEFAULT_RATES[trip.currency] || 1) : 1);
   return `
     <div class="tp-expense-wrap">
+      ${trip.type==='foreign' && rate ? `<div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;padding:4px 8px;background:var(--bg-sub);border-radius:6px;">
+        💱 환율: 1 ${trip.currency||'외화'} = ${rate.toLocaleString('ko-KR')}원 (설정 탭에서 변경)
+      </div>` : ''}
       <table class="tp-expense-table">
         <thead><tr>
           <th>분류</th><th>날짜</th><th>제목</th>
           <th style="text-align:right;">원화</th>
-          ${trip.type==='foreign' ? `<th style="text-align:right;">외화</th>` : ''}
-          <th></th>
+          ${trip.type==='foreign' ? `<th style="text-align:right;">외화(${trip.currency||''})</th>` : ''}
+          <th style="width:64px;"></th>
         </tr></thead>
         <tbody>
           ${expenses.length === 0
             ? `<tr><td colspan="${trip.type==='foreign'?6:5}" class="tp-table-empty">💸 아래 "추가" 버튼에서 지출을 기록하세요</td></tr>`
             : expenses.map(e => `
-              <tr onmouseenter="this.querySelector('.tp-row-actions').style.display='flex'" onmouseleave="this.querySelector('.tp-row-actions').style.display='none'">
+              <tr class="tp-hover-parent">
                 <td><span class="tp-scat-badge" style="background:${getExpCatColor(e.category)}">${e.category||'기타'}</span></td>
                 <td style="font-size:12px;">${e.date||''}</td>
                 <td>${e.title||''}</td>
                 <td style="text-align:right;font-weight:700;">${(parseFloat(e.amount)||0).toLocaleString('ko-KR')}원</td>
-                ${trip.type==='foreign' ? `<td style="text-align:right;color:var(--text-sub);font-size:12px;">${e.foreignAmount ? e.foreignAmount + (trip.currency||'') : '-'}</td>` : ''}
+                ${trip.type==='foreign' ? `<td style="text-align:right;color:var(--text-sub);font-size:12px;">${e.foreignAmount ? parseFloat(e.foreignAmount).toLocaleString('ko-KR') : '-'}</td>` : ''}
                 <td>
-                  <div class="tp-row-actions" style="display:none;gap:4px;">
+                  <div class="tp-row-actions tp-hover-actions">
                     <button class="icon-btn" onclick="TravelApp.editExpense('${trip.id}','${e.id}')" title="수정">✏️</button>
                     <button class="icon-btn" onclick="TravelApp.deleteExpense('${trip.id}','${e.id}')" title="삭제">🗑️</button>
                   </div>
@@ -608,16 +666,19 @@ function renderExpenseList(trip) {
       <div class="tp-expense-form-area">
         <div class="tp-expense-inline-form">
           <select class="tp-form-sel" id="tp-ecat-${trip.id}">
-            ${EXPENSE_CATEGORIES.map(c => `<option>${c}</option>`).join('')}
+            ${getCategories('expense').map(c => `<option>${c}</option>`).join('')}
           </select>
           <input type="date" class="tp-form-input" id="tp-edate-${trip.id}" value="${trip.startDate||new Date().toISOString().slice(0,10)}"/>
           <input type="text" class="tp-form-input" id="tp-etitle-${trip.id}" placeholder="제목"/>
-          <input type="number" class="tp-form-input" id="tp-eamt-${trip.id}" placeholder="금액(원)"/>
-          ${trip.type==='foreign' ? `<input type="number" class="tp-form-input sm" id="tp-eforeign-${trip.id}" placeholder="외화금액"/>` : ''}
+          <input type="number" class="tp-form-input" id="tp-eamt-${trip.id}" placeholder="금액(원)"
+            oninput="TravelApp.onKrwInput('${trip.id}',this,${rate})"/>
+          ${trip.type==='foreign' ? `<input type="number" class="tp-form-input sm" id="tp-eforeign-${trip.id}" placeholder="외화(${trip.currency||''})"
+            oninput="TravelApp.onForeignInput('${trip.id}',this,${rate})"/>` : ''}
           <div class="tp-form-actions">
             <button class="tp-form-save" onclick="TravelApp.addExpense('${trip.id}')">+ 추가</button>
           </div>
         </div>
+        ${trip.type==='foreign' && rate ? `<div style="font-size:11px;color:var(--text-sub);margin-top:4px;">💡 원화 입력 시 외화 자동계산, 외화 입력 시 원화 자동계산</div>` : ''}
       </div>
     </div>
   `;
@@ -657,14 +718,14 @@ function renderWishPlaces(trip, regionFilter) {
             <span class="tp-wish-count">${items.length}곳</span>
           </div>
           ${items.map(w => `
-            <div class="tp-wish-item ${w.visited?'visited':''}" onmouseenter="this.querySelector('.tp-item-actions').style.display='flex'" onmouseleave="this.querySelector('.tp-item-actions').style.display='none'">
+            <div class="tp-wish-item tp-hover-parent ${w.visited?'visited':''}">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
                 <input type="checkbox" ${w.visited?'checked':''} onchange="TravelApp.toggleWishVisited('${trip.id}','${w.id}',this.checked)" style="accent-color:var(--green);"/>
                 <span class="tp-wish-name">${w.place||''}</span>
                 ${w.region ? `<span class="tp-wish-region">${w.region}</span>` : ''}
               </label>
               ${w.notes ? `<span class="tp-wish-notes">${w.notes}</span>` : ''}
-              <div class="tp-item-actions" style="display:none;gap:2px;flex-shrink:0;">
+              <div class="tp-item-actions tp-hover-actions" style="flex-shrink:0;">
                 <button class="icon-btn" onclick="TravelApp.deleteWish('${trip.id}','${w.id}')" title="삭제">🗑️</button>
               </div>
             </div>
@@ -682,6 +743,7 @@ function getCatEmoji(cat) {
 
 // ===== RENDER: 버킷플레이스 탭 =====
 function renderTravelBucket() {
+  if (!window.S || S === null) return;
   initTravelState();
   const el = document.getElementById('travel-bucket-content');
   if (!el) return;
@@ -727,7 +789,7 @@ function renderTravelBucket() {
           ${filtered.length === 0
             ? `<tr><td colspan="8" class="tp-table-empty">⭐ 가보고 싶은 곳을 추가해보세요!</td></tr>`
             : filtered.map(b => `
-              <tr class="${b.checked?'tp-bucket-done':''}" onmouseenter="this.querySelector('.tp-row-actions').style.display='flex'" onmouseleave="this.querySelector('.tp-row-actions').style.display='none'">
+              <tr class="tp-hover-parent ${b.checked?'tp-bucket-done':''}">
                 <td>
                   <input type="checkbox" ${b.checked?'checked':''} onchange="TravelApp.toggleBucket('${b.id}',this.checked)" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;"/>
                 </td>
@@ -738,7 +800,7 @@ function renderTravelBucket() {
                 <td>${b.season||'-'}</td>
                 <td style="color:var(--text-sub);font-size:12px;">${b.notes||'-'}</td>
                 <td>
-                  <div class="tp-row-actions" style="display:none;gap:4px;">
+                  <div class="tp-row-actions tp-hover-actions">
                     <button class="icon-btn" onclick="TravelApp.editBucket('${b.id}')" title="수정">✏️</button>
                     <button class="icon-btn" onclick="TravelApp.deleteBucket('${b.id}')" title="삭제">🗑️</button>
                   </div>
@@ -969,7 +1031,7 @@ function editSchedule(tripId, schedId) {
   renderTravelModal(`
     <div class="modal-header">✏️ 일정 수정</div>
     <div class="form-row">
-      <div class="form-group"><label>분류</label><select class="form-input" id="tp-es-cat">${SCHEDULE_CATEGORIES.map(c=>`<option ${s.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="form-group"><label>분류</label><select class="form-input" id="tp-es-cat">${getCategories('schedule').map(c=>`<option ${s.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
       <div class="form-group"><label>날짜</label><input type="date" class="form-input" id="tp-es-date" value="${s.date||''}"/></div>
       <div class="form-group"><label>시간</label><input type="time" class="form-input" id="tp-es-time" value="${s.time||''}"/></div>
     </div>
@@ -1040,7 +1102,7 @@ function editExpense(tripId, expId) {
   renderTravelModal(`
     <div class="modal-header">✏️ 지출 수정</div>
     <div class="form-row">
-      <div class="form-group"><label>분류</label><select class="form-input" id="tp-ee-cat">${EXPENSE_CATEGORIES.map(c=>`<option ${e.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="form-group"><label>분류</label><select class="form-input" id="tp-ee-cat">${getCategories('expense').map(c=>`<option ${e.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
       <div class="form-group"><label>날짜</label><input type="date" class="form-input" id="tp-ee-date" value="${e.date||''}"/></div>
     </div>
     <div class="form-group"><label>제목</label><input type="text" class="form-input" id="tp-ee-title" value="${e.title||''}"/></div>
@@ -1065,11 +1127,101 @@ function saveEditExpense(tripId, expId) {
     ...trip.expenses[idx],
     category: g('tp-ee-cat'), date: g('tp-ee-date'), title: g('tp-ee-title'),
     amount: parseFloat(g('tp-ee-amt')) || 0,
-    foreignAmount: g('tp-ee-foreign') || '',
+    foreignAmount: g('tp-ee-foreign') !== undefined ? g('tp-ee-foreign') : trip.expenses[idx].foreignAmount || '',
   };
   saveState();
   closeTravelModal();
   renderTravelDetail(document.getElementById('travel-my-content'), tripId);
+}
+
+// ===== 쌍방향 환율 자동계산 =====
+function onKrwInput(tripId, inputEl, rate) {
+  if (!rate || rate <= 0) return;
+  const krw = parseFloat(inputEl.value) || 0;
+  const foreignEl = document.getElementById('tp-eforeign-' + tripId);
+  if (foreignEl && document.activeElement === inputEl) {
+    foreignEl.value = krw > 0 ? (krw / rate).toFixed(2) : '';
+  }
+}
+
+function onForeignInput(tripId, inputEl, rate) {
+  if (!rate || rate <= 0) return;
+  const foreign = parseFloat(inputEl.value) || 0;
+  const krwEl = document.getElementById('tp-eamt-' + tripId);
+  if (krwEl && document.activeElement === inputEl) {
+    krwEl.value = foreign > 0 ? Math.round(foreign * rate) : '';
+  }
+}
+
+// ===== 설정탭용 분류 관리 UI =====
+function renderTravelCategorySettings() {
+  const types = [
+    { key: 'schedule', label: '여행일정 분류', icon: '📅' },
+    { key: 'expense',  label: '지출 분류',     icon: '💸' },
+    { key: 'bucket',   label: '버킷플레이스 유형', icon: '⭐' },
+  ];
+  return types.map(({ key, label, icon }) => {
+    const cats = getCategories(key);
+    const tags = cats.map(c => `
+      <span class="tp-cat-tag">
+        ${c}
+        <button onclick="TravelApp.deleteTravelCat('${key}','${c}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#999;padding:0 0 0 2px;line-height:1;">✕</button>
+      </span>
+    `).join('');
+    return `
+      <div class="tp-cat-section">
+        <div class="tp-cat-section-title">${icon} ${label}</div>
+        <div class="tp-cat-tags" id="tp-cat-tags-${key}">${tags}</div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <input type="text" class="tp-cat-input form-input" id="tp-cat-input-${key}" placeholder="새 분류 입력..."
+            style="flex:1;font-size:12px;padding:5px 10px;height:30px;"
+            onkeydown="if(event.key==='Enter')TravelApp.addTravelCat('${key}')"/>
+          <button onclick="TravelApp.addTravelCat('${key}')"
+            style="padding:4px 12px;background:#A29BFE;color:white;border:none;border-radius:8px;cursor:pointer;font-size:12px;">+ 추가</button>
+          <button onclick="TravelApp.resetTravelCat('${key}')"
+            style="padding:4px 10px;background:var(--bg-sub);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:11px;color:var(--text-sub);">초기화</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function addTravelCat(type) {
+  const inputEl = document.getElementById('tp-cat-input-' + type);
+  if (!inputEl) return;
+  const val = inputEl.value.trim();
+  if (!val) return;
+  const cats = getCategories(type);
+  if (cats.includes(val)) { alert('이미 있는 분류입니다.'); return; }
+  cats.push(val);
+  saveCategories(type, cats);
+  inputEl.value = '';
+  _refreshCatTagsUI(type);
+}
+
+function deleteTravelCat(type, name) {
+  let cats = getCategories(type);
+  cats = cats.filter(c => c !== name);
+  saveCategories(type, cats);
+  _refreshCatTagsUI(type);
+}
+
+function resetTravelCat(type) {
+  if (!confirm('기본값으로 초기화하시겠어요?')) return;
+  localStorage.removeItem('travel_cats_' + type);
+  _refreshCatTagsUI(type);
+}
+
+function _refreshCatTagsUI(type) {
+  const container = document.getElementById('tp-cat-tags-' + type);
+  if (!container) return;
+  const cats = getCategories(type);
+  container.innerHTML = cats.map(c => `
+    <span class="tp-cat-tag">
+      ${c}
+      <button onclick="TravelApp.deleteTravelCat('${type}','${c}')" style="background:none;border:none;cursor:pointer;font-size:11px;color:#999;padding:0 0 0 2px;line-height:1;">✕</button>
+    </span>
+  `).join('');
 }
 
 // ===== WISH PLACES =====
@@ -1291,4 +1443,16 @@ window.TravelApp = {
   renderTravelBucket,
   // Init
   init: initTravelState,
+  // Category management
+  getCategories,
+  saveCategories,
+  addTravelCat,
+  deleteTravelCat,
+  resetTravelCat,
+  renderTravelCategorySettings,
+  // Currency exchange
+  onKrwInput,
+  onForeignInput,
+  // Flag util
+  getCountryFlag,
 };
