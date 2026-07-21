@@ -598,8 +598,17 @@ function renderAll(){
   renderDashboard();renderIncome();renderCredit();renderAssets();
   renderCalendar();renderInstallment();
   renderLedger();renderLcatPanel();
-  // 여행 플래너 초기화
-  if(window.TravelApp){TravelApp.init();}
+  // 여행 플래너 초기화 + 현재 활성 여행 탭 재렌더 (Firebase 데이터 로드 후 빈 화면 방지)
+  if(window.TravelApp){
+    TravelApp.init();
+    const myTabEl = document.getElementById('tab-travel-my');
+    const bucketTabEl = document.getElementById('tab-travel-bucket');
+    if(myTabEl && myTabEl.classList.contains('active')){
+      initTravelState(); TravelApp.renderTravelMy();
+    } else if(bucketTabEl && bucketTabEl.classList.contains('active')){
+      initTravelState(); TravelApp.renderTravelBucket();
+    }
+  }
 }
 
 // ===== BUDGET CATEGORIES =====
