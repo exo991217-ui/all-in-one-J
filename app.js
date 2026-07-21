@@ -7341,6 +7341,15 @@ function renderSettings(){
           </div>
           <div style="border-top:1px solid var(--border);padding-top:14px;">
             ${_catRows}
+            <div id="travel-storage-row" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="width:8px;height:8px;border-radius:2px;background:#4CAF82;display:inline-block;flex-shrink:0;"></span>
+                  <span style="font-size:13px;font-weight:500;color:var(--text-main);">✈️ 여행 플래너 (Firestore)</span>
+                </div>
+                <span id="travel-storage-count" style="font-size:12px;font-weight:600;color:var(--text-sub);">집계 중...</span>
+              </div>
+            </div>
           </div>
         </div>
         <!-- 데이터 정리 시작 버튼 -->
@@ -7418,6 +7427,10 @@ function renderSettings(){
   // 설정 탭에서 여행 분류 태그 렌더링
   if (typeof renderAllCatTags === 'function') {
     try { renderAllCatTags(); } catch(e) {}
+  }
+  // 여행 플래너 Firestore 저장 용량 비동기 갱신
+  if (typeof updateTravelStorageDisplay === 'function') {
+    updateTravelStorageDisplay().catch(()=>{});
   }
 }
 
@@ -7679,6 +7692,39 @@ const ICON_LINK  = `<svg width="14" height="14"><use href="#icon-link"/></svg>`;
 
 // ---- Global State ----
 // travelCurrentUser is declared above (line 7630)
+
+// ─── 여행 플래너 Firestore 저장 용량 표시 (비동기) ───
+async function updateTravelStorageDisplay() {
+  const el = document.getElementById('travel-storage-count');
+  if (!el) return;
+  if (!travelCurrentUser || !travelDb) {
+    el.textContent = '로그인 필요';
+    return;
+  }
+  try {
+    const userRef = travelDb.collection('users').doc(travelCurrentUser.uid);
+    const [trips, buckets] = await Promise.all([
+      userRef.collection('trips').get().catch(()=>({size:0,docs:[]})),
+      userRef.collection('bucketItems').get().catch(()=>({size:0})),
+    ]);
+    // 각 여행 내 서브컬렉션(일정·지출·예약) 개수
+    let schedCount = 0, expCount = 0, resCount = 0;
+    await Promise.all((trips.docs||[]).map(async td => {
+      const tRef = userRef.collection('trips').doc(td.id);
+      const [sch, exp, res] = await Promise.all([
+        tRef.collection('scheduleItems').get().catch(()=>({size:0})),
+        tRef.collection('expenseItems').get().catch(()=>({size:0})),
+        tRef.collection('reservations').get().catch(()=>({size:0})),
+      ]);
+      schedCount += sch.size; expCount += exp.size; resCount += res.size;
+    }));
+    const total = trips.size + buckets.size + schedCount + expCount + resCount;
+    el.textContent = `여행 ${trips.size}개 · 버킷 ${buckets.size}개 · 일정/지출/예약 ${schedCount+expCount+resCount}건 (총 ${total}건)`;
+  } catch(e) {
+    el.textContent = '확인 불가';
+    console.error('[Travel Storage]', e);
+  }
+}
 let currentTripId = null;
 let currentTrip = null;
 let scheduleEditId = null;
