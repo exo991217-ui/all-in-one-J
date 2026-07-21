@@ -2380,5 +2380,24 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-bucket-place{font-weight:700;color:var(--text-main)}
 .tp-bucket-type-badge{font-size:11px;font-weight:700;color:white;border-radius:6px;padding:2px 8px;white-space:nowrap;display:inline-block}
 
-/* Item hover actions */
+/* Item hover actions — CSS-only, 레이아웃 밀림 없음 */
+.tp-hover-actions{
+  display:flex;align-items:center;gap:4px;flex-shrink:0;
+  visibility:hidden;opacity:0;transition:opacity .1s ease;
+}
+.tp-hover-parent:hover .tp-hover-actions{visibility:visible;opacity:1}
+/* 구버전 호환 */
 .tp-item-actions{display:flex;align-items:center;flex-shrink:0}
+
+/* 여행 분류 관리 태그 (설정 탭) */
+.tp-cat-section{margin-bottom:18px;padding-bottom:18px;border-bottom:1px dashed var(--border)}
+.tp-cat-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.tp-cat-section-title{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:10px}
+.tp-cat-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0;min-height:28px}
+.tp-cat-tag{
+  display:inline-flex;align-items:center;gap:3px;
+  background:#F0EDFF;color:#5E4BC4;
+  border:1.5px solid #C8B8FF;border-radius:20px;
+  padding:3px 10px 3px 12px;font-size:12px;font-weight:600;
+}
+.tp-cat-tag button{line-height:1;display:flex;align-items:center;}
