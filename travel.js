@@ -152,10 +152,13 @@ function getInitials(name) {
 
 // ===== RENDER: 내 여행 탭 =====
 function renderTravelMy() {
-  if (!window.S || S === null) return;
-  initTravelState();
   const el = document.getElementById('travel-my-content');
   if (!el) return;
+  if (!window.S || S === null) {
+    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-sub);font-size:14px;">⏳ 데이터 불러오는 중...</div>';
+    return;
+  }
+  initTravelState();
 
   if (_travelView) {
     renderTravelDetail(el, _travelView);
@@ -743,10 +746,13 @@ function getCatEmoji(cat) {
 
 // ===== RENDER: 버킷플레이스 탭 =====
 function renderTravelBucket() {
-  if (!window.S || S === null) return;
-  initTravelState();
   const el = document.getElementById('travel-bucket-content');
   if (!el) return;
+  if (!window.S || S === null) {
+    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-sub);font-size:14px;">⏳ 데이터 불러오는 중...</div>';
+    return;
+  }
+  initTravelState();
 
   const bucketList = S.travels.bucketList || [];
   const filter = _bucketFilter;
