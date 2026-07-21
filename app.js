@@ -6012,6 +6012,24 @@ function switchTab(tab){
   if(resolvedTab==='analysis') renderAnalysis();
   if(resolvedTab==='archive') renderArchive();
   if(resolvedTab==='settings') renderSettings();
+  if(resolvedTab==='travel-my'){
+    if(window.TravelApp){initTravelState();TravelApp.renderTravelMy();}
+    const grp=document.getElementById('nav-travel-group');
+    if(grp)grp.classList.add('active');
+    const sub=document.getElementById('nav-travel-submenu');
+    if(sub)sub.style.display='block';
+    const arr=document.getElementById('nav-travel-arrow');
+    if(arr)arr.textContent='∧';
+  }
+  if(resolvedTab==='travel-bucket'){
+    if(window.TravelApp){initTravelState();TravelApp.renderTravelBucket();}
+    const grp=document.getElementById('nav-travel-group');
+    if(grp)grp.classList.add('active');
+    const sub=document.getElementById('nav-travel-submenu');
+    if(sub)sub.style.display='block';
+    const arr=document.getElementById('nav-travel-arrow');
+    if(arr)arr.textContent='∧';
+  }
   if(window.innerWidth<=680)closeSidebar();
 }
 
