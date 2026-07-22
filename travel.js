@@ -635,7 +635,9 @@ function renderTravelDetail(el, tripId) {
             <button class="add-btn" onclick="TravelApp.openAddWishModal('${trip.id}')">+ 추가</button>
           </div>
         </div>
-        ${renderWishPlaces(trip, '')}
+        <div id="tp-wish-places-container-${trip.id}">
+          ${renderWishPlaces(trip, '')}
+        </div>
       </div>
     </div>
   `;
@@ -684,23 +686,33 @@ function renderScheduleList(trip) {
         <tbody>
           ${schedule.length === 0
             ? `<tr><td colspan="9" class="tp-table-empty">📅 아래 "추가" 버튼에서 일정을 추가하세요</td></tr>`
-            : schedule.map(s => `
-              <tr class="tp-hover-parent" onclick="TravelApp.editSchedule('${trip.id}','${s.id}')">
-                <td><span class="tp-scat-badge" style="background:${getSchedCatStyle(s.category).bg};color:${getSchedCatStyle(s.category).color};">${getSchedCatStyle(s.category).emoji} ${s.category||'기타'}</span></td>
-                <td>${s.date||''}</td>
-                <td>${s.time||''}</td>
-                <td>${s.place||''}</td>
-                <td>${s.content||''}</td>
-                <td>${s.transport ? `<span class="tp-transport-badge">${s.transport}</span>` : ''}</td>
-                <td>${s.notes||''}</td>
-                <td>${s.mapLink ? `<button class="tp-map-link-btn" onclick="event.stopPropagation();TravelApp.openMapModal(this)" data-map-url="${s.mapLink.replace(/"/g,'&quot;')}" title="지도 보기">🗺️ 지도</button>` : ''}</td>
-                <td onclick="event.stopPropagation()">
-                  <div class="tp-row-actions tp-hover-actions">
-                    <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteSchedule('${trip.id}','${s.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')
+            : schedule.map(s => {
+                const cs = getSchedCatStyle(s.category);
+                const hBg = cs.bg + '66';
+                const hBd = cs.bg;
+                const ts = s.transport ? getTransportBadgeStyle(s.transport) : null;
+                return `
+                <tr class="tp-hover-parent"
+                  onmouseover="(function(r,bg,bc){r.querySelectorAll('td').forEach(function(td,i){td.style.background=bg;if(i===0)td.style.boxShadow='inset 3px 0 0 0 '+bc})})(this,'${hBg}','${hBd}')"
+                  onmouseout="this.querySelectorAll('td').forEach(function(td){td.style.background='';td.style.boxShadow=''})"
+                  onclick="TravelApp.editSchedule('${trip.id}','${s.id}')">
+                  <td><span class="tp-scat-badge" style="background:${cs.bg};color:${cs.color};">${s.category||'기타'}</span></td>
+                  <td>${s.date||''}</td>
+                  <td>${s.time||''}</td>
+                  <td>${s.place||''}</td>
+                  <td>${s.content||''}</td>
+                  <td>${ts
+                    ? `<span class="tp-transport-badge" style="background:${ts.bg};color:${ts.color};border-color:${ts.border};">${s.transport}</span>`
+                    : s.transport ? `<span class="tp-transport-badge">${s.transport}</span>` : ''}</td>
+                  <td>${renderLinkOrText(s.notes)}</td>
+                  <td>${renderMapPinBtn(s.mapLink)}</td>
+                  <td onclick="event.stopPropagation()">
+                    <div class="tp-row-actions tp-hover-actions">
+                      <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteSchedule('${trip.id}','${s.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')
           }
         </tbody>
       </table>
@@ -722,43 +734,71 @@ function renderScheduleTimetable(trip) {
   });
   const sortedDates = Object.keys(dateGroups).sort();
 
-  // 시간 범위 10:00 ~ 22:00
-  const hours = Array.from({length: 13}, (_, i) => i + 10);
+  // 시간이 없는 항목 (핀 고정)
+  const pinnedByDate = {};
+  sortedDates.forEach(d => {
+    const pinned = (dateGroups[d] || []).filter(s => !s.time);
+    if (pinned.length) pinnedByDate[d] = pinned;
+    dateGroups[d] = (dateGroups[d] || []).filter(s => !!s.time);
+  });
+  const hasPinned = Object.values(pinnedByDate).some(a => a.length > 0);
 
-  const startDate = trip.startDate ? new Date(trip.startDate) : null;
+  // 실제 데이터 기반 시간 범위
+  let minH = 23, maxH = 10;
+  sortedDates.forEach(d => {
+    (dateGroups[d] || []).forEach(s => {
+      const h = parseInt((s.time || '').split(':')[0]);
+      if (!isNaN(h)) { if (h < minH) minH = h; if (h > maxH) maxH = h; }
+    });
+  });
+  if (minH > maxH) { minH = 10; maxH = 21; }
+  const hours = Array.from({ length: Math.max(maxH - minH + 2, 4) }, (_, i) => minH + i);
 
   return `
     <div class="tp-timetable-wrap">
       <div class="tp-timetable">
+        <!-- 헤더 -->
         <div class="tp-tt-row tp-tt-head">
           <div class="tp-tt-time-col">시간</div>
           ${sortedDates.map((d, i) => {
-            const dayNum = i + 1;
             const dateStr = d !== '미정' ? d.slice(5) : '미정';
-            return `<div class="tp-tt-day-col"><div class="tp-tt-day-label">${dayNum}일차</div><div class="tp-tt-date">${dateStr}</div></div>`;
+            return `<div class="tp-tt-day-col"><div class="tp-tt-day-label">${i+1}일차</div><div class="tp-tt-date">${dateStr}</div></div>`;
           }).join('')}
         </div>
-        ${hours.map(h => `
-          <div class="tp-tt-row">
+        ${hasPinned ? `
+        <!-- 핀 고정 행 (시간 미지정) -->
+        <div class="tp-tt-row tp-tt-pinned-row">
+          <div class="tp-tt-time-col" style="font-size:13px;color:#A29BFE;">📌</div>
+          ${sortedDates.map(d => {
+            const items = pinnedByDate[d] || [];
+            return `<div class="tp-tt-day-col">${items.map(s => {
+              const cs = getSchedCatStyle(s.category);
+              return `<div class="tp-tt-item"><span class="tp-tt-name">${s.place||s.content||''}</span><span class="tp-scat-badge sm" style="background:${cs.bg};color:${cs.color};">${s.category||'기타'}</span></div>`;
+            }).join('')}</div>`;
+          }).join('')}
+        </div>` : ''}
+        <!-- 시간 슬롯 -->
+        ${hours.map(h => {
+          const hasContent = sortedDates.some(d =>
+            (dateGroups[d] || []).some(s => parseInt(s.time.split(':')[0]) === h)
+          );
+          return `<div class="tp-tt-row${hasContent ? '' : ' tp-tt-empty-row'}">
             <div class="tp-tt-time-col">${h}:00</div>
             ${sortedDates.map(d => {
-              const items = (dateGroups[d] || []).filter(s => {
-                if (!s.time) return false;
-                const sh = parseInt(s.time.split(':')[0]);
-                return sh === h;
-              });
-              return `<div class="tp-tt-day-col">
-                ${items.map(s => `
-                  <div class="tp-tt-item">
-                    <span class="tp-tt-name">${s.place || s.content || ''}</span>
-                    <span class="tp-scat-badge sm" style="background:${getSchedCatStyle(s.category).bg};color:${getSchedCatStyle(s.category).color};">${getSchedCatStyle(s.category).emoji} ${s.category||'기타'}</span>
-                    ${s.transport ? `<span class="tp-transport-badge sm">${s.transport}</span>` : ''}
-                  </div>
-                `).join('')}
-              </div>`;
+              const items = (dateGroups[d] || []).filter(s => parseInt(s.time.split(':')[0]) === h);
+              return `<div class="tp-tt-day-col">${items.map(s => {
+                const cs = getSchedCatStyle(s.category);
+                const ts = s.transport ? getTransportBadgeStyle(s.transport) : null;
+                return `<div class="tp-tt-item">
+                  <span class="tp-tt-name">${s.place||s.content||''}</span>
+                  <span class="tp-scat-badge sm" style="background:${cs.bg};color:${cs.color};">${s.category||'기타'}</span>
+                  ${ts ? `<span class="tp-transport-badge sm" style="background:${ts.bg};color:${ts.color};border-color:${ts.border};">${s.transport}</span>`
+                       : s.transport ? `<span class="tp-transport-badge sm">${s.transport}</span>` : ''}
+                </div>`;
+              }).join('')}</div>`;
             }).join('')}
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>
     ${renderScheduleAddForm(trip)}
@@ -788,35 +828,75 @@ function renderScheduleAddForm(trip) {
   `;
 }
 
-// ── 일정 배지 스타일 (진한 배경 + 진한 텍스트) ─────────────
+// ── 일정 배지 스타일 (파스텔 배경 + 진한 텍스트) ─────────────
 function getSchedCatStyle(cat) {
   const styles = {
-    '관광': { bg: '#A9CCE3', color: '#1A3E5E', emoji: '🔭' },
-    '식사': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍽' },
-    '카페': { bg: '#FAD7A0', color: '#7D5000', emoji: '☕' },
-    '쇼핑': { bg: '#C39BD3', color: '#5B2C6F', emoji: '🛍' },
-    '체험': { bg: '#A8D5B5', color: '#0D4D25', emoji: '🎯' },
-    '숙소': { bg: '#A2D9CE', color: '#0A4D42', emoji: '🛏' },
-    '교통': { bg: '#BFC9CA', color: '#2E4053', emoji: '🚌' },
-    '이동': { bg: '#A9D18E', color: '#274E13', emoji: '🚶' },
-    '기타': { bg: '#D5D8DC', color: '#424949', emoji: '📌' },
+    '관광': { bg: '#C8DFF0', color: '#1A3E5E', emoji: '🔭' },
+    '식사': { bg: '#FAD2CE', color: '#7B241C', emoji: '🍽️' },
+    '카페': { bg: '#FDE8C0', color: '#7D5000', emoji: '☕' },
+    '쇼핑': { bg: '#E2C8EE', color: '#5B2C6F', emoji: '🛍️' },
+    '체험': { bg: '#C4E8D0', color: '#0D4D25', emoji: '🎯' },
+    '숙소': { bg: '#BFE8E0', color: '#0A4D42', emoji: '🛏️' },
+    '교통': { bg: '#D4DADA', color: '#2E4053', emoji: '🚌' },
+    '이동': { bg: '#CCEAAE', color: '#274E13', emoji: '🚶' },
+    '기타': { bg: '#E2E6E8', color: '#424949', emoji: '📌' },
   };
   return styles[cat] || styles['기타'];
 }
 // 하위호환 (renderExpenseList 등에서 색상만 쓰는 곳)
 function getSchedCatColor(cat) { return getSchedCatStyle(cat).bg; }
 
-// ── 버킷/지출 배지 스타일 ──────────────────────────────────────
+// ── 버킷/지출 배지 스타일 (파스텔 톤) ──────────────────────────
 function getBucketCatStyle(cat) {
   const styles = {
-    '풍경': { bg: '#A8D5B5', color: '#0D4D25', emoji: '🏔' },
-    '맛집': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍽' },
-    '카페': { bg: '#FAD7A0', color: '#7D5000', emoji: '☕' },
-    '체험': { bg: '#A9CCE3', color: '#1A4E6B', emoji: '🎯' },
-    '기념품': { bg: '#C39BD3', color: '#5B2C6F', emoji: '🎁' },
-    '기타': { bg: '#BFC9CA', color: '#2E4053', emoji: '⭐' },
+    '풍경': { bg: '#C4E8D0', color: '#0D4D25', emoji: '🏔️' },
+    '맛집': { bg: '#FAD2CE', color: '#7B241C', emoji: '🍽️' },
+    '카페': { bg: '#FDE8C0', color: '#7D5000', emoji: '☕' },
+    '체험': { bg: '#C8DFF0', color: '#1A4E6B', emoji: '🎯' },
+    '기념품': { bg: '#E2C8EE', color: '#5B2C6F', emoji: '🎁' },
+    '기타': { bg: '#D4DADA', color: '#2E4053', emoji: '⭐' },
   };
   return styles[cat] || styles['기타'];
+}
+
+// ── 교통편 뱃지 스타일 (종류별 색상) ─────────────────────────
+function getTransportBadgeStyle(transport) {
+  if (!transport) return null;
+  const t = transport.trim();
+  if (['도보','걷기','워킹'].includes(t))
+    return { bg: '#E6F5EC', color: '#1E7A45', border: '#C3E6D0' };
+  if (['택시','콜택시'].includes(t))
+    return { bg: '#FFF8E1', color: '#C25700', border: '#FFE082' };
+  if (['기차','KTX','신칸센','JR'].includes(t) || t.startsWith('JR') || t.includes('철도'))
+    return { bg: '#E3F2FD', color: '#0D47A1', border: '#90CAF9' };
+  if (['버스','셔틀','고속버스'].includes(t))
+    return { bg: '#E8F5E9', color: '#2E7D32', border: '#A5D6A7' };
+  if (['지하철','메트로','전철'].includes(t))
+    return { bg: '#F3E5F5', color: '#6A1B9A', border: '#CE93D8' };
+  if (['비행기','항공','국내선','국제선'].includes(t))
+    return { bg: '#E8EAF6', color: '#283593', border: '#9FA8DA' };
+  if (['배','선박','페리','크루즈'].includes(t))
+    return { bg: '#E1F5FE', color: '#01579B', border: '#81D4FA' };
+  if (['렌터카','자동차','차'].includes(t))
+    return { bg: '#FFF3E0', color: '#E65100', border: '#FFCC80' };
+  return { bg: '#F0F1F3', color: '#5A6470', border: '#D8DDE3' };
+}
+
+// ── URL 감지 → 링크 아이콘 렌더링 ────────────────────────────
+function renderLinkOrText(text) {
+  if (!text) return '';
+  if (/^https?:\/\//i.test(text.trim())) {
+    const safe = text.replace(/"/g, '&quot;');
+    return `<a href="${safe}" target="_blank" rel="noopener" class="tp-link-icon-btn" title="${safe}" onclick="event.stopPropagation()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>`;
+  }
+  return text;
+}
+
+// ── 지도 핀 버튼 렌더링 ─────────────────────────────────────
+function renderMapPinBtn(mapLink) {
+  if (!mapLink) return '';
+  const safe = mapLink.replace(/"/g, '&quot;');
+  return `<button class="tp-map-pin-btn" onclick="event.stopPropagation();TravelApp.openMapModal(this)" data-map-url="${safe}" title="지도 보기"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`;
 }
 // 지출 분류 스타일
 function getExpCatStyleObj(cat) {
@@ -852,9 +932,15 @@ function renderExpenseList(trip) {
         <tbody>
           ${expenses.length === 0
             ? `<tr><td colspan="${trip.type==='foreign'?6:5}" class="tp-table-empty">💸 아래 "추가" 버튼에서 지출을 기록하세요</td></tr>`
-            : expenses.map(e => `
-              <tr class="tp-hover-parent" onclick="TravelApp.editExpense('${trip.id}','${e.id}')">
-                <td><span class="tp-scat-badge" style="background:${getBucketCatStyle(e.category).bg};color:${getBucketCatStyle(e.category).color};">${getBucketCatStyle(e.category).emoji} ${e.category||'기타'}</span></td>
+            : expenses.map(e => {
+                const es = getExpCatStyleObj(e.category);
+                const hBg = es.bg;
+                return `
+              <tr class="tp-hover-parent"
+                onmouseover="(function(r,bg){r.querySelectorAll('td').forEach(function(td,i){td.style.background=bg;if(i===0)td.style.boxShadow='inset 3px 0 0 0 '+bg})})(this,'${hBg}')"
+                onmouseout="this.querySelectorAll('td').forEach(function(td){td.style.background='';td.style.boxShadow=''})"
+                onclick="TravelApp.editExpense('${trip.id}','${e.id}')">
+                <td><span class="tp-scat-badge" style="background:${es.bg};color:${es.color};">${e.category||'기타'}</span></td>
                 <td style="font-size:12px;">${e.date||''}</td>
                 <td>${e.title||''}</td>
                 <td style="text-align:right;font-weight:700;">₩${(parseFloat(e.amount)||0).toLocaleString('ko-KR')}</td>
@@ -906,8 +992,10 @@ function getExpCatColor(cat) {
 
 function renderWishPlaces(trip, regionFilter) {
   const wishes = trip.wishPlaces || [];
-  const filter = regionFilter || '';
-  const filtered = filter ? wishes.filter(w => (w.region||'').includes(filter) || (w.place||'').includes(filter)) : wishes;
+  const filter = (regionFilter || '').trim();
+  const filtered = filter
+    ? wishes.filter(w => (w.region||'').includes(filter) || (w.place||'').includes(filter))
+    : wishes;
 
   // 카테고리별 그룹
   const groups = {};
@@ -918,32 +1006,39 @@ function renderWishPlaces(trip, regionFilter) {
   });
 
   if (Object.keys(groups).length === 0) {
-    return `<div style="color:var(--text-sub);font-size:13px;padding:16px 0;text-align:center;">⭐ + 추가 버튼으로 가고싶은 곳을 추가하세요</div>`;
+    return `<div style="color:var(--text-sub);font-size:13px;padding:24px 0;text-align:center;">
+      ⭐ ${filter ? `"${filter}" 지역에 해당하는 장소가 없어요` : '+ 추가 버튼으로 가고싶은 곳을 추가하세요'}
+    </div>`;
   }
 
   return `
-    <div class="tp-wish-grid">
-      ${Object.entries(groups).map(([cat, items]) => `
-        <div class="tp-wish-col">
-          <div class="tp-wish-cat-header">
-            <span>${getCatEmoji(cat)} ${cat}</span>
-            <span class="tp-wish-count">${items.length}곳</span>
-          </div>
-          ${items.map(w => `
-            <div class="tp-wish-item tp-hover-parent ${w.visited?'visited':''}">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;">
-                <input type="checkbox" ${w.visited?'checked':''} onchange="TravelApp.toggleWishVisited('${trip.id}','${w.id}',this.checked)" style="accent-color:var(--green);"/>
-                <span class="tp-wish-name">${w.place||''}</span>
-                ${w.region ? `<span class="tp-wish-region">${w.region}</span>` : ''}
-              </label>
-              ${w.notes ? `<span class="tp-wish-notes">${w.notes}</span>` : ''}
-              <div class="tp-item-actions tp-hover-actions" style="flex-shrink:0;">
-                <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteWish('${trip.id}','${w.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
-              </div>
+    <div class="tp-wish-grid-v2">
+      ${Object.entries(groups).map(([cat, items]) => {
+        const st = getBucketCatStyle(cat);
+        return `
+          <div class="tp-wish-col-v2" style="border-top:3px solid ${st.bg};">
+            <div class="tp-wish-cat-header-v2">
+              <span class="tp-wish-cat-emoji">${st.emoji}</span>
+              <span class="tp-wish-cat-name">${cat}</span>
+              <span class="tp-wish-count-v2" style="background:${st.bg};color:${st.color};">${items.length}곳</span>
             </div>
-          `).join('')}
-        </div>
-      `).join('')}
+            ${items.map(w => `
+              <div class="tp-wish-item-v2 tp-hover-parent ${w.visited?'visited':''}"
+                onmouseover="this.style.background='${st.bg}44'"
+                onmouseout="this.style.background=''">
+                <span class="tp-wish-radio-circle ${w.visited?'checked':''}" style="${w.visited?'border-color:'+st.color+';background:'+st.color:''}" onclick="(function(el){var cb=el.parentElement.querySelector('input[type=checkbox]');cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'))})(this)"></span>
+                <span class="tp-wish-name-v2 ${w.visited?'done':''}">${w.place||''}</span>
+                ${w.region ? `<span class="tp-wish-region-v2">${w.region}</span>` : ''}
+                ${w.notes ? `<span class="tp-wish-notes-v2">${w.notes}</span>` : ''}
+                <input type="checkbox" ${w.visited?'checked':''} onchange="TravelApp.toggleWishVisited('${trip.id}','${w.id}',this.checked)" style="display:none;"/>
+                <div class="tp-item-actions tp-hover-actions">
+                  <button class="icon-btn tp-trash-btn" onclick="event.stopPropagation();TravelApp.deleteWish('${trip.id}','${w.id}')" title="삭제"><span class="tp-trash-svg"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }).join('')}
     </div>
   `;
 }
@@ -1004,7 +1099,10 @@ function renderTravelBucket() {
           ${filtered.length === 0
             ? `<tr><td colspan="8" class="tp-table-empty">⭐ 가보고 싶은 곳을 추가해보세요!</td></tr>`
             : filtered.map(b => `
-              <tr class="tp-hover-parent ${b.checked?'tp-bucket-done':''}" onclick="TravelApp.editBucket('${b.id}')">
+              <tr class="tp-hover-parent ${b.checked?'tp-bucket-done':''}"
+                onmouseover="(function(r,bg,bc){r.querySelectorAll('td').forEach(function(td,i){td.style.background=bg;if(i===1)td.style.boxShadow='inset 3px 0 0 0 '+bc})})(this,'${getBucketCatStyle(b.type).bg}44','${getBucketCatStyle(b.type).bg}')"
+                onmouseout="this.querySelectorAll('td').forEach(function(td){td.style.background='';td.style.boxShadow=''})"
+                onclick="TravelApp.editBucket('${b.id}')">
                 <td onclick="event.stopPropagation()">
                   <input type="checkbox" ${b.checked?'checked':''} onchange="TravelApp.toggleBucket('${b.id}',this.checked)" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;"/>
                 </td>
@@ -1488,12 +1586,9 @@ function toggleWishVisited(tripId, wishId, checked) {
 function filterWishPlaces(tripId, regionFilter) {
   const trip = getTripById(tripId);
   if (!trip) return;
-  const el = document.querySelector('.tp-wish-grid') || document.createElement('div');
-  const parent = el.parentElement;
-  if (parent) {
-    const newEl = document.createElement('div');
-    newEl.innerHTML = renderWishPlaces(trip, regionFilter);
-    parent.replaceChild(newEl.firstChild || newEl, el);
+  const container = document.getElementById('tp-wish-places-container-' + tripId);
+  if (container) {
+    container.innerHTML = renderWishPlaces(trip, regionFilter);
   }
 }
 
