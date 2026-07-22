@@ -2707,7 +2707,7 @@ function _renderTripBarsForWeek(trips, y, m, rowCells) {
   });
   if (!bars.length) return '';
   return `<div class="trip-events-row">${bars.map(b =>
-    `<div class="trip-event-bar" style="grid-column:${b.colStart}/${b.colEnd};--bar-color:${b.bg};" title="${b.name} ${b.flag}"><div class="trip-bar-track"><span class="trip-bar-plane">✈</span><span class="trip-bar-dash"></span>${b.endsHere?'<span class="trip-bar-tip">›</span>':''}</div><div class="trip-bar-label">${b.startsHere?b.name+' '+b.flag:''}</div></div>`
+    `<div class="trip-event-bar" style="grid-column:${b.colStart}/${b.colEnd};--bar-color:${b.bg};" title="${b.name} ${b.flag}"><div class="trip-bar-track">${b.startsHere?`<span class="trip-bar-plane">✈</span><span class="trip-bar-dash"></span><span class="trip-bar-label">${b.name} ${b.flag}</span>`:'<span class="trip-bar-cont"></span>'}<span class="trip-bar-dash"></span>${b.endsHere?'<span class="trip-bar-tip">›</span>':''}</div></div>`
   ).join('')}</div>`;
 }
 // ===== 여행 일정 캘린더 바 헬퍼 끝 =====
