@@ -951,7 +951,8 @@ function renderExpenseList(trip) {
                   </div>
                 </td>
               </tr>
-            `).join('')
+            `;
+              }).join('')
           }
           <tr class="tp-expense-total">
             <td colspan="${trip.type==='foreign'?4:3}">합계</td>
