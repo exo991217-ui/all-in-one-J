@@ -2200,7 +2200,7 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 
 /* ===== TRAVEL PLANNER ===== */
 /* Layout */
-.tp-layout{display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
+.tp-layout{display:grid;grid-template-columns:1fr;gap:24px;align-items:start}
 @media(max-width:900px){.tp-layout{grid-template-columns:1fr}}
 
 /* Filter bar */
@@ -2216,13 +2216,13 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-year-label{font-size:13px;font-weight:700;color:var(--text-sub);margin-bottom:12px;padding:4px 0;border-bottom:1.5px solid var(--border);}
 
 /* Card grid */
-.tp-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tp-card-grid{display:grid;grid-template-columns:1fr;gap:14px}
 @media(max-width:600px){.tp-card-grid{grid-template-columns:1fr}}
 
 .tp-card{background:white;border-radius:14px;border:1.5px solid var(--border);box-shadow:0 2px 12px rgba(160,140,220,.08);cursor:pointer;transition:all .18s;overflow:hidden}
 .tp-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(160,140,220,.18);border-color:#A29BFE}
 .tp-card.done{opacity:.75}
-.tp-card-inner{display:flex;align-items:stretch;height:80px}
+.tp-card-inner{display:flex;align-items:stretch;height:72px}
 .tp-card-flag{width:64px;min-width:64px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
 .tp-flag-code{font-size:18px;font-weight:800;color:white;text-shadow:0 1px 4px rgba(0,0,0,.3);letter-spacing:-1px}
 .tp-card-body{flex:1;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;min-width:0}
@@ -2240,7 +2240,7 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-sidebar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:14px;font-weight:800;color:var(--text-main)}
 .tp-upcoming-item{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--border);cursor:pointer;gap:8px;transition:background .12s;border-radius:8px}
 .tp-upcoming-item:last-child{border-bottom:none}
-.tp-upcoming-item:hover{background:#FAFAFF}
+.tp-upcoming-item:hover{background:var(--t-bg,#FAFAFF)}
 .tp-upcoming-main{flex:1;min-width:0}
 .tp-upcoming-name{font-size:13px;font-weight:700;color:var(--text-main)}
 .tp-upcoming-date{font-size:11px;color:var(--text-sub);margin-top:2px}
@@ -2291,8 +2291,18 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-booking-col{background:var(--bg);border-radius:12px;border:1.5px solid var(--border);padding:14px}
 .tp-booking-header{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:800;color:var(--text-main);margin-bottom:10px}
 .tp-booking-empty{font-size:12px;color:var(--text-sub);text-align:center;padding:12px 0}
-.tp-booking-item{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);gap:6px}
+.tp-booking-item{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 10px;border-bottom:1px dashed var(--border);gap:6px;border-radius:7px}
 .tp-booking-item:last-child{border-bottom:none}
+/* ── 계획된 여행 일정 컴팩트 카드 섹션 ── */
+.tp-planned-section{background:white;border-radius:14px;border:1.5px solid var(--border);box-shadow:var(--shadow);padding:16px 20px;margin-bottom:20px}
+.tp-planned-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-size:14px;font-weight:800;color:var(--text-main)}
+.tp-planned-cards{display:flex;flex-direction:column;gap:8px}
+.tp-planned-card{background:var(--bg,#F9F8FF);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;cursor:pointer;transition:all .15s}
+.tp-planned-card:hover{background:var(--t-bg,#F0EEFF);border-color:var(--t2,#A29BFE);box-shadow:inset 3px 0 0 0 var(--t2,#A29BFE)}
+.tp-planned-card-name{font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-planned-card-meta{font-size:11px;color:var(--text-sub)}
+.tp-planned-card-expense{font-size:11px;color:var(--orange);font-weight:700;margin-top:2px}
+
 .tp-booking-info{flex:1;min-width:0}
 .tp-booking-name{font-size:13px;font-weight:600;color:var(--text-main)}
 .tp-booking-sub{font-size:11px;color:var(--text-sub);margin-top:2px}
@@ -2402,9 +2412,9 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-item-actions{display:flex;align-items:center;flex-shrink:0}
 /* 호버 항목 하이라이트 */
 div.tp-hover-parent{transition:background .13s,box-shadow .13s;}
-div.tp-hover-parent:hover{background:rgba(162,155,254,.09);box-shadow:inset 3px 0 0 0 #A29BFE;border-radius:7px;}
+div.tp-hover-parent:hover{background:var(--t-bg,rgba(162,155,254,.09));box-shadow:inset 3px 0 0 0 var(--t2,#A29BFE);border-radius:7px;}
 tr.tp-hover-parent{cursor:pointer;}
-tr.tp-hover-parent:hover td{background:rgba(162,155,254,.09)!important;}
+tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!important;}
 /* SVG 휴지통 버튼 */
 .tp-trash-svg{display:inline-flex;align-items:center;justify-content:center;color:#b2bec3;transition:color .15s;}
 .tp-trash-btn{opacity:1!important;background:none;border:none;cursor:pointer;padding:3px 4px;display:inline-flex;align-items:center;border-radius:5px;transition:background .15s;}
