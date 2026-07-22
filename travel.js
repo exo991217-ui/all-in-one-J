@@ -53,8 +53,17 @@ let _travelFilter = '전체';
 let _travelView = null; // null = list, tripId = detail
 let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable' | 'schedule-summary'
 let _bucketFilter = '전체';
-// 가고싶은 곳 지역 설정 (localStorage에 저장해 새로고침해도 유지)
-let _wishRegionSetting = localStorage.getItem('travel_wish_region') || '';
+// 가고싶은 곳 지역 설정: 여행 ID별 독립 저장 (localStorage)
+function _getWishRegion(tripId) {
+  return localStorage.getItem('travel_wish_region_' + tripId) || '';
+}
+function _setWishRegion(tripId, region) {
+  if (region) {
+    localStorage.setItem('travel_wish_region_' + tripId, region);
+  } else {
+    localStorage.removeItem('travel_wish_region_' + tripId);
+  }
+}
 // 준비물·팁 상태
 let _tipsSubTab = 'checklist'; // 'checklist' | 'tips'
 let _tipsWriting = false;
@@ -710,7 +719,7 @@ function renderTravelDetail(el, tripId) {
         <div class="tp-section-header">
           <div class="tp-section-title" style="margin-bottom:0;">⭐ 가고싶은 곳</div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <button class="add-btn" style="background:#EDE9FF;color:#5E4BC4;border:none;" onclick="TravelApp.openWishRegionModal()" title="지역 설정">📍 지역 설정${_wishRegionSetting ? ': '+_wishRegionSetting : ''}</button>
+            <button class="add-btn" style="background:#EDE9FF;color:#5E4BC4;border:none;" onclick="TravelApp.openWishRegionModal('${trip.id}')" title="지역 설정">📍 지역 설정${_getWishRegion(trip.id) ? ': '+_getWishRegion(trip.id) : ''}</button>
             <button class="add-btn" onclick="TravelApp.openAddBucketModal()" title="버킷플레이스에 장소 추가">+ 버킷에 추가</button>
           </div>
         </div>
@@ -1071,15 +1080,15 @@ function getExpCatColor(cat) {
 }
 
 // ===== 가고싶은 곳 지역 설정 함수 =====
-function openWishRegionModal() {
-  const current = _wishRegionSetting;
+function openWishRegionModal(tripId) {
+  const id = tripId || _travelView;
+  if (!id) return;
+  const current = _getWishRegion(id);
   const el = document.getElementById('travel-my-content');
   if (!el) return;
-  // 간단한 인라인 프롬프트 대신 모달 사용
   const region = prompt('가고싶은 지역 또는 나라를 입력하세요\n(예: 일본, 도쿄, 호주 / 비워두면 초기화)', current);
   if (region === null) return; // 취소
-  _wishRegionSetting = region.trim();
-  localStorage.setItem('travel_wish_region', _wishRegionSetting);
+  _setWishRegion(id, region.trim());
   // 현재 열려있는 여행 상세 새로고침
   if (_travelView) {
     renderTravelDetail(el, _travelView);
@@ -1090,7 +1099,7 @@ function renderWishPlaces(trip, regionFilter) {
   // 버킷플레이스 전역 데이터를 가고싶은 곳으로 사용
   const bucketList = (S && S.travels && S.travels.bucketList) || [];
   // 지역 설정: 전달된 regionFilter 우선, 없으면 저장된 설정값 사용
-  const activeFilter = (regionFilter !== undefined ? regionFilter : _wishRegionSetting) || '';
+  const activeFilter = (regionFilter !== undefined ? regionFilter : _getWishRegion(trip.id)) || '';
   const filter = activeFilter.trim();
 
   // 지역 설정이 없으면 빈 상태 + 설정 유도 표시
@@ -1100,7 +1109,7 @@ function renderWishPlaces(trip, regionFilter) {
         <div style="font-size:36px;margin-bottom:12px;">📍</div>
         <div style="font-size:15px;font-weight:700;color:#5E4BC4;margin-bottom:6px;">지역을 설정하면 관련 장소만 보여요</div>
         <div style="font-size:13px;color:#9490A8;margin-bottom:18px;">가고싶은 지역이나 나라를 설정해서<br>버킷플레이스 장소를 필터링해보세요</div>
-        <button class="add-btn primary" onclick="TravelApp.openWishRegionModal()" style="font-size:13px;padding:8px 20px;">📍 지역 설정</button>
+        <button class="add-btn primary" onclick="TravelApp.openWishRegionModal('${trip.id}')" style="font-size:13px;padding:8px 20px;">📍 지역 설정</button>
       </div>
     `;
   }
@@ -1121,7 +1130,7 @@ function renderWishPlaces(trip, regionFilter) {
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 14px;background:#EDE9FF;border-radius:12px;font-size:13px;">
       <span style="color:#5E4BC4;font-weight:700;">📍 ${filter}</span>
       <span style="color:#9490A8;flex:1;">설정 중</span>
-      <button class="add-btn" onclick="TravelApp.openWishRegionModal()" style="font-size:11px;padding:3px 10px;">변경</button>
+      <button class="add-btn" onclick="TravelApp.openWishRegionModal('${trip.id}')" style="font-size:11px;padding:3px 10px;">변경</button>
     </div>
   `;
 
