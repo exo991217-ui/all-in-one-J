@@ -2701,11 +2701,13 @@ function _renderTripBarsForWeek(trips, y, m, rowCells) {
     // 왼쪽 끝/오른쪽 끝 둥글기: 이 달·이 주에서 시작/끝인지
     const roundLeft = effStart === startDay ? '6px' : '0';
     const roundRight = effEnd === endDay ? '6px' : '0';
-    bars.push({ colStart, colEnd, name: t.name, flag, bg, roundLeft, roundRight });
+    const startsHere = roundLeft !== '0';
+    const endsHere = roundRight !== '0';
+    bars.push({ colStart, colEnd, name: t.name, flag, bg, startsHere, endsHere });
   });
   if (!bars.length) return '';
   return `<div class="trip-events-row">${bars.map(b =>
-    `<div class="trip-event-bar" style="grid-column:${b.colStart}/${b.colEnd};background:${b.bg};border-radius:${b.roundLeft} ${b.roundRight} ${b.roundRight} ${b.roundLeft};" title="${b.name}">${b.name} ${b.flag}</div>`
+    `<div class="trip-event-bar" style="grid-column:${b.colStart}/${b.colEnd};--bar-color:${b.bg};" title="${b.name} ${b.flag}"><div class="trip-bar-track"><span class="trip-bar-plane">✈</span><span class="trip-bar-dash"></span>${b.endsHere?'<span class="trip-bar-tip">›</span>':''}</div><div class="trip-bar-label">${b.startsHere?b.name+' '+b.flag:''}</div></div>`
   ).join('')}</div>`;
 }
 // ===== 여행 일정 캘린더 바 헬퍼 끝 =====
@@ -2833,8 +2835,8 @@ function renderFood(){
       </div>`;
     }).join('');
 
-    rowsHTML+=_renderTripBarsForWeek(_travelTrips,cm.y,cm.m,rowCells);
     rowsHTML+=`<div class="food-cal-week-row">${rowHTML}</div>`;
+    rowsHTML+=_renderTripBarsForWeek(_travelTrips,cm.y,cm.m,rowCells);
     rowsHTML+=`<div class="food-week-summary" style="border-color:${ft.border};background:${ft.light};">
       <span class="food-week-label" style="color:${ft.color};">${row+1}주차</span>
       <div class="food-week-totals">
