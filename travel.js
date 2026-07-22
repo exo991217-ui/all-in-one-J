@@ -792,11 +792,11 @@ function renderScheduleAddForm(trip) {
 function getSchedCatStyle(cat) {
   const styles = {
     '관광': { bg: '#A9CCE3', color: '#1A3E5E', emoji: '🔭' },
-    '식사': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍽' },
+    '식사': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍜' },
     '카페': { bg: '#FAD7A0', color: '#7D5000', emoji: '☕' },
-    '쇼핑': { bg: '#C39BD3', color: '#5B2C6F', emoji: '🛍' },
+    '쇼핑': { bg: '#C39BD3', color: '#5B2C6F', emoji: '💵' },
     '체험': { bg: '#A8D5B5', color: '#0D4D25', emoji: '🎯' },
-    '숙소': { bg: '#A2D9CE', color: '#0A4D42', emoji: '🛏' },
+    '숙소': { bg: '#A2D9CE', color: '#0A4D42', emoji: '🛌' },
     '교통': { bg: '#BFC9CA', color: '#2E4053', emoji: '🚌' },
     '이동': { bg: '#A9D18E', color: '#274E13', emoji: '🚶' },
     '기타': { bg: '#D5D8DC', color: '#424949', emoji: '📌' },
@@ -809,8 +809,8 @@ function getSchedCatColor(cat) { return getSchedCatStyle(cat).bg; }
 // ── 버킷/지출 배지 스타일 ──────────────────────────────────────
 function getBucketCatStyle(cat) {
   const styles = {
-    '풍경': { bg: '#A8D5B5', color: '#0D4D25', emoji: '🏔' },
-    '맛집': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍽' },
+    '풍경': { bg: '#A8D5B5', color: '#0D4D25', emoji: '🖼️' },
+    '맛집': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍜' },
     '카페': { bg: '#FAD7A0', color: '#7D5000', emoji: '☕' },
     '체험': { bg: '#A9CCE3', color: '#1A4E6B', emoji: '🎯' },
     '기념품': { bg: '#C39BD3', color: '#5B2C6F', emoji: '🎁' },
@@ -949,7 +949,7 @@ function renderWishPlaces(trip, regionFilter) {
 }
 
 function getCatEmoji(cat) {
-  const e = {'풍경':'🏔','맛집':'🍽','카페':'☕','체험':'🎯','기념품':'🎁','기타':'⭐'};
+  const e = {'풍경':'🖼️','맛집':'🍜','카페':'☕','체험':'🎯','기념품':'🎁','기타':'⭐'};
   return e[cat] || '⭐';
 }
 
