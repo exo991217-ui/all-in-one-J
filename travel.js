@@ -126,11 +126,18 @@ function formatTravelDateRange(start, end) {
   if (!start) return '';
   const s = new Date(start);
   const e = end ? new Date(end) : null;
-  const sy = s.getFullYear(), sm = s.getMonth() + 1, sd = s.getDate();
-  if (!e) return `${sy}년 ${sm}/${sd}`;
-  const ey = e.getFullYear(), em = e.getMonth() + 1, ed = e.getDate();
-  if (sy === ey) return `${sm}/${sd} ~ ${em}/${ed}`;
-  return `${sy}.${sm}/${sd} ~ ${ey}.${em}/${ed}`;
+  const sy = String(s.getFullYear()).slice(2), sm = String(s.getMonth()+1).padStart(2,'0'), sd = String(s.getDate()).padStart(2,'0');
+  if (!e) return `${sy}/${sm}/${sd}`;
+  const ey = String(e.getFullYear()).slice(2), em = String(e.getMonth()+1).padStart(2,'0'), ed = String(e.getDate()).padStart(2,'0');
+  return `${sy}/${sm}/${sd} ~ ${ey}/${em}/${ed}`;
+}
+
+// 일정 날짜 포맷: yyyy-mm-dd → yy/mm/dd
+function fmtScheduleDate(d) {
+  if (!d) return '';
+  const p = d.split('-');
+  if (p.length < 3) return d;
+  return String(p[0]).slice(2) + '/' + p[1] + '/' + p[2];
 }
 
 function getTripStatusLabel(trip) {
@@ -249,69 +256,74 @@ function renderTravelMy() {
     .slice(0, 6);
 
   el.innerHTML = `
-    <div class="tp-layout">
-      <div class="tp-main">
-        <div class="page-header">
-          <div>
-            <h1 class="page-title">내 여행 🗺️</h1>
-            <p class="page-sub">나만의 여행 기록을 관리해요</p>
-          </div>
-          <button class="add-btn primary" onclick="TravelApp.openNewTripModal()">+ 새 여행</button>
+    <div>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">내 여행 🗺️</h1>
+          <p class="page-sub">나만의 여행 기록을 관리해요</p>
         </div>
+        <button class="add-btn primary" onclick="TravelApp.openNewTripModal()">+ 새 여행</button>
+      </div>
 
-        <!-- 필터 바 -->
-        <div class="tp-filter-bar">
-          ${['준비물과팁','전체','해외여행','국내여행','완료'].map(f => `
-            <button class="tp-filter-chip ${_travelFilter === f ? 'active' : ''}" onclick="TravelApp.setTravelFilter('${f}')">
-              ${f === '준비물과팁' ? '🎒 ' : f === '전체' ? '' : f === '해외여행' ? '🌏 ' : f === '국내여행' ? '🏔 ' : '✅ '}${f}
-            </button>
-          `).join('')}
+      <!-- 상단: 계획된 여행 일정 컴팩트 카드 -->
+      ${upcomingTrips.length > 0 ? `
+        <div class="tp-planned-section">
+          <div class="tp-planned-header">
+            <span>📋 계획된 여행 일정</span>
+            <button class="add-btn" style="font-size:11px;padding:4px 10px;" onclick="TravelApp.openNewTripModal()">+ 추가</button>
+          </div>
+          <div class="tp-planned-cards">
+            ${upcomingTrips.map(t => {
+              const status = getTripStatusLabel(t);
+              const bgColor = getTripFlagBg(t);
+              return `
+                <div class="tp-planned-card" onclick="TravelApp.openTrip('${t.id}')">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:36px;height:36px;border-radius:10px;background:${bgColor};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <span style="font-size:13px;font-weight:800;color:white;letter-spacing:-1px;">${getInitials(t.name)}</span>
+                    </div>
+                    <div style="min-width:0;flex:1;">
+                      <div class="tp-planned-card-name">${t.name}</div>
+                      <div class="tp-planned-card-meta">${formatTravelDateRange(t.startDate, t.endDate)}${t.regions ? ' · ' + t.regions : ''}${t.companions ? ' · ' + t.companions : ''}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                      ${status === 'ongoing'
+                        ? `<span class="tp-badge green">여행중 ✈️</span>`
+                        : `<div class="tp-planned-card-expense">🔥 ${getTripTotalExpense(t).toLocaleString('ko-KR')}원</div>`
+                      }
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
         </div>
+      ` : ''}
 
-        <!-- 여행 카드 그리드 -->
-        ${sortedYears.length === 0 ? `
-          <div class="tp-empty">
-            <div style="font-size:48px;margin-bottom:12px;">✈️</div>
-            <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:8px;">아직 여행 기록이 없어요</div>
-            <div style="font-size:13px;color:var(--text-sub);">[+ 새 여행] 버튼으로 첫 여행을 추가해보세요!</div>
-          </div>
-        ` : sortedYears.map(year => `
-          <div class="tp-year-group">
-            <div class="tp-year-label">📅 ${year}</div>
-            <div class="tp-card-grid">
-              ${groups[year].map(t => renderTripCard(t)).join('')}
-            </div>
-          </div>
+      <!-- 필터 바 -->
+      <div class="tp-filter-bar">
+        ${['준비물과팁','전체','해외여행','국내여행','완료'].map(f => `
+          <button class="tp-filter-chip ${_travelFilter === f ? 'active' : ''}" onclick="TravelApp.setTravelFilter('${f}')">
+            ${f === '준비물과팁' ? '🎒 ' : f === '전체' ? '' : f === '해외여행' ? '🌏 ' : f === '국내여행' ? '🏔 ' : '✅ '}${f}
+          </button>
         `).join('')}
       </div>
 
-      <!-- 우측: 계획된 여행 일정 -->
-      <div class="tp-sidebar">
-        <div class="tp-sidebar-header">
-          <span>📋 계획된 여행 일정</span>
-          <button class="add-btn" style="font-size:11px;padding:4px 10px;" onclick="TravelApp.openNewTripModal()">+ 추가</button>
+      <!-- 여행 카드 그리드 -->
+      ${sortedYears.length === 0 ? `
+        <div class="tp-empty">
+          <div style="font-size:48px;margin-bottom:12px;">✈️</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:8px;">아직 여행 기록이 없어요</div>
+          <div style="font-size:13px;color:var(--text-sub);">[+ 새 여행] 버튼으로 첫 여행을 추가해보세요!</div>
         </div>
-        ${upcomingTrips.length === 0 ? `<div style="color:var(--text-sub);font-size:13px;padding:16px 0;text-align:center;">계획된 여행이 없어요</div>` :
-          upcomingTrips.map(t => {
-            const status = getTripStatusLabel(t);
-            return `
-              <div class="tp-upcoming-item" onclick="TravelApp.openTrip('${t.id}')">
-                <div class="tp-upcoming-main">
-                  <div class="tp-upcoming-name">${t.name}</div>
-                  <div class="tp-upcoming-date">${t.companions ? `👥 ${t.companions}` : ''}</div>
-                </div>
-                <div class="tp-upcoming-right">
-                  <div class="tp-upcoming-datestr">${formatTravelDateRange(t.startDate, t.endDate)}</div>
-                  ${status === 'ongoing'
-                    ? `<span class="tp-badge green">진행중 ✓</span>`
-                    : `<span style="font-size:12px;color:var(--orange);font-weight:700;">🔥 ${getTripTotalExpense(t).toLocaleString('ko-KR')}원 ▼</span>`
-                  }
-                </div>
-              </div>
-            `;
-          }).join('')
-        }
-      </div>
+      ` : sortedYears.map(year => `
+        <div class="tp-year-group">
+          <div class="tp-year-label">📅 ${year}</div>
+          <div class="tp-card-grid">
+            ${groups[year].map(t => renderTripCard(t)).join('')}
+          </div>
+        </div>
+      `).join('')}
     </div>
   `;
 }
@@ -631,8 +643,8 @@ function renderTravelDetail(el, tripId) {
         <div class="tp-section-header">
           <div class="tp-section-title" style="margin-bottom:0;">⭐ 가고싶은 곳</div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <input type="text" id="wish-region-filter" class="tp-filter-input" placeholder="지역 필터 (예: 시드니)" value="" oninput="TravelApp.filterWishPlaces('${trip.id}',this.value)"/>
-            <button class="add-btn" onclick="TravelApp.openAddWishModal('${trip.id}')">+ 추가</button>
+            <input type="text" id="wish-region-filter" class="tp-filter-input" placeholder="지역/장소 필터" value="" oninput="TravelApp.filterWishPlaces('${trip.id}',this.value)"/>
+            <button class="add-btn" onclick="TravelApp.openAddBucketModal()" title="버킷플레이스에 장소 추가">+ 버킷에 추가</button>
           </div>
         </div>
         <div id="tp-wish-places-container-${trip.id}">
@@ -697,7 +709,7 @@ function renderScheduleList(trip) {
                   onmouseout="this.querySelectorAll('td').forEach(function(td){td.style.background='';td.style.boxShadow=''})"
                   onclick="TravelApp.editSchedule('${trip.id}','${s.id}')">
                   <td><span class="tp-scat-badge" style="background:${cs.bg};color:${cs.color};">${s.category||'기타'}</span></td>
-                  <td>${s.date||''}</td>
+                  <td>${fmtScheduleDate(s.date)}</td>
                   <td>${s.time||''}</td>
                   <td>${s.place||''}</td>
                   <td>${s.content||''}</td>
@@ -992,23 +1004,25 @@ function getExpCatColor(cat) {
 }
 
 function renderWishPlaces(trip, regionFilter) {
-  const wishes = trip.wishPlaces || [];
+  // 버킷플레이스 전역 데이터를 가고싶은 곳으로 사용
+  const bucketList = (S && S.travels && S.travels.bucketList) || [];
   const filter = (regionFilter || '').trim();
   const filtered = filter
-    ? wishes.filter(w => (w.region||'').includes(filter) || (w.place||'').includes(filter))
-    : wishes;
+    ? bucketList.filter(b => (b.region||'').includes(filter) || (b.place||'').includes(filter) || (b.country||'').includes(filter))
+    : bucketList;
 
-  // 카테고리별 그룹
+  // type 필드를 카테고리로 사용하여 그룹화
   const groups = {};
-  filtered.forEach(w => {
-    const cat = w.category || '기타';
+  filtered.forEach(b => {
+    const cat = b.type || '기타';
     if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(w);
+    groups[cat].push(b);
   });
 
   if (Object.keys(groups).length === 0) {
     return `<div style="color:var(--text-sub);font-size:13px;padding:24px 0;text-align:center;">
-      ⭐ ${filter ? `"${filter}" 지역에 해당하는 장소가 없어요` : '+ 추가 버튼으로 가고싶은 곳을 추가하세요'}
+      ⭐ ${filter ? `"${filter}" 검색 결과가 없어요` : '버킷플레이스 탭에서 가고싶은 곳을 추가해보세요!'}
+      <div style="margin-top:8px;"><button class="add-btn" onclick="App.switchTab('travel-bucket')" style="font-size:12px;">⭐ 버킷플레이스 바로가기</button></div>
     </div>`;
   }
 
@@ -1023,17 +1037,17 @@ function renderWishPlaces(trip, regionFilter) {
               <span class="tp-wish-cat-name">${cat}</span>
               <span class="tp-wish-count-v2" style="background:${st.bg};color:${st.color};">${items.length}곳</span>
             </div>
-            ${items.map(w => `
-              <div class="tp-wish-item-v2 tp-hover-parent ${w.visited?'visited':''}"
+            ${items.map(b => `
+              <div class="tp-wish-item-v2 tp-hover-parent ${b.checked?'visited':''}"
                 onmouseover="this.style.background='${st.bg}44'"
                 onmouseout="this.style.background=''">
-                <span class="tp-wish-radio-circle ${w.visited?'checked':''}" style="${w.visited?'border-color:'+st.color+';background:'+st.color:''}" onclick="(function(el){var cb=el.parentElement.querySelector('input[type=checkbox]');cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'))})(this)"></span>
-                <span class="tp-wish-name-v2 ${w.visited?'done':''}">${w.place||''}</span>
-                ${w.region ? `<span class="tp-wish-region-v2">${w.region}</span>` : ''}
-                ${w.notes ? `<span class="tp-wish-notes-v2">${w.notes}</span>` : ''}
-                <input type="checkbox" ${w.visited?'checked':''} onchange="TravelApp.toggleWishVisited('${trip.id}','${w.id}',this.checked)" style="display:none;"/>
+                <span class="tp-wish-radio-circle ${b.checked?'checked':''}" style="${b.checked?'border-color:'+st.color+';background:'+st.color:''}" onclick="TravelApp.toggleBucket('${b.id}')"></span>
+                <span class="tp-wish-name-v2 ${b.checked?'done':''}">${b.place||''}</span>
+                ${b.region ? `<span class="tp-wish-region-v2">${b.region}</span>` : ''}
+                ${b.country ? `<span class="tp-wish-region-v2" style="background:#FFF5E6;color:#C07A1A;">${b.country}</span>` : ''}
+                ${b.notes ? `<span class="tp-wish-notes-v2">${b.notes}</span>` : ''}
                 <div class="tp-item-actions tp-hover-actions">
-                  <button class="icon-btn tp-trash-btn" onclick="event.stopPropagation();TravelApp.deleteWish('${trip.id}','${w.id}')" title="삭제"><span class="tp-trash-svg"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
+                  <button class="icon-btn tp-trash-btn" onclick="event.stopPropagation();TravelApp.deleteBucket('${b.id}')" title="삭제"><span class="tp-trash-svg"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
                 </div>
               </div>
             `).join('')}
