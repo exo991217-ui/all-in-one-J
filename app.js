@@ -2642,6 +2642,74 @@ function _getAmountLegendStyle(amount,ft){
   return {bg:matched.bg||'',color:matched.color||'',border:''};
 }
 
+// ===== 여행 일정 캘린더 바 헬퍼 =====
+// 해당 년월과 겹치는 여행 목록 반환
+function _getTravelTripsForMonth(y, m) {
+  if (!S.travels || !S.travels.trips) return [];
+  const monthStart = new Date(y, m - 1, 1);
+  const monthEnd = new Date(y, m, 0);
+  return S.travels.trips.filter(t => {
+    if (!t.startDate) return false;
+    const start = new Date(t.startDate);
+    const end = t.endDate ? new Date(t.endDate) : start;
+    return start <= monthEnd && end >= monthStart;
+  });
+}
+
+// 한 주 행에 표시할 여행 바 HTML 반환
+function _renderTripBarsForWeek(trips, y, m, rowCells) {
+  const dayCells = rowCells.filter(c => c.type === 'day');
+  if (!trips.length || !dayCells.length) return '';
+  const weekMinDay = Math.min(...dayCells.map(c => c.d));
+  const weekMaxDay = Math.max(...dayCells.map(c => c.d));
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const monthStart = new Date(y, m - 1, 1);
+  const monthEnd = new Date(y, m, 0);
+
+  const bars = [];
+  trips.forEach(t => {
+    const tripStart = new Date(t.startDate);
+    const tripEnd = t.endDate ? new Date(t.endDate) : new Date(t.startDate);
+    // 이 달 기준 시작·끝 일자 (다른 달은 클램프)
+    let startDay, endDay;
+    if (tripStart <= monthEnd && tripStart >= monthStart) {
+      startDay = tripStart.getDate();
+    } else if (tripStart < monthStart) {
+      startDay = 1;
+    } else {
+      return;
+    }
+    if (tripEnd >= monthStart && tripEnd <= monthEnd) {
+      endDay = tripEnd.getDate();
+    } else if (tripEnd > monthEnd) {
+      endDay = daysInMonth;
+    } else {
+      return;
+    }
+    // 이 주와 겹치는 범위
+    const effStart = Math.max(startDay, weekMinDay);
+    const effEnd = Math.min(endDay, weekMaxDay);
+    if (effStart > effEnd) return;
+    const startCell = rowCells.find(c => c.type === 'day' && c.d === effStart);
+    const endCell = rowCells.find(c => c.type === 'day' && c.d === effEnd);
+    if (!startCell || !endCell) return;
+    const colStart = startCell.dow + 1;
+    const colEnd = endCell.dow + 2;
+    // travel.js 함수 사용 (script 로드 순서상 사용 가능)
+    const flag = (typeof getCountryFlag === 'function') ? getCountryFlag(t) : '✈️';
+    const bg = (typeof getTripFlagBg === 'function') ? getTripFlagBg(t) : '#74B9FF';
+    // 왼쪽 끝/오른쪽 끝 둥글기: 이 달·이 주에서 시작/끝인지
+    const roundLeft = effStart === startDay ? '6px' : '0';
+    const roundRight = effEnd === endDay ? '6px' : '0';
+    bars.push({ colStart, colEnd, name: t.name, flag, bg, roundLeft, roundRight });
+  });
+  if (!bars.length) return '';
+  return `<div class="trip-events-row">${bars.map(b =>
+    `<div class="trip-event-bar" style="grid-column:${b.colStart}/${b.colEnd};background:${b.bg};border-radius:${b.roundLeft} ${b.roundRight} ${b.roundRight} ${b.roundLeft};" title="${b.name}">${b.name} ${b.flag}</div>`
+  ).join('')}</div>`;
+}
+// ===== 여행 일정 캘린더 바 헬퍼 끝 =====
+
 // 날짜별 소비 금액 계산 (가계부 지출 + 자동화) — renderFood 외부에서도 사용 가능
 function _getDaySpendAmount(d, ledgerEntries, activeAutos){
   const ledgerAmt=ledgerEntries.filter(e=>{
@@ -2710,6 +2778,8 @@ function renderFood(){
   const _todayNow=new Date();
   const _isThisMonth=cm.y===_todayNow.getFullYear()&&cm.m===(_todayNow.getMonth()+1);
   const _todayD=_todayNow.getDate();
+  // 이 달과 겹치는 여행 목록 (Google Calendar 스타일 바 렌더링용)
+  const _travelTrips=_getTravelTripsForMonth(cm.y,cm.m);
 
   for(let row=0;row<totalRows;row++){
     const rowCells=allCells.slice(row*7,(row+1)*7);
@@ -2763,6 +2833,7 @@ function renderFood(){
       </div>`;
     }).join('');
 
+    rowsHTML+=_renderTripBarsForWeek(_travelTrips,cm.y,cm.m,rowCells);
     rowsHTML+=`<div class="food-cal-week-row">${rowHTML}</div>`;
     rowsHTML+=`<div class="food-week-summary" style="border-color:${ft.border};background:${ft.light};">
       <span class="food-week-label" style="color:${ft.color};">${row+1}주차</span>
