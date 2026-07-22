@@ -3,7 +3,7 @@
 
 // ===== TRAVEL STATE DEFAULTS =====
 function initTravelState() {
-  if (!window.S || S === null) return;
+  if (S === null) return;
   if (!S.travels) S.travels = { trips: [], bucketList: [] };
   if (!S.travels.trips) S.travels.trips = [];
   if (!S.travels.bucketList) S.travels.bucketList = [];
@@ -154,7 +154,7 @@ function getInitials(name) {
 function renderTravelMy() {
   const el = document.getElementById('travel-my-content');
   if (!el) return;
-  if (!window.S || S === null) {
+  if (S === null) {
     el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-sub);font-size:14px;">⏳ 데이터 불러오는 중...</div>';
     return;
   }
@@ -748,7 +748,7 @@ function getCatEmoji(cat) {
 function renderTravelBucket() {
   const el = document.getElementById('travel-bucket-content');
   if (!el) return;
-  if (!window.S || S === null) {
+  if (S === null) {
     el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-sub);font-size:14px;">⏳ 데이터 불러오는 중...</div>';
     return;
   }
