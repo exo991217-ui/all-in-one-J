@@ -53,6 +53,8 @@ let _travelFilter = '전체';
 let _travelView = null; // null = list, tripId = detail
 let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable' | 'schedule-summary'
 let _bucketFilter = '전체';
+// 가고싶은 곳 지역 설정 (localStorage에 저장해 새로고침해도 유지)
+let _wishRegionSetting = localStorage.getItem('travel_wish_region') || '';
 // 준비물·팁 상태
 let _tipsSubTab = 'checklist'; // 'checklist' | 'tips'
 let _tipsWriting = false;
@@ -237,9 +239,7 @@ function renderTravelMy() {
   const trips = S.travels.trips || [];
   const filter = _travelFilter;
 
-  if (filter === '준비물과팁') { el.innerHTML = renderTipsHTML(); return; }
-
-  // 계획된 여행 일정: 예정(ongoing 포함)만, 시작일 오름차순
+  // 계획된 여행 일정: 예정(ongoing 포함)만, 시작일 오름차순 — 항상 표시
   const upcomingTrips = trips
     .filter(t => getTripStatusLabel(t) !== 'done')
     .sort((a, b) => {
@@ -248,6 +248,51 @@ function renderTravelMy() {
       if (!b.startDate) return -1;
       return new Date(a.startDate) - new Date(b.startDate);
     });
+
+  // 준비물과팁 필터: 계획된 여행 일정 상단 고정 후 팁 내용 표시
+  if (filter === '준비물과팁') {
+    el.innerHTML = `
+      <div>
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">내 여행 🗺️</h1>
+            <p class="page-sub">나만의 여행 기록을 관리해요</p>
+          </div>
+          <button class="add-btn primary" onclick="TravelApp.openNewTripModal()">+ 새 여행</button>
+        </div>
+        ${upcomingTrips.length > 0 ? `
+          <div class="tp-planned-section">
+            <div class="tp-planned-header">
+              <span>📅 계획된 여행 일정</span>
+              <button class="add-btn" style="font-size:11px;padding:4px 10px;" onclick="TravelApp.openNewTripModal()">+ 추가</button>
+            </div>
+            <div class="tp-planned-cards">
+              ${upcomingTrips.map(t => {
+                const bgColor = getTripFlagBg(t);
+                const dateStr = t.startDate ? formatTravelDateRange(t.startDate, t.endDate) : '날짜 미정';
+                const isOngoing = getTripStatusLabel(t) === 'ongoing';
+                return `
+                  <div class="tp-planned-card tp-planned-card-slim" style="border-left-color:${bgColor}" onclick="TravelApp.openTrip('${t.id}')">
+                    <div class="tp-planned-card-name">${t.name}${isOngoing ? ' <span class="tp-badge green" style="font-size:10px;padding:2px 6px;">여행중</span>' : ''}</div>
+                    <div class="tp-planned-card-date">${dateStr}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+        <div class="tp-filter-bar">
+          ${['준비물과팁','전체','해외여행','국내여행','완료'].map(f => `
+            <button class="tp-filter-chip ${_travelFilter === f ? 'active' : ''}" onclick="TravelApp.setTravelFilter('${f}')">
+              ${f === '준비물과팁' ? '🎒 ' : f === '전체' ? '' : f === '해외여행' ? '🌏 ' : f === '국내여행' ? '🏔 ' : '✅ '}${f}
+            </button>
+          `).join('')}
+        </div>
+        ${renderTipsContentHTML()}
+      </div>
+    `;
+    return;
+  }
 
   // 하단 전체 목록: 타입 필터 적용 후 예정↑ / 완료↓ 분리
   let base = trips;
@@ -295,7 +340,7 @@ function renderTravelMy() {
         <button class="add-btn primary" onclick="TravelApp.openNewTripModal()">+ 새 여행</button>
       </div>
 
-      <!-- 상단: 계획된 여행 일정 가로 스크롤 카드 -->
+      <!-- 상단: 계획된 여행 일정 가로 스크롤 카드 (항상 표시) -->
       ${upcomingTrips.length > 0 ? `
         <div class="tp-planned-section">
           <div class="tp-planned-header">
@@ -305,19 +350,12 @@ function renderTravelMy() {
           <div class="tp-planned-cards">
             ${upcomingTrips.map(t => {
               const bgColor = getTripFlagBg(t);
-              const label = getPlannedCardLabel(t);
               const dateStr = t.startDate ? formatTravelDateRange(t.startDate, t.endDate) : '날짜 미정';
               const isOngoing = getTripStatusLabel(t) === 'ongoing';
               return `
-                <div class="tp-planned-card" style="border-left-color:${bgColor}" onclick="TravelApp.openTrip('${t.id}')">
-                  <div class="tp-planned-card-top">
-                    <div class="tp-planned-circle" style="background:${bgColor}">
-                      ${label.length === 1 && label !== '🌐' ? label : (label === '🌐' ? '<span style="font-size:20px">🌐</span>' : label)}
-                    </div>
-                    <div class="tp-planned-card-name">${t.name}</div>
-                    ${isOngoing ? '<span class="tp-badge green" style="font-size:10px;padding:2px 6px;">여행중</span>' : '<span class="tp-planned-arrow">›</span>'}
-                  </div>
-                  <div class="tp-planned-card-date">📅 ${dateStr}</div>
+                <div class="tp-planned-card tp-planned-card-slim" style="border-left-color:${bgColor}" onclick="TravelApp.openTrip('${t.id}')">
+                  <div class="tp-planned-card-name">${t.name}${isOngoing ? ' <span class="tp-badge green" style="font-size:10px;padding:2px 6px;">여행중</span>' : ''}</div>
+                  <div class="tp-planned-card-date">${dateStr}</div>
                 </div>
               `;
             }).join('')}
@@ -361,7 +399,7 @@ function renderTripCard(t) {
     <div class="tp-card ${status === 'done' ? 'done' : ''}" onclick="TravelApp.openTrip('${t.id}')">
       <div class="tp-card-inner">
         <div class="tp-card-flag" style="background:${bgColor};">
-          <span class="tp-flag-code">${getInitials(t.name)}</span>
+          <span class="tp-flag-code">${getCountryCode(t)}</span>
           ${statusBadge}
         </div>
         <div class="tp-card-body">
@@ -376,6 +414,26 @@ function renderTripCard(t) {
           </div>
         </div>
       </div>
+    </div>
+  `;
+}
+
+// 준비물/팁 컨텐츠만 (헤더·필터 바 없이) — renderTravelMy의 준비물과팁 케이스에서 호출
+function renderTipsContentHTML() {
+  return `
+    <!-- 서브 탭 -->
+    <div style="display:flex;gap:0;margin:18px 0 0;border-bottom:2px solid #eef0f5;">
+      <button onclick="TravelApp.setTipsTab('checklist')" style="padding:10px 22px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:${_tipsSubTab==='checklist'?'#5E4BC4':'#aaa'};border-bottom:3px solid ${_tipsSubTab==='checklist'?'#5E4BC4':'transparent'};margin-bottom:-2px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:6px;transition:color .15s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="6" rx="1"/><rect x="3" y="13" width="6" height="6" rx="1"/><line x1="13" y1="8" x2="21" y2="8"/><line x1="13" y1="16" x2="21" y2="16"/></svg>
+        준비물
+      </button>
+      <button onclick="TravelApp.setTipsTab('tips')" style="padding:10px 22px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:${_tipsSubTab==='tips'?'#5E4BC4':'#aaa'};border-bottom:3px solid ${_tipsSubTab==='tips'?'#5E4BC4':'transparent'};margin-bottom:-2px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:6px;transition:color .15s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        유용한 팁
+      </button>
+    </div>
+    <div style="margin-top:20px;">
+      ${_tipsSubTab === 'checklist' ? renderChecklistTab() : renderTipsTab()}
     </div>
   `;
 }
@@ -396,20 +454,7 @@ function renderTipsHTML() {
           </button>
         `).join('')}
       </div>
-      <!-- 서브 탭 -->
-      <div style="display:flex;gap:0;margin:18px 0 0;border-bottom:2px solid #eef0f5;">
-        <button onclick="TravelApp.setTipsTab('checklist')" style="padding:10px 22px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:${_tipsSubTab==='checklist'?'#5E4BC4':'#aaa'};border-bottom:3px solid ${_tipsSubTab==='checklist'?'#5E4BC4':'transparent'};margin-bottom:-2px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:6px;transition:color .15s;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="6" rx="1"/><rect x="3" y="13" width="6" height="6" rx="1"/><line x1="13" y1="8" x2="21" y2="8"/><line x1="13" y1="16" x2="21" y2="16"/></svg>
-          준비물
-        </button>
-        <button onclick="TravelApp.setTipsTab('tips')" style="padding:10px 22px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:${_tipsSubTab==='tips'?'#5E4BC4':'#aaa'};border-bottom:3px solid ${_tipsSubTab==='tips'?'#5E4BC4':'transparent'};margin-bottom:-2px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:6px;transition:color .15s;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          유용한 팁
-        </button>
-      </div>
-      <div style="margin-top:20px;">
-        ${_tipsSubTab === 'checklist' ? renderChecklistTab() : renderTipsTab()}
-      </div>
+      ${renderTipsContentHTML()}
     </div>
   `;
 }
@@ -665,12 +710,12 @@ function renderTravelDetail(el, tripId) {
         <div class="tp-section-header">
           <div class="tp-section-title" style="margin-bottom:0;">⭐ 가고싶은 곳</div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <input type="text" id="wish-region-filter" class="tp-filter-input" placeholder="지역/장소 필터" value="" oninput="TravelApp.filterWishPlaces('${trip.id}',this.value)"/>
+            <button class="add-btn" style="background:#EDE9FF;color:#5E4BC4;border:none;" onclick="TravelApp.openWishRegionModal()" title="지역 설정">📍 지역 설정${_wishRegionSetting ? ': '+_wishRegionSetting : ''}</button>
             <button class="add-btn" onclick="TravelApp.openAddBucketModal()" title="버킷플레이스에 장소 추가">+ 버킷에 추가</button>
           </div>
         </div>
         <div id="tp-wish-places-container-${trip.id}">
-          ${renderWishPlaces(trip, '')}
+          ${renderWishPlaces(trip)}
         </div>
       </div>
     </div>
@@ -1025,13 +1070,44 @@ function getExpCatColor(cat) {
   return colors[cat] || '#DFE6E9';
 }
 
+// ===== 가고싶은 곳 지역 설정 함수 =====
+function openWishRegionModal() {
+  const current = _wishRegionSetting;
+  const el = document.getElementById('travel-my-content');
+  if (!el) return;
+  // 간단한 인라인 프롬프트 대신 모달 사용
+  const region = prompt('가고싶은 지역 또는 나라를 입력하세요\n(예: 일본, 도쿄, 호주 / 비워두면 초기화)', current);
+  if (region === null) return; // 취소
+  _wishRegionSetting = region.trim();
+  localStorage.setItem('travel_wish_region', _wishRegionSetting);
+  // 현재 열려있는 여행 상세 새로고침
+  if (_travelView) {
+    renderTravelDetail(el, _travelView);
+  }
+}
+
 function renderWishPlaces(trip, regionFilter) {
   // 버킷플레이스 전역 데이터를 가고싶은 곳으로 사용
   const bucketList = (S && S.travels && S.travels.bucketList) || [];
-  const filter = (regionFilter || '').trim();
-  const filtered = filter
-    ? bucketList.filter(b => (b.region||'').includes(filter) || (b.place||'').includes(filter) || (b.country||'').includes(filter))
-    : bucketList;
+  // 지역 설정: 전달된 regionFilter 우선, 없으면 저장된 설정값 사용
+  const activeFilter = (regionFilter !== undefined ? regionFilter : _wishRegionSetting) || '';
+  const filter = activeFilter.trim();
+
+  // 지역 설정이 없으면 빈 상태 + 설정 유도 표시
+  if (!filter) {
+    return `
+      <div style="text-align:center;padding:36px 20px;background:#F8F8FC;border-radius:16px;border:1.5px dashed #D0CCE8;">
+        <div style="font-size:36px;margin-bottom:12px;">📍</div>
+        <div style="font-size:15px;font-weight:700;color:#5E4BC4;margin-bottom:6px;">지역을 설정하면 관련 장소만 보여요</div>
+        <div style="font-size:13px;color:#9490A8;margin-bottom:18px;">가고싶은 지역이나 나라를 설정해서<br>버킷플레이스 장소를 필터링해보세요</div>
+        <button class="add-btn primary" onclick="TravelApp.openWishRegionModal()" style="font-size:13px;padding:8px 20px;">📍 지역 설정</button>
+      </div>
+    `;
+  }
+
+  const filtered = bucketList.filter(b =>
+    (b.region||'').includes(filter) || (b.place||'').includes(filter) || (b.country||'').includes(filter)
+  );
 
   // type 필드를 카테고리로 사용하여 그룹화
   const groups = {};
@@ -1041,14 +1117,23 @@ function renderWishPlaces(trip, regionFilter) {
     groups[cat].push(b);
   });
 
+  const settingBadge = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 14px;background:#EDE9FF;border-radius:12px;font-size:13px;">
+      <span style="color:#5E4BC4;font-weight:700;">📍 ${filter}</span>
+      <span style="color:#9490A8;flex:1;">설정 중</span>
+      <button class="add-btn" onclick="TravelApp.openWishRegionModal()" style="font-size:11px;padding:3px 10px;">변경</button>
+    </div>
+  `;
+
   if (Object.keys(groups).length === 0) {
-    return `<div style="color:var(--text-sub);font-size:13px;padding:24px 0;text-align:center;">
-      ⭐ ${filter ? `"${filter}" 검색 결과가 없어요` : '버킷플레이스 탭에서 가고싶은 곳을 추가해보세요!'}
-      <div style="margin-top:8px;"><button class="add-btn" onclick="App.switchTab('travel-bucket')" style="font-size:12px;">⭐ 버킷플레이스 바로가기</button></div>
+    return `${settingBadge}<div style="color:var(--text-sub);font-size:13px;padding:24px 0;text-align:center;">
+      ⭐ "${filter}" 에 해당하는 버킷플레이스 장소가 없어요
+      <div style="margin-top:8px;"><button class="add-btn" onclick="App.switchTab('travel-bucket')" style="font-size:12px;">⭐ 버킷플레이스에 추가하기</button></div>
     </div>`;
   }
 
   return `
+    ${settingBadge}
     <div class="tp-wish-grid-v2">
       ${Object.entries(groups).map(([cat, items]) => {
         const st = getBucketCatStyle(cat);
@@ -1219,6 +1304,58 @@ function openNewTripModal(editTrip) {
   `);
 }
 
+// ===== 캘린더 연동 함수 =====
+// 여행 일정을 캘린더(S.consumptionCalendar)에 자동 동기화
+function syncTripToCalendar(trip) {
+  if (!trip || !trip.startDate) return;
+  if (!S.consumptionCalendar) S.consumptionCalendar = {};
+  // 기존 이 여행의 캘린더 이벤트 먼저 삭제
+  removeTripFromCalendar(trip.id);
+  const flag = getCountryFlag(trip);
+  const eventName = trip.name + ' ' + flag;
+  const start = new Date(trip.startDate);
+  const end = trip.endDate ? new Date(trip.endDate) : new Date(trip.startDate);
+  // 여행 기간이 걸친 각 연·월에 이벤트 추가
+  let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cur <= endMonth) {
+    const y = cur.getFullYear();
+    const m = cur.getMonth() + 1;
+    if (!S.consumptionCalendar[y]) S.consumptionCalendar[y] = {};
+    if (!S.consumptionCalendar[y][m]) S.consumptionCalendar[y][m] = [];
+    // 중복 방지: 이미 있으면 skip
+    const existing = S.consumptionCalendar[y][m].find(e => e.isTripEvent && e.tripId === trip.id);
+    if (!existing) {
+      S.consumptionCalendar[y][m].push({
+        id: 'trip_' + trip.id + '_' + y + '_' + m,
+        name: eventName,
+        amount: 0,
+        savedAmt: 0,
+        isPlan: true,
+        isTripEvent: true,
+        tripId: trip.id
+      });
+    }
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  // 캘린더 탭이 열려 있을 때 즉시 갱신
+  if (typeof renderCalendar === 'function') setTimeout(renderCalendar, 0);
+}
+
+function removeTripFromCalendar(tripId) {
+  if (!S || !S.consumptionCalendar) return;
+  Object.keys(S.consumptionCalendar).forEach(y => {
+    if (!S.consumptionCalendar[y]) return;
+    Object.keys(S.consumptionCalendar[y]).forEach(m => {
+      if (!S.consumptionCalendar[y][m]) return;
+      S.consumptionCalendar[y][m] = S.consumptionCalendar[y][m].filter(
+        e => !(e.isTripEvent && e.tripId === tripId)
+      );
+    });
+  });
+}
+// ========================================
+
 function saveTrip(editId) {
   const name = document.getElementById('tp-m-name').value.trim();
   if (!name) { alert('여행 이름을 입력하세요.'); return; }
@@ -1228,17 +1365,22 @@ function saveTrip(editId) {
   const regions = document.getElementById('tp-m-regions').value.trim();
   const companions = document.getElementById('tp-m-companions').value.trim();
 
+  let savedTrip;
   if (editId) {
     const t = getTripById(editId);
-    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions }); }
+    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions }); savedTrip = t; }
   } else {
-    S.travels.trips.push({
+    const newTrip = {
       id: genTravelId(), name, type, startDate, endDate, regions, companions,
       currency: 'USD', exchangeRate: 0,
       bookings: { flights: [], hotels: [], others: [] },
       schedule: [], expenses: [], wishPlaces: []
-    });
+    };
+    S.travels.trips.push(newTrip);
+    savedTrip = newTrip;
   }
+  // 캘린더 연동: 여행 일정 자동 추가/갱신
+  if (savedTrip) syncTripToCalendar(savedTrip);
   saveState();
   closeTravelModal();
   renderTravelMy();
@@ -1246,6 +1388,8 @@ function saveTrip(editId) {
 
 function deleteTrip(id) {
   if (!confirm('이 여행을 삭제하시겠습니까? 모든 내용이 삭제됩니다.')) return;
+  // 캘린더에서도 삭제
+  removeTripFromCalendar(id);
   S.travels.trips = S.travels.trips.filter(t => t.id !== id);
   saveState();
   _travelView = null;
@@ -1256,11 +1400,11 @@ function updateTripField(tripId, field, value) {
   const t = getTripById(tripId);
   if (!t) return;
   t[field] = value;
-  saveState();
-  // Partial re-render for expensive fields
-  if (field === 'startDate' || field === 'endDate' || field === 'companions' || field === 'regions') {
-    // lightweight save only
+  // 날짜·이름·지역 변경 시 캘린더 재동기화
+  if (field === 'startDate' || field === 'endDate' || field === 'name' || field === 'regions' || field === 'type') {
+    syncTripToCalendar(t);
   }
+  saveState();
 }
 
 // ===== BOOKING MODAL =====
@@ -1769,8 +1913,13 @@ ${(trip.expenses||[]).map(e => `  ${e.date||''} | ${e.category} | ${e.title} | $
 
 // ===== 준비물 체크리스트 관리 =====
 function _rerenderTips() {
-  const el = document.getElementById('travel-my-content');
-  if (el) el.innerHTML = renderTipsHTML();
+  // 준비물과팁 필터일 때는 renderTravelMy를 통해 계획된 여행 일정 상단 고정 포함 전체 재렌더
+  if (_travelFilter === '준비물과팁') {
+    renderTravelMy();
+  } else {
+    const el = document.getElementById('travel-my-content');
+    if (el) el.innerHTML = renderTipsHTML();
+  }
 }
 
 function toggleChecklistItem(type, id, checked) {
@@ -1999,6 +2148,8 @@ window.TravelApp = {
   deleteExpense,
   editExpense,
   saveEditExpense,
+  // 가고싶은 곳 지역 설정
+  openWishRegionModal,
   // Wish
   openAddWishModal,
   saveWish,
