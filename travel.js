@@ -206,10 +206,17 @@ function getTripFlagBg(trip) {
 }
 
 function getInitials(name) {
-  if (!name) return '??';
-  const words = name.replace(/[^가-힣A-Za-z0-9 ]/g, '').split(' ');
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
+  if (!name) return '?';
+  const clean = name.replace(/[^가-힣A-Za-z0-9]/g, '');
+  return clean.charAt(0) || name.charAt(0);
+}
+
+// 계획된 여행 카드용: 지역명 첫 글자 우선, 없으면 여행명 첫 글자
+function getPlannedCardLabel(t) {
+  if (t.type === 'foreign') return '🌐';
+  const src = t.regions || t.name || '';
+  const clean = src.replace(/[^가-힣A-Za-z0-9]/g, '');
+  return clean.charAt(0) || src.charAt(0) || '?';
 }
 
 // ===== RENDER: 내 여행 탭 =====
@@ -230,30 +237,53 @@ function renderTravelMy() {
   const trips = S.travels.trips || [];
   const filter = _travelFilter;
 
-  // 필터링
-  let filtered = trips;
-  if (filter === '해외여행') filtered = trips.filter(t => t.type === 'foreign');
-  else if (filter === '국내여행') filtered = trips.filter(t => t.type === 'domestic');
-  else if (filter === '완료') filtered = trips.filter(t => getTripStatusLabel(t) === 'done');
-  else if (filter === '준비물과팁') {
-    el.innerHTML = renderTipsHTML();
-    return;
+  if (filter === '준비물과팁') { el.innerHTML = renderTipsHTML(); return; }
+
+  // 계획된 여행 일정: 예정(ongoing 포함)만, 시작일 오름차순
+  const upcomingTrips = trips
+    .filter(t => getTripStatusLabel(t) !== 'done')
+    .sort((a, b) => {
+      if (!a.startDate && !b.startDate) return 0;
+      if (!a.startDate) return 1;
+      if (!b.startDate) return -1;
+      return new Date(a.startDate) - new Date(b.startDate);
+    });
+
+  // 하단 전체 목록: 타입 필터 적용 후 예정↑ / 완료↓ 분리
+  let base = trips;
+  if (filter === '해외여행') base = trips.filter(t => t.type === 'foreign');
+  else if (filter === '국내여행') base = trips.filter(t => t.type === 'domestic');
+  else if (filter === '완료') base = trips.filter(t => getTripStatusLabel(t) === 'done');
+
+  const sortAsc = (a, b) => {
+    if (!a.startDate && !b.startDate) return 0;
+    if (!a.startDate) return 1; if (!b.startDate) return -1;
+    return new Date(a.startDate) - new Date(b.startDate);
+  };
+  const sortDesc = (a, b) => -sortAsc(a, b);
+
+  let upcomingList, doneList;
+  if (filter === '완료') {
+    upcomingList = [];
+    doneList = [...base].sort(sortDesc);
+  } else {
+    upcomingList = base.filter(t => getTripStatusLabel(t) !== 'done').sort(sortAsc);
+    doneList = base.filter(t => getTripStatusLabel(t) === 'done').sort(sortDesc);
   }
 
-  // 연도별 그룹
-  const groups = {};
-  filtered.forEach(t => {
-    const y = t.startDate ? new Date(t.startDate).getFullYear() : '미정';
-    if (!groups[y]) groups[y] = [];
-    groups[y].push(t);
-  });
-  const sortedYears = Object.keys(groups).sort((a, b) => b - a);
+  function renderGroup(label, list) {
+    if (list.length === 0) return '';
+    return `
+      <div class="tp-year-group">
+        <div class="tp-year-label">${label}</div>
+        <div class="tp-card-grid">
+          ${list.map(t => renderTripCard(t)).join('')}
+        </div>
+      </div>
+    `;
+  }
 
-  // 계획된 여행 일정 (우측 사이드바용)
-  const upcomingTrips = trips
-    .filter(t => t.startDate && getTripStatusLabel(t) !== 'done')
-    .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-    .slice(0, 6);
+  const hasAny = upcomingList.length + doneList.length > 0;
 
   el.innerHTML = `
     <div>
@@ -265,34 +295,29 @@ function renderTravelMy() {
         <button class="add-btn primary" onclick="TravelApp.openNewTripModal()">+ 새 여행</button>
       </div>
 
-      <!-- 상단: 계획된 여행 일정 컴팩트 카드 -->
+      <!-- 상단: 계획된 여행 일정 가로 스크롤 카드 -->
       ${upcomingTrips.length > 0 ? `
         <div class="tp-planned-section">
           <div class="tp-planned-header">
-            <span>📋 계획된 여행 일정</span>
+            <span>📅 계획된 여행 일정</span>
             <button class="add-btn" style="font-size:11px;padding:4px 10px;" onclick="TravelApp.openNewTripModal()">+ 추가</button>
           </div>
           <div class="tp-planned-cards">
             ${upcomingTrips.map(t => {
-              const status = getTripStatusLabel(t);
               const bgColor = getTripFlagBg(t);
+              const label = getPlannedCardLabel(t);
+              const dateStr = t.startDate ? formatTravelDateRange(t.startDate, t.endDate) : '날짜 미정';
+              const isOngoing = getTripStatusLabel(t) === 'ongoing';
               return `
-                <div class="tp-planned-card" onclick="TravelApp.openTrip('${t.id}')">
-                  <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:36px;height:36px;border-radius:10px;background:${bgColor};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                      <span style="font-size:13px;font-weight:800;color:white;letter-spacing:-1px;">${getInitials(t.name)}</span>
+                <div class="tp-planned-card" style="border-left-color:${bgColor}" onclick="TravelApp.openTrip('${t.id}')">
+                  <div class="tp-planned-card-top">
+                    <div class="tp-planned-circle" style="background:${bgColor}">
+                      ${label.length === 1 && label !== '🌐' ? label : (label === '🌐' ? '<span style="font-size:20px">🌐</span>' : label)}
                     </div>
-                    <div style="min-width:0;flex:1;">
-                      <div class="tp-planned-card-name">${t.name}</div>
-                      <div class="tp-planned-card-meta">${formatTravelDateRange(t.startDate, t.endDate)}${t.regions ? ' · ' + t.regions : ''}${t.companions ? ' · ' + t.companions : ''}</div>
-                    </div>
-                    <div style="text-align:right;flex-shrink:0;">
-                      ${status === 'ongoing'
-                        ? `<span class="tp-badge green">여행중 ✈️</span>`
-                        : `<div class="tp-planned-card-expense">🔥 ${getTripTotalExpense(t).toLocaleString('ko-KR')}원</div>`
-                      }
-                    </div>
+                    <div class="tp-planned-card-name">${t.name}</div>
+                    ${isOngoing ? '<span class="tp-badge green" style="font-size:10px;padding:2px 6px;">여행중</span>' : '<span class="tp-planned-arrow">›</span>'}
                   </div>
+                  <div class="tp-planned-card-date">📅 ${dateStr}</div>
                 </div>
               `;
             }).join('')}
@@ -309,21 +334,18 @@ function renderTravelMy() {
         `).join('')}
       </div>
 
-      <!-- 여행 카드 그리드 -->
-      ${sortedYears.length === 0 ? `
+      <!-- 하단 여행 목록: 예정 → 완료 순 -->
+      ${!hasAny ? `
         <div class="tp-empty">
           <div style="font-size:48px;margin-bottom:12px;">✈️</div>
           <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:8px;">아직 여행 기록이 없어요</div>
           <div style="font-size:13px;color:var(--text-sub);">[+ 새 여행] 버튼으로 첫 여행을 추가해보세요!</div>
         </div>
-      ` : sortedYears.map(year => `
-        <div class="tp-year-group">
-          <div class="tp-year-label">📅 ${year}</div>
-          <div class="tp-card-grid">
-            ${groups[year].map(t => renderTripCard(t)).join('')}
-          </div>
-        </div>
-      `).join('')}
+      ` : `
+        ${renderGroup('🗓️ 예정된 여행', upcomingList)}
+        ${doneList.length > 0 && upcomingList.length > 0 ? '<div style="height:8px"></div>' : ''}
+        ${renderGroup('✅ 완료된 여행', doneList)}
+      `}
     </div>
   `;
 }
@@ -1249,8 +1271,11 @@ function openAddBookingModal(tripId, type, editId) {
   const isEdit = !!editId;
   const labels = { flights: '항공', hotels: '숙소', others: '기타' };
 
-  const flightFields = type === 'flights' ? `
-    <div class="form-group"><label>노선 (예: 인천 → 시드니)</label><input type="text" class="form-input" id="tp-b-route" value="${b.route||''}"/></div>
+  const fields = type === 'flights' ? `
+    <div class="form-row">
+      <div class="form-group"><label>출발지</label><input type="text" class="form-input" id="tp-b-from" value="${b.from||''}" placeholder="인천"/></div>
+      <div class="form-group"><label>도착지</label><input type="text" class="form-input" id="tp-b-to" value="${b.to||''}" placeholder="시드니"/></div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>출발 날짜</label><input type="date" class="form-input" id="tp-b-ddate" value="${b.departDate||''}"/></div>
       <div class="form-group"><label>출발 시간</label><input type="time" class="form-input" id="tp-b-dtime" value="${b.departTime||''}"/></div>
@@ -1259,25 +1284,47 @@ function openAddBookingModal(tripId, type, editId) {
       <div class="form-group"><label>도착 날짜</label><input type="date" class="form-input" id="tp-b-adate" value="${b.arrivalDate||''}"/></div>
       <div class="form-group"><label>도착 시간</label><input type="time" class="form-input" id="tp-b-atime" value="${b.arrivalTime||''}"/></div>
     </div>
-    <div class="form-group"><label>예약 코드</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}" placeholder="FNS2TO"/></div>
-  ` : type === 'hotels' ? `
-    <div class="form-group"><label>숙소명</label><input type="text" class="form-input" id="tp-b-name" value="${b.name||''}"/></div>
     <div class="form-row">
-      <div class="form-group"><label>체크인</label><input type="date" class="form-input" id="tp-b-checkin" value="${b.checkin||''}"/></div>
-      <div class="form-group"><label>체크아웃</label><input type="date" class="form-input" id="tp-b-checkout" value="${b.checkout||''}"/></div>
+      <div class="form-group"><label>항공편 번호</label><input type="text" class="form-input" id="tp-b-flightno" value="${b.flightNo||''}" placeholder="OZ601"/></div>
+      <div class="form-group"><label>예약 코드</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}" placeholder="FNS2TO"/></div>
     </div>
-    <div class="form-group"><label>예약 코드</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}"/></div>
+    <div class="form-group"><label>메모</label><input type="text" class="form-input" id="tp-b-memo" value="${b.memo||''}" placeholder="수하물 23kg 포함"/></div>
+    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="url" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..."/></div>
+  ` : type === 'hotels' ? `
+    <div class="form-group"><label>숙소명</label><input type="text" class="form-input" id="tp-b-name" value="${b.name||''}" placeholder="호텔 플러스 호스텔"/></div>
+    <div class="form-row">
+      <div class="form-group"><label>체크인 날짜</label><input type="date" class="form-input" id="tp-b-checkin" value="${b.checkin||''}"/></div>
+      <div class="form-group"><label>체크인 시간</label><input type="time" class="form-input" id="tp-b-cintime" value="${b.checkinTime||''}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>체크아웃 날짜</label><input type="date" class="form-input" id="tp-b-checkout" value="${b.checkout||''}"/></div>
+      <div class="form-group"><label>체크아웃 시간</label><input type="time" class="form-input" id="tp-b-couttime" value="${b.checkoutTime||''}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>전화번호</label><input type="text" class="form-input" id="tp-b-phone" value="${b.phone||''}" placeholder="+61-2-xxxx-xxxx"/></div>
+      <div class="form-group"><label>예약번호</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}"/></div>
+    </div>
+    <div class="form-group"><label>메모</label><input type="text" class="form-input" id="tp-b-memo" value="${b.memo||''}" placeholder="조식 포함, 체크인 오후 3시 이후"/></div>
+    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="url" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..."/></div>
   ` : `
-    <div class="form-group"><label>항목명</label><input type="text" class="form-input" id="tp-b-name" value="${b.name||''}"/></div>
+    <div class="form-group"><label>예약명</label><input type="text" class="form-input" id="tp-b-name" value="${b.name||''}" placeholder="시드니 오페라하우스 투어"/></div>
+    <div class="form-group"><label>유형</label>
+      <select class="form-input" id="tp-b-btype">
+        ${['투어','입장권','교통','식당','기타'].map(v => `<option value="${v}" ${(b.btype||'기타')===v?'selected':''}>${v}</option>`).join('')}
+      </select>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>날짜</label><input type="date" class="form-input" id="tp-b-date" value="${b.date||''}"/></div>
-      <div class="form-group"><label>예약 코드</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}"/></div>
+      <div class="form-group"><label>시간</label><input type="time" class="form-input" id="tp-b-time" value="${b.time||''}"/></div>
     </div>
+    <div class="form-group"><label>예약번호</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}"/></div>
+    <div class="form-group"><label>메모</label><input type="text" class="form-input" id="tp-b-memo" value="${b.memo||''}"/></div>
+    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="url" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..."/></div>
   `;
 
   renderTravelModal(`
     <div class="modal-header">${isEdit?'✏️ 수정':'+ 추가'} — ${labels[type]}</div>
-    ${flightFields}
+    ${fields}
     <div class="modal-actions">
       <button class="btn-cancel" onclick="TravelApp.closeModal()">취소</button>
       <button class="btn-save" onclick="TravelApp.saveBooking('${tripId}','${type}',${isEdit?`'${editId}'`:'null'})">저장</button>
@@ -1291,14 +1338,30 @@ function saveBooking(tripId, type, editId) {
   if (!trip.bookings) trip.bookings = { flights: [], hotels: [], others: [] };
   if (!trip.bookings[type]) trip.bookings[type] = [];
 
-  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   let data = {};
   if (type === 'flights') {
-    data = { route: g('tp-b-route'), departDate: g('tp-b-ddate'), departTime: g('tp-b-dtime'), arrivalDate: g('tp-b-adate'), arrivalTime: g('tp-b-atime'), code: g('tp-b-code') };
+    data = {
+      from: g('tp-b-from'), to: g('tp-b-to'),
+      departDate: g('tp-b-ddate'), departTime: g('tp-b-dtime'),
+      arrivalDate: g('tp-b-adate'), arrivalTime: g('tp-b-atime'),
+      flightNo: g('tp-b-flightno'), code: g('tp-b-code'),
+      memo: g('tp-b-memo'), link: g('tp-b-link'),
+    };
   } else if (type === 'hotels') {
-    data = { name: g('tp-b-name'), checkin: g('tp-b-checkin'), checkout: g('tp-b-checkout'), code: g('tp-b-code') };
+    data = {
+      name: g('tp-b-name'),
+      checkin: g('tp-b-checkin'), checkinTime: g('tp-b-cintime'),
+      checkout: g('tp-b-checkout'), checkoutTime: g('tp-b-couttime'),
+      phone: g('tp-b-phone'), code: g('tp-b-code'),
+      memo: g('tp-b-memo'), link: g('tp-b-link'),
+    };
   } else {
-    data = { name: g('tp-b-name'), date: g('tp-b-date'), code: g('tp-b-code') };
+    data = {
+      name: g('tp-b-name'), btype: g('tp-b-btype'),
+      date: g('tp-b-date'), time: g('tp-b-time'),
+      code: g('tp-b-code'), memo: g('tp-b-memo'), link: g('tp-b-link'),
+    };
   }
 
   if (editId) {
