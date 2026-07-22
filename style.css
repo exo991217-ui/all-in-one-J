@@ -2314,12 +2314,12 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-schedule-table thead tr{background:var(--bg)}
 .tp-schedule-table th{padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);border-bottom:1.5px solid var(--border)}
 .tp-schedule-table td{padding:8px 10px;border-bottom:1px dashed var(--border)}
-    .tp-schedule-table tbody tr.tp-hover-parent:hover td{background:rgba(162,155,254,.09)!important;}
+    /* schedule row hover handled via inline JS for per-category color */
 .tp-table-empty{text-align:center;color:var(--text-sub);padding:24px 0}
 .tp-scat-badge{font-size:11px;font-weight:700;border-radius:50px;padding:3px 10px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
 .tp-scat-badge.sm{font-size:10px;padding:2px 7px}
-.tp-transport-badge{font-size:11px;background:var(--blue-light);color:var(--blue);border-radius:5px;padding:2px 6px;font-weight:600}
-.tp-transport-badge.sm{font-size:10px;padding:1px 5px}
+.tp-transport-badge{font-size:11px;background:var(--blue-light);color:var(--blue);border-radius:6px;padding:2px 7px;font-weight:700;border:1px solid var(--border)}
+.tp-transport-badge.sm{font-size:10px;padding:1px 5px;border-width:1px}
 .tp-map-link{font-size:14px;text-decoration:none}
 .tp-map-link-btn{display:inline-flex;align-items:center;gap:3px;background:#E8F6FF;color:#1A6BAF;border:1.5px solid #B3D9F8;border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
 .tp-map-link-btn:hover{background:#D0EDFF;border-color:#74B9FF}
@@ -2364,7 +2364,7 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-expense-table{width:100%;border-collapse:collapse;font-size:13px}
 .tp-expense-table th{padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);border-bottom:1.5px solid var(--border);background:var(--bg)}
 .tp-expense-table td{padding:9px 10px;border-bottom:1px dashed var(--border)}
-    .tp-expense-table tbody tr.tp-hover-parent:hover td{background:rgba(162,155,254,.09)!important;}
+    /* expense row hover handled via inline JS for per-category color */
 .tp-expense-total td{background:var(--bg);font-weight:700;font-size:13px;border-top:1.5px solid var(--border);border-bottom:none}
 .tp-expense-form-area{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
 .tp-expense-inline-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -2386,7 +2386,7 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-bucket-table thead tr{background:linear-gradient(90deg,#F5F2FF,#EEF4FF)}
 .tp-bucket-table th{padding:10px 12px;text-align:left;font-size:11.5px;font-weight:700;color:var(--text-sub)}
 .tp-bucket-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
-.tp-bucket-table tbody tr:hover td{background:#FAFAFF}
+/* bucket row hover handled via inline JS for per-category color */
 .tp-bucket-table tbody tr:last-child td{border-bottom:none}
 .tp-bucket-done td{opacity:.6;text-decoration:line-through}
 .tp-bucket-place{font-weight:700;color:var(--text-main)}
@@ -2423,3 +2423,58 @@ tr.tp-hover-parent:hover td{background:rgba(162,155,254,.09)!important;}
   padding:3px 10px 3px 12px;font-size:12px;font-weight:600;
 }
 .tp-cat-tag button{line-height:1;display:flex;align-items:center;}
+
+/* ===== 수정 1346 — 추가 스타일 ===== */
+
+/* 링크 아이콘 버튼 (URL 자동감지) */
+.tp-link-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:#EEF6FF;color:#2B7FC7;border-radius:6px;text-decoration:none;transition:background .15s,color .15s;border:1px solid #C8DFF5;}
+.tp-link-icon-btn:hover{background:#D0EAFF;color:#0A5FA3;}
+
+/* 지도 핀 버튼 */
+.tp-map-pin-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#FFF0EE;color:#E05C3A;border-radius:7px;border:1px solid #F5C5B8;cursor:pointer;transition:background .15s,color .15s;}
+.tp-map-pin-btn:hover{background:#FFD9D0;color:#C0391B;}
+
+/* 시간표 — 빈 행(내용 없는 시간 슬롯) */
+.tp-tt-empty-row{opacity:.55;}
+.tp-tt-empty-row .tp-tt-time-col{color:#CCC;}
+
+/* 시간표 — 핀 고정 행 */
+.tp-tt-pinned-row{background:linear-gradient(to right,#FAFAFE,#F6F4FF);}
+.tp-tt-pinned-row .tp-tt-day-col{min-height:36px;}
+
+/* 가고싶은 곳 v2 — 2열 그리드 */
+.tp-wish-grid-v2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:620px){.tp-wish-grid-v2{grid-template-columns:1fr;}}
+
+/* 가고싶은 곳 v2 — 카드 */
+.tp-wish-col-v2{background:white;border-radius:14px;border:1.5px solid var(--border);box-shadow:0 2px 10px rgba(160,140,220,.06);overflow:hidden;}
+
+/* 카테고리 헤더 */
+.tp-wish-cat-header-v2{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--bg);border-bottom:1.5px solid var(--border);}
+.tp-wish-cat-emoji{font-size:16px;line-height:1;}
+.tp-wish-cat-name{font-size:13px;font-weight:800;color:var(--text-main);flex:1;}
+.tp-wish-count-v2{font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px;}
+
+/* 가고싶은 곳 v2 — 아이템 행 */
+.tp-wish-item-v2{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
+.tp-wish-item-v2:last-child{border-bottom:none;}
+.tp-wish-item-v2.visited .tp-wish-name-v2{text-decoration:line-through;color:var(--text-sub);}
+
+/* 라디오 원 */
+.tp-wish-radio-circle{width:16px;height:16px;border-radius:50%;border:2px solid #CCC;flex-shrink:0;display:inline-block;transition:all .15s;cursor:pointer;}
+.tp-wish-radio-circle.checked{border-color:var(--green);background:var(--green);}
+
+/* 장소명 */
+.tp-wish-name-v2{font-size:13px;font-weight:600;color:var(--text-main);flex:1;}
+.tp-wish-name-v2.done{text-decoration:line-through;color:var(--text-sub);}
+
+/* 지역 태그 */
+.tp-wish-region-v2{font-size:11px;font-weight:700;background:#E3F1FF;color:#2B6CB0;border-radius:20px;padding:2px 8px;flex-shrink:0;white-space:nowrap;}
+
+/* 메모 */
+.tp-wish-notes-v2{font-size:11px;color:var(--text-sub);flex-shrink:0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* 시간표 item 간격 개선 */
+.tp-tt-item{display:flex;flex-wrap:wrap;gap:3px;align-items:center;padding:3px 0;border-bottom:1px dashed transparent;}
+.tp-tt-day-col>.tp-tt-item:last-child{border-bottom:none;}
+.tp-tt-name{font-size:11px;font-weight:700;color:var(--text-main);margin-right:2px;}
