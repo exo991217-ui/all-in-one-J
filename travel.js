@@ -96,6 +96,16 @@ const DEFAULT_RATES = {
   MYR: 310, PHP: 24, IDR: 0.088, NZD: 840,
 };
 
+// ── 통화 기호 ────────────────────────────────────────────────
+const CURRENCY_SYMBOLS = {
+  USD: '$', JPY: '¥', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$',
+  HKD: 'HK$', SGD: 'S$', CNY: '¥', THB: '฿', VND: '₫', TWD: 'NT$',
+  MYR: 'RM', PHP: '₱', IDR: 'Rp', NZD: 'NZ$',
+};
+function getCurrencySymbol(currency) {
+  return CURRENCY_SYMBOLS[currency] || (currency ? currency + ' ' : '');
+}
+
 function genTravelId() { return 'tr_' + Date.now() + '_' + Math.floor(Math.random() * 9999); }
 
 function getTripById(id) {
@@ -541,8 +551,7 @@ function renderTravelDetail(el, tripId) {
         <div class="tp-detail-title-row">
           <h2 class="tp-detail-title" title="클릭해서 수정" onclick="TravelApp.openEditTripModal('${trip.id}')" style="cursor:pointer;">${trip.name} <span style="font-size:13px;color:var(--text-sub);font-weight:400;">클릭해서 수정</span></h2>
           <div style="display:flex;gap:8px;">
-            <button class="icon-btn tp-edit-btn" onclick="TravelApp.openEditTripModal('${trip.id}')" title="수정">✏️</button>
-            <button class="icon-btn tp-del-btn" onclick="TravelApp.deleteTrip('${trip.id}')" title="삭제">🗑️</button>
+            <button class="icon-btn tp-del-btn tp-trash-btn" onclick="TravelApp.deleteTrip('${trip.id}')" title="삭제"><span class="tp-trash-svg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
           </div>
         </div>
         <div class="tp-info-row">
@@ -643,15 +652,14 @@ function renderBookingSection(trip, type, label) {
       ${items.length === 0
         ? `<div class="tp-booking-empty">${label.replace(/[🎫✈️🏨📝]/g,'').trim()} 예약 없음</div>`
         : items.map(b => `
-          <div class="tp-booking-item tp-hover-parent">
+          <div class="tp-booking-item tp-hover-parent" onclick="TravelApp.editBooking('${trip.id}','${type}','${b.id}')" style="cursor:pointer;">
             <div class="tp-booking-info">
               <div class="tp-booking-name">${b.name || b.route || ''}</div>
               <div class="tp-booking-sub">${b.date || b.departDate || ''} ${b.time || b.departTime || ''} ${b.code ? '· ' + b.code : ''}</div>
               ${b.checkin ? `<div class="tp-booking-sub">${b.checkin} ~ ${b.checkout || ''}</div>` : ''}
             </div>
-            <div class="tp-item-actions tp-hover-actions">
-              <button class="icon-btn" onclick="TravelApp.editBooking('${trip.id}','${type}','${b.id}')" title="수정">✏️</button>
-              <button class="icon-btn" onclick="TravelApp.deleteBooking('${trip.id}','${type}','${b.id}')" title="삭제">🗑️</button>
+            <div class="tp-item-actions tp-hover-actions" onclick="event.stopPropagation()">
+              <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteBooking('${trip.id}','${type}','${b.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
             </div>
           </div>
         `).join('')
@@ -677,7 +685,7 @@ function renderScheduleList(trip) {
           ${schedule.length === 0
             ? `<tr><td colspan="9" class="tp-table-empty">📅 아래 "추가" 버튼에서 일정을 추가하세요</td></tr>`
             : schedule.map(s => `
-              <tr class="tp-hover-parent">
+              <tr class="tp-hover-parent" onclick="TravelApp.editSchedule('${trip.id}','${s.id}')">
                 <td><span class="tp-scat-badge" style="background:${getSchedCatStyle(s.category).bg};color:${getSchedCatStyle(s.category).color};">${getSchedCatStyle(s.category).emoji} ${s.category||'기타'}</span></td>
                 <td>${s.date||''}</td>
                 <td>${s.time||''}</td>
@@ -685,11 +693,10 @@ function renderScheduleList(trip) {
                 <td>${s.content||''}</td>
                 <td>${s.transport ? `<span class="tp-transport-badge">${s.transport}</span>` : ''}</td>
                 <td>${s.notes||''}</td>
-                <td>${s.mapLink ? `<button class="tp-map-link-btn" onclick="TravelApp.openMapModal(this)" data-map-url="${s.mapLink.replace(/"/g,'&quot;')}" title="지도 보기">🗺️ 지도</button>` : ''}</td>
-                <td>
+                <td>${s.mapLink ? `<button class="tp-map-link-btn" onclick="event.stopPropagation();TravelApp.openMapModal(this)" data-map-url="${s.mapLink.replace(/"/g,'&quot;')}" title="지도 보기">🗺️ 지도</button>` : ''}</td>
+                <td onclick="event.stopPropagation()">
                   <div class="tp-row-actions tp-hover-actions">
-                    <button class="icon-btn" onclick="TravelApp.editSchedule('${trip.id}','${s.id}')" title="수정">✏️</button>
-                    <button class="icon-btn" onclick="TravelApp.deleteSchedule('${trip.id}','${s.id}')" title="삭제">🗑️</button>
+                    <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteSchedule('${trip.id}','${s.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
                   </div>
                 </td>
               </tr>
@@ -781,18 +788,18 @@ function renderScheduleAddForm(trip) {
   `;
 }
 
-// ── 일정 배지 스타일 (파스텔 배경 + 진한 텍스트) ─────────────
+// ── 일정 배지 스타일 (진한 배경 + 진한 텍스트) ─────────────
 function getSchedCatStyle(cat) {
   const styles = {
-    '관광': { bg: '#E8F4FF', color: '#1A6BAF', emoji: '🔭' },
-    '식사': { bg: '#FFF0EE', color: '#C0392B', emoji: '🍽' },
-    '카페': { bg: '#FFFBEA', color: '#A0720A', emoji: '☕' },
-    '쇼핑': { bg: '#F3EEFF', color: '#6C3FC3', emoji: '🛍' },
-    '체험': { bg: '#E8FFF4', color: '#1A7A50', emoji: '🎯' },
-    '숙소': { bg: '#E6FAFA', color: '#127A7A', emoji: '🛏' },
-    '교통': { bg: '#F0F1F2', color: '#555E68', emoji: '🚌' },
-    '이동': { bg: '#E8F5EE', color: '#27AE60', emoji: '🚶' },
-    '기타': { bg: '#F4F4F4', color: '#777',    emoji: '📌' },
+    '관광': { bg: '#A9CCE3', color: '#1A3E5E', emoji: '🔭' },
+    '식사': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍽' },
+    '카페': { bg: '#FAD7A0', color: '#7D5000', emoji: '☕' },
+    '쇼핑': { bg: '#C39BD3', color: '#5B2C6F', emoji: '🛍' },
+    '체험': { bg: '#A8D5B5', color: '#0D4D25', emoji: '🎯' },
+    '숙소': { bg: '#A2D9CE', color: '#0A4D42', emoji: '🛏' },
+    '교통': { bg: '#BFC9CA', color: '#2E4053', emoji: '🚌' },
+    '이동': { bg: '#A9D18E', color: '#274E13', emoji: '🚶' },
+    '기타': { bg: '#D5D8DC', color: '#424949', emoji: '📌' },
   };
   return styles[cat] || styles['기타'];
 }
@@ -802,12 +809,12 @@ function getSchedCatColor(cat) { return getSchedCatStyle(cat).bg; }
 // ── 버킷/지출 배지 스타일 ──────────────────────────────────────
 function getBucketCatStyle(cat) {
   const styles = {
-    '풍경': { bg: '#E8F5EE', color: '#1E7A45', emoji: '🏔' },
-    '맛집': { bg: '#FFF0EE', color: '#C0392B', emoji: '🍽' },
-    '카페': { bg: '#FFF5E6', color: '#A0600A', emoji: '☕' },
-    '체험': { bg: '#E8F4FF', color: '#1A6BAF', emoji: '🎯' },
-    '기념품': { bg: '#F3EEFF', color: '#6C3FC3', emoji: '🎁' },
-    '기타': { bg: '#F4F4F4', color: '#777',    emoji: '⭐' },
+    '풍경': { bg: '#A8D5B5', color: '#0D4D25', emoji: '🏔' },
+    '맛집': { bg: '#F5B7B1', color: '#7B241C', emoji: '🍽' },
+    '카페': { bg: '#FAD7A0', color: '#7D5000', emoji: '☕' },
+    '체험': { bg: '#A9CCE3', color: '#1A4E6B', emoji: '🎯' },
+    '기념품': { bg: '#C39BD3', color: '#5B2C6F', emoji: '🎁' },
+    '기타': { bg: '#BFC9CA', color: '#2E4053', emoji: '⭐' },
   };
   return styles[cat] || styles['기타'];
 }
@@ -838,24 +845,23 @@ function renderExpenseList(trip) {
       <table class="tp-expense-table">
         <thead><tr>
           <th>분류</th><th>날짜</th><th>제목</th>
-          <th style="text-align:right;">원화</th>
-          ${trip.type==='foreign' ? `<th style="text-align:right;">외화(${trip.currency||''})</th>` : ''}
+          <th style="text-align:right;">원화(₩)</th>
+          ${trip.type==='foreign' ? `<th style="text-align:right;">${getCurrencySymbol(trip.currency)} ${trip.currency||'외화'}</th>` : ''}
           <th style="width:64px;"></th>
         </tr></thead>
         <tbody>
           ${expenses.length === 0
             ? `<tr><td colspan="${trip.type==='foreign'?6:5}" class="tp-table-empty">💸 아래 "추가" 버튼에서 지출을 기록하세요</td></tr>`
             : expenses.map(e => `
-              <tr class="tp-hover-parent">
+              <tr class="tp-hover-parent" onclick="TravelApp.editExpense('${trip.id}','${e.id}')">
                 <td><span class="tp-scat-badge" style="background:${getBucketCatStyle(e.category).bg};color:${getBucketCatStyle(e.category).color};">${getBucketCatStyle(e.category).emoji} ${e.category||'기타'}</span></td>
                 <td style="font-size:12px;">${e.date||''}</td>
                 <td>${e.title||''}</td>
-                <td style="text-align:right;font-weight:700;">${(parseFloat(e.amount)||0).toLocaleString('ko-KR')}원</td>
-                ${trip.type==='foreign' ? `<td style="text-align:right;color:var(--text-sub);font-size:12px;">${e.foreignAmount ? parseFloat(e.foreignAmount).toLocaleString('ko-KR') : '-'}</td>` : ''}
-                <td>
+                <td style="text-align:right;font-weight:700;">₩${(parseFloat(e.amount)||0).toLocaleString('ko-KR')}</td>
+                ${trip.type==='foreign' ? `<td style="text-align:right;color:var(--text-sub);font-size:12px;">${e.foreignAmount ? getCurrencySymbol(trip.currency) + parseFloat(e.foreignAmount).toLocaleString('ko-KR') : '-'}</td>` : ''}
+                <td onclick="event.stopPropagation()">
                   <div class="tp-row-actions tp-hover-actions">
-                    <button class="icon-btn" onclick="TravelApp.editExpense('${trip.id}','${e.id}')" title="수정">✏️</button>
-                    <button class="icon-btn" onclick="TravelApp.deleteExpense('${trip.id}','${e.id}')" title="삭제">🗑️</button>
+                    <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteExpense('${trip.id}','${e.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
                   </div>
                 </td>
               </tr>
@@ -863,7 +869,7 @@ function renderExpenseList(trip) {
           }
           <tr class="tp-expense-total">
             <td colspan="${trip.type==='foreign'?4:3}">합계</td>
-            <td style="text-align:right;font-weight:800;">${total.toLocaleString('ko-KR')}원</td>
+            <td style="text-align:right;font-weight:800;">₩${total.toLocaleString('ko-KR')}</td>
             ${trip.type==='foreign' ? `<td></td>` : ''}
             <td></td>
           </tr>
@@ -878,7 +884,7 @@ function renderExpenseList(trip) {
           <input type="text" class="tp-form-input" id="tp-etitle-${trip.id}" placeholder="제목"/>
           <input type="number" class="tp-form-input" id="tp-eamt-${trip.id}" placeholder="금액(원)"
             oninput="TravelApp.onKrwInput('${trip.id}',this,${rate})"/>
-          ${trip.type==='foreign' ? `<input type="number" class="tp-form-input sm" id="tp-eforeign-${trip.id}" placeholder="외화(${trip.currency||''})"
+          ${trip.type==='foreign' ? `<input type="number" class="tp-form-input sm" id="tp-eforeign-${trip.id}" placeholder="${getCurrencySymbol(trip.currency)}${trip.currency||'외화'}"
             oninput="TravelApp.onForeignInput('${trip.id}',this,${rate})"/>` : ''}
           <div class="tp-form-actions">
             <button class="tp-form-save" onclick="TravelApp.addExpense('${trip.id}')">+ 추가</button>
@@ -932,7 +938,7 @@ function renderWishPlaces(trip, regionFilter) {
               </label>
               ${w.notes ? `<span class="tp-wish-notes">${w.notes}</span>` : ''}
               <div class="tp-item-actions tp-hover-actions" style="flex-shrink:0;">
-                <button class="icon-btn" onclick="TravelApp.deleteWish('${trip.id}','${w.id}')" title="삭제">🗑️</button>
+                <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteWish('${trip.id}','${w.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
               </div>
             </div>
           `).join('')}
@@ -998,8 +1004,8 @@ function renderTravelBucket() {
           ${filtered.length === 0
             ? `<tr><td colspan="8" class="tp-table-empty">⭐ 가보고 싶은 곳을 추가해보세요!</td></tr>`
             : filtered.map(b => `
-              <tr class="tp-hover-parent ${b.checked?'tp-bucket-done':''}">
-                <td>
+              <tr class="tp-hover-parent ${b.checked?'tp-bucket-done':''}" onclick="TravelApp.editBucket('${b.id}')">
+                <td onclick="event.stopPropagation()">
                   <input type="checkbox" ${b.checked?'checked':''} onchange="TravelApp.toggleBucket('${b.id}',this.checked)" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;"/>
                 </td>
                 <td><span class="tp-bucket-type-badge" style="background:${getBucketCatStyle(b.type).bg};color:${getBucketCatStyle(b.type).color};">${getBucketCatStyle(b.type).emoji} ${b.type||'기타'}</span></td>
@@ -1008,10 +1014,9 @@ function renderTravelBucket() {
                 <td class="tp-bucket-place">${b.place||''}</td>
                 <td>${b.season||'-'}</td>
                 <td style="color:var(--text-sub);font-size:12px;">${b.notes||'-'}</td>
-                <td>
+                <td onclick="event.stopPropagation()">
                   <div class="tp-row-actions tp-hover-actions">
-                    <button class="icon-btn" onclick="TravelApp.editBucket('${b.id}')" title="수정">✏️</button>
-                    <button class="icon-btn" onclick="TravelApp.deleteBucket('${b.id}')" title="삭제">🗑️</button>
+                    <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteBucket('${b.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
                   </div>
                 </td>
               </tr>
