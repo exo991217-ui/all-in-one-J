@@ -685,7 +685,7 @@ function renderScheduleList(trip) {
                 <td>${s.content||''}</td>
                 <td>${s.transport ? `<span class="tp-transport-badge">${s.transport}</span>` : ''}</td>
                 <td>${s.notes||''}</td>
-                <td>${s.mapLink ? `<button class="tp-map-link-btn" onclick="TravelApp.openMapModal(this)" data-map-url="${s.mapLink.replace(/"/g,'&quot;')}" title="지도 열기">🗺️ 지도</button>` : ''}</td>
+                <td>${s.mapLink ? `<button class="tp-map-link-btn" onclick="TravelApp.openMapModal(this)" data-map-url="${s.mapLink.replace(/"/g,'&quot;')}" title="지도 보기">🗺️ 지도</button>` : ''}</td>
                 <td>
                   <div class="tp-row-actions tp-hover-actions">
                     <button class="icon-btn" onclick="TravelApp.editSchedule('${trip.id}','${s.id}')" title="수정">✏️</button>
@@ -1746,22 +1746,18 @@ function setTipsTagFilter(tag) {
 // ===== 구글 지도 모달 =====
 function _getMapsEmbedUrl(url) {
   if (!url) return '';
-  // Already embed format
   if (url.includes('/maps/embed') || url.includes('output=embed')) return url;
-  // Standard google maps URL — convert to embed
   if (url.includes('google.com/maps') || url.includes('maps.google')) {
     return url + (url.includes('?') ? '&' : '?') + 'output=embed';
   }
-  // Anything else: use as q= search
-  return `https://maps.google.com/maps?q=${encodeURIComponent(url)}&output=embed&hl=ko`;
+  return 'https://maps.google.com/maps?q=' + encodeURIComponent(url) + '&output=embed&hl=ko';
 }
 
 function openMapModal(btn) {
   const rawUrl = btn ? btn.getAttribute('data-map-url') : '';
   const embedUrl = _getMapsEmbedUrl(rawUrl);
-  // Build overlay
-  const existing = document.getElementById('tp-map-modal-overlay');
-  if (existing) existing.remove();
+  const old = document.getElementById('tp-map-modal-overlay');
+  if (old) old.remove();
   const overlay = document.createElement('div');
   overlay.id = 'tp-map-modal-overlay';
   overlay.innerHTML = `
@@ -1774,10 +1770,11 @@ function openMapModal(btn) {
         </div>
       </div>
       <div class="tp-map-modal-body">
-        ${embedUrl ? `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-sub);font-size:14px;">지도 링크를 불러올 수 없습니다.</div>'}
+        ${embedUrl
+          ? '<iframe src="' + embedUrl + '" width="100%" height="100%" frameborder="0" style="border:0;" allowfullscreen loading="lazy"></iframe>'
+          : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:14px;">지도를 불러올 수 없습니다.</div>'}
       </div>
-    </div>
-  `;
+    </div>`;
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 }
@@ -1878,6 +1875,5 @@ window.TravelApp = {
   saveTip,
   deleteTip,
   setTipsTagFilter,
-  // Map modal
   openMapModal,
 };
