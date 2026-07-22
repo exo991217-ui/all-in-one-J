@@ -7323,6 +7323,7 @@ function renderSettings(){
     {label:'가계부',color:'#FF8A65',bytes:_sz(S.ledger)+_sz(S.ledgerCategories)+_sz(S.keywordRules),badge:_ledgerEntries>0?_ledgerEntries+'건':null},
     {label:'분석',color:'#81C784',bytes:_sz(S.expenseNatureSettings)+_sz(S.savingsGoals)+_sz(S.budgetCategories)+_sz(S.monthBudgets)+_sz(S.automations),badge:null},
     {label:'마감 아카이브',color:'#F48FB1',bytes:_sz(S.monthClosedArchive)+_sz(S.closedMonths),badge:_archiveMonths>0?_archiveMonths+'개월':null},
+    {label:'여행 플래너',color:'#81ECEC',bytes:_sz(S.travels),badge:((S.travels?.trips?.length||0)+(S.travels?.bucketList?.length||0))>0?'여행 '+(S.travels?.trips?.length||0)+' · 버킷 '+(S.travels?.bucketList?.length||0):null},
   ];
   const _catSum=_storageCats.reduce((s,c)=>s+c.bytes,0);
   _storageCats.push({label:'설정/기타',color:'#CE93D8',bytes:Math.max(0,_storageBytes-_catSum)});
@@ -7362,24 +7363,6 @@ function renderSettings(){
       <h1 class="page-title">설정 ⚙️</h1>
       <p class="page-sub">앱 환경 설정, 데이터 관리, 저장 용량을 관리하세요.</p>
     </div></div>
-
-    <!-- 여행 데이터 요약 -->
-    <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">✈️ 여행 데이터 현황</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
-        <div class="cm-stat-box"><div class="cm-stat-label">🗺️ 내 여행</div><div class="cm-stat-val" style="color:#5E4BC4;">${_tripCount}개</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">해외 ${_foreignTrips} · 국내 ${_tripCount-_foreignTrips}</div></div>
-        <div class="cm-stat-box"><div class="cm-stat-label">⭐ 버킷플레이스</div><div class="cm-stat-val" style="color:#FDCB6E;">${_bucketCount}곳</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">완료 ${_bucketDone}곳</div></div>
-        <div class="cm-stat-box"><div class="cm-stat-label">💸 총 여행경비</div><div class="cm-stat-val red">${_totalTravelExpense.toLocaleString('ko-KR')}원</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">전체 여행 합산</div></div>
-        <div class="cm-stat-box"><div class="cm-stat-label">🏆 방문 달성률</div><div class="cm-stat-val green">${_bucketCount>0?Math.round(_bucketDone/_bucketCount*100):0}%</div><div style="font-size:10px;color:var(--text-sub);margin-top:3px;">버킷플레이스 기준</div></div>
-      </div>
-    </div>
-
-    <!-- 여행 분류 기본값 설정 -->
-    <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">🏷️ 여행 분류 기본값 설정</div>
-      <div style="font-size:12px;color:var(--text-sub);margin-bottom:16px;">일정·지출·버킷의 분류 항목을 원하는 대로 추가·삭제할 수 있어요.</div>
-      ${_travelCatHtml}
-    </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
       <div>
@@ -7446,6 +7429,13 @@ function renderSettings(){
           <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">삭제 제외항목을 설정한 뒤 월별로 정리하세요.</div>
         </div>
       </div>
+    </div>
+
+    <!-- 여행 분류 기본값 설정 (맨 아래) -->
+    <div class="card" style="margin-top:16px;opacity:0.85;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;color:var(--text-sub);">🏷️ 여행 분류 기본값 설정</div>
+      <div style="font-size:11px;color:var(--text-sub);margin-bottom:14px;">일정·지출·버킷의 분류 항목을 원하는 대로 추가·삭제할 수 있어요.</div>
+      ${_travelCatHtml}
     </div>
   `;
 }
