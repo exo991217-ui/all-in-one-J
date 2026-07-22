@@ -2315,22 +2315,21 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-schedule-table th{padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);border-bottom:1.5px solid var(--border)}
 .tp-schedule-table td{padding:8px 10px;border-bottom:1px dashed var(--border)}
 .tp-table-empty{text-align:center;color:var(--text-sub);padding:24px 0}
-.tp-scat-badge{font-size:11px;font-weight:700;border-radius:50px;padding:3px 9px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;letter-spacing:-0.2px}
+.tp-scat-badge{font-size:11px;font-weight:700;border-radius:50px;padding:3px 10px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
 .tp-scat-badge.sm{font-size:10px;padding:2px 7px}
 .tp-transport-badge{font-size:11px;background:var(--blue-light);color:var(--blue);border-radius:5px;padding:2px 6px;font-weight:600}
 .tp-transport-badge.sm{font-size:10px;padding:1px 5px}
 .tp-map-link{font-size:14px;text-decoration:none}
 .tp-map-link-btn{display:inline-flex;align-items:center;gap:3px;background:#E8F6FF;color:#1A6BAF;border:1.5px solid #B3D9F8;border-radius:20px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
 .tp-map-link-btn:hover{background:#D0EDFF;border-color:#74B9FF}
-/* ===== GOOGLE MAP MODAL ===== */
-#tp-map-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;}
-.tp-map-modal-box{background:white;border-radius:16px;overflow:hidden;width:min(720px,100%);height:min(540px,90vh);display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.25);}
-.tp-map-modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1.5px solid var(--border);font-size:15px;font-weight:700;flex-shrink:0;gap:10px;}
-.tp-map-modal-body{flex:1;overflow:hidden;background:#f4f4f4;}
-.tp-map-modal-close{background:none;border:none;font-size:17px;cursor:pointer;color:var(--text-sub);padding:2px 5px;border-radius:6px;transition:background .12s;}
-.tp-map-modal-close:hover{background:var(--bg-sub);}
-.tp-map-open-link{font-size:12px;font-weight:600;color:#1A6BAF;text-decoration:none;padding:4px 10px;border-radius:10px;background:#E8F6FF;border:1px solid #B3D9F8;transition:background .12s;}
-.tp-map-open-link:hover{background:#D0EDFF;}
+#tp-map-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px}
+.tp-map-modal-box{background:white;border-radius:16px;overflow:hidden;width:min(720px,100%);height:min(540px,90vh);display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.25)}
+.tp-map-modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1.5px solid var(--border);font-size:15px;font-weight:700;flex-shrink:0}
+.tp-map-modal-body{flex:1;overflow:hidden;background:#f4f4f4}
+.tp-map-modal-close{background:none;border:none;font-size:17px;cursor:pointer;color:var(--text-sub);padding:2px 6px;border-radius:6px}
+.tp-map-modal-close:hover{background:var(--bg-sub)}
+.tp-map-open-link{font-size:12px;font-weight:600;color:#1A6BAF;text-decoration:none;padding:4px 10px;border-radius:10px;background:#E8F6FF;border:1px solid #B3D9F8}
+.tp-map-open-link:hover{background:#D0EDFF}
 .tp-row-actions{display:flex;align-items:center}
 
 /* Schedule add form */
@@ -2389,7 +2388,7 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-bucket-table tbody tr:last-child td{border-bottom:none}
 .tp-bucket-done td{opacity:.6;text-decoration:line-through}
 .tp-bucket-place{font-weight:700;color:var(--text-main)}
-.tp-bucket-type-badge{font-size:11px;font-weight:700;border-radius:50px;padding:3px 10px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px;letter-spacing:-0.2px}
+.tp-bucket-type-badge{font-size:11px;font-weight:700;border-radius:50px;padding:3px 10px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
 
 /* Item hover actions — CSS-only, 레이아웃 밀림 없음 */
 .tp-hover-actions{
