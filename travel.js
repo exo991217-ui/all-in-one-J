@@ -1084,14 +1084,33 @@ function openWishRegionModal(tripId) {
   const id = tripId || _travelView;
   if (!id) return;
   const current = _getWishRegion(id);
-  const el = document.getElementById('travel-my-content');
-  if (!el) return;
-  const region = prompt('가고싶은 지역 또는 나라를 입력하세요\n(예: 일본, 도쿄, 호주 / 비워두면 초기화)', current);
-  if (region === null) return; // 취소
-  _setWishRegion(id, region.trim());
-  // 현재 열려있는 여행 상세 새로고침
+  renderTravelModal(`
+    <div class="modal-header">📍 가고싶은 지역 설정</div>
+    <div class="form-group" style="margin-bottom:18px;">
+      <label style="font-size:13px;font-weight:700;color:var(--text-main);display:block;margin-bottom:8px;">지역 또는 나라 입력</label>
+      <input type="text" class="form-input" id="tp-wish-region-input" value="${current}" placeholder="교토, 호주" autocomplete="off"/>
+      <div style="margin-top:8px;font-size:12px;color:#9490A8;line-height:1.6;">
+        쉼표(,)로 구분하면 여러 지역을 동시에 필터링해요<br>
+        <span style="color:#5E4BC4;font-weight:600;">예: 교토, 호주</span> → 교토와 호주 장소가 모두 표시<br>
+        비워두면 필터 초기화
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="TravelApp.closeModal()">취소</button>
+      <button class="modal-btn primary" onclick="TravelApp.saveWishRegion('${id}')">확인</button>
+    </div>
+  `);
+  setTimeout(() => { const inp = document.getElementById('tp-wish-region-input'); if (inp) { inp.focus(); inp.select(); } }, 60);
+}
+
+function saveWishRegion(tripId) {
+  const inp = document.getElementById('tp-wish-region-input');
+  if (!inp) return;
+  _setWishRegion(tripId, inp.value.trim());
+  closeTravelModal();
   if (_travelView) {
-    renderTravelDetail(el, _travelView);
+    const el = document.getElementById('travel-my-content');
+    if (el) renderTravelDetail(el, _travelView);
   }
 }
 
@@ -1101,21 +1120,24 @@ function renderWishPlaces(trip, regionFilter) {
   // 지역 설정: 전달된 regionFilter 우선, 없으면 저장된 설정값 사용
   const activeFilter = (regionFilter !== undefined ? regionFilter : _getWishRegion(trip.id)) || '';
   const filter = activeFilter.trim();
+  // 쉼표로 구분된 복수 필터 파싱
+  const filters = filter.split(',').map(f => f.trim()).filter(Boolean);
 
   // 지역 설정이 없으면 빈 상태 + 설정 유도 표시
-  if (!filter) {
+  if (!filters.length) {
     return `
       <div style="text-align:center;padding:36px 20px;background:#F8F8FC;border-radius:16px;border:1.5px dashed #D0CCE8;">
         <div style="font-size:36px;margin-bottom:12px;">📍</div>
         <div style="font-size:15px;font-weight:700;color:#5E4BC4;margin-bottom:6px;">지역을 설정하면 관련 장소만 보여요</div>
-        <div style="font-size:13px;color:#9490A8;margin-bottom:18px;">가고싶은 지역이나 나라를 설정해서<br>버킷플레이스 장소를 필터링해보세요</div>
+        <div style="font-size:13px;color:#9490A8;margin-bottom:18px;">가고싶은 지역이나 나라를 설정해서<br>버킷플레이스 장소를 필터링해보세요<br><span style="color:#5E4BC4;font-weight:600;">쉼표(,)로 구분하면 여러 지역 동시 필터링!</span></div>
         <button class="add-btn primary" onclick="TravelApp.openWishRegionModal('${trip.id}')" style="font-size:13px;padding:8px 20px;">📍 지역 설정</button>
       </div>
     `;
   }
 
+  // 하나라도 매칭되면 표시 (OR 로직)
   const filtered = bucketList.filter(b =>
-    (b.region||'').includes(filter) || (b.place||'').includes(filter) || (b.country||'').includes(filter)
+    filters.some(f => (b.region||'').includes(f) || (b.place||'').includes(f) || (b.country||'').includes(f))
   );
 
   // type 필드를 카테고리로 사용하여 그룹화
@@ -1126,17 +1148,17 @@ function renderWishPlaces(trip, regionFilter) {
     groups[cat].push(b);
   });
 
+  const filterTags = filters.map(f => `<span style="display:inline-flex;align-items:center;background:#fff;color:#5E4BC4;font-weight:700;border-radius:20px;padding:2px 10px;font-size:12px;border:1.5px solid #C4B8F0;">📍 ${f}</span>`).join('');
   const settingBadge = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 14px;background:#EDE9FF;border-radius:12px;font-size:13px;">
-      <span style="color:#5E4BC4;font-weight:700;">📍 ${filter}</span>
-      <span style="color:#9490A8;flex:1;">설정 중</span>
-      <button class="add-btn" onclick="TravelApp.openWishRegionModal('${trip.id}')" style="font-size:11px;padding:3px 10px;">변경</button>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;padding:8px 12px;background:#EDE9FF;border-radius:12px;flex-wrap:wrap;">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;flex:1;">${filterTags}</div>
+      <button class="add-btn" onclick="TravelApp.openWishRegionModal('${trip.id}')" style="font-size:11px;padding:3px 10px;flex-shrink:0;">변경</button>
     </div>
   `;
 
   if (Object.keys(groups).length === 0) {
     return `${settingBadge}<div style="color:var(--text-sub);font-size:13px;padding:24px 0;text-align:center;">
-      ⭐ "${filter}" 에 해당하는 버킷플레이스 장소가 없어요
+      ⭐ "${filters.join(', ')}" 에 해당하는 버킷플레이스 장소가 없어요
       <div style="margin-top:8px;"><button class="add-btn" onclick="App.switchTab('travel-bucket')" style="font-size:12px;">⭐ 버킷플레이스에 추가하기</button></div>
     </div>`;
   }
@@ -2159,6 +2181,7 @@ window.TravelApp = {
   saveEditExpense,
   // 가고싶은 곳 지역 설정
   openWishRegionModal,
+  saveWishRegion,
   // Wish
   openAddWishModal,
   saveWish,
