@@ -7,6 +7,45 @@ function initTravelState() {
   if (!S.travels) S.travels = { trips: [], bucketList: [] };
   if (!S.travels.trips) S.travels.trips = [];
   if (!S.travels.bucketList) S.travels.bucketList = [];
+  // ── 준비물 체크리스트 ────────────────────────────────────
+  if (!S.travels.checklist) {
+    S.travels.checklist = {
+      common: [
+        { id: 'c1', text: '충전기', checked: false, subItems: [] },
+        { id: 'c2', text: '보조배터리', checked: false, subItems: [] },
+        { id: 'c3', text: '상비약', checked: false, subItems: [
+          { id: 'c3s1', text: '진통제', checked: false },
+          { id: 'c3s2', text: '알러지약', checked: false }
+        ] },
+        { id: 'c4', text: '세면도구', checked: false, subItems: [] },
+        { id: 'c5', text: '여행용 멀티탭', checked: false, subItems: [] },
+        { id: 'c6', text: '우산 / 우비', checked: false, subItems: [] },
+        { id: 'c7', text: '지갑(카드)', checked: false, subItems: [] },
+        { id: 'c8', text: '항공권', checked: false, subItems: [] },
+        { id: 'c9', text: '선크림', checked: false, subItems: [] },
+        { id: 'c10', text: '카메라', checked: false, subItems: [] },
+      ],
+      overseas: [
+        { id: 'o1', text: '기본 준비', checked: false, subItems: [
+          { id: 'o1s1', text: '항공권(E티켓)', checked: false },
+          { id: 'o1s2', text: '여권', checked: false },
+          { id: 'o1s3', text: '현지 비상금', checked: false },
+          { id: 'o1s4', text: '숙소 바우처 프린트', checked: false },
+          { id: 'o1s5', text: '팩스/입장권 프린트', checked: false },
+        ] },
+        { id: 'o2', text: '비자 확인', checked: false, subItems: [] },
+        { id: 'o3', text: '여행자 보험', checked: false, subItems: [] },
+        { id: 'o4', text: '환전 / 트래블월렛', checked: false, subItems: [] },
+        { id: 'o5', text: '유심 / 포켓와이파이', checked: false, subItems: [] },
+        { id: 'o6', text: '콘센트 어댑터', checked: false, subItems: [] },
+        { id: 'o7', text: '국제운전면허증', checked: false, subItems: [] },
+      ]
+    };
+  }
+  if (!S.travels.checklist.common) S.travels.checklist.common = [];
+  if (!S.travels.checklist.overseas) S.travels.checklist.overseas = [];
+  // ── 여행 팁 게시글 ──────────────────────────────────────
+  if (!S.travels.travelTips) S.travels.travelTips = [];
 }
 
 // ===== TRAVEL HELPERS =====
@@ -14,6 +53,12 @@ let _travelFilter = '전체';
 let _travelView = null; // null = list, tripId = detail
 let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable' | 'schedule-summary'
 let _bucketFilter = '전체';
+// 준비물·팁 상태
+let _tipsSubTab = 'checklist'; // 'checklist' | 'tips'
+let _tipsWriting = false;
+let _tipsTagFilter = '전체';
+let _tipPendingTags = [];
+let _checklistExpandedGroups = {}; // { itemId: boolean }
 
 const TRIP_TYPE_ICONS = { domestic: '🏔', foreign: '✈️' };
 
@@ -293,68 +338,190 @@ function renderTripCard(t) {
 
 function renderTipsHTML() {
   return `
-    <div class="page-header">
-      <div><h1 class="page-title">준비물과 팁 🎒</h1><p class="page-sub">여행 전 꼭 챙겨야 할 것들</p></div>
-    </div>
-    <div class="tp-filter-bar">
-      ${['준비물과팁','전체','해외여행','국내여행','완료'].map(f => `
-        <button class="tp-filter-chip ${_travelFilter === f ? 'active' : ''}" onclick="TravelApp.setTravelFilter('${f}')">
-          ${f === '준비물과팁' ? '🎒 ' : f === '전체' ? '' : f === '해외여행' ? '🌏 ' : f === '국내여행' ? '🏔 ' : '✅ '}${f}
+    <div>
+      <div class="page-header" style="margin-bottom:8px;">
+        <div>
+          <h1 class="page-title" style="font-size:22px;">준비물과 팁 🎒</h1>
+          <p class="page-sub">여행 전 꼭 챙겨야 할 것들을 정리해요</p>
+        </div>
+      </div>
+      <div class="tp-filter-bar">
+        ${['준비물과팁','전체','해외여행','국내여행','완료'].map(f => `
+          <button class="tp-filter-chip ${_travelFilter === f ? 'active' : ''}" onclick="TravelApp.setTravelFilter('${f}')">
+            ${f === '준비물과팁' ? '🎒 ' : f === '전체' ? '' : f === '해외여행' ? '🌏 ' : f === '국내여행' ? '🏔 ' : '✅ '}${f}
+          </button>
+        `).join('')}
+      </div>
+      <!-- 서브 탭 -->
+      <div style="display:flex;gap:0;margin:18px 0 0;border-bottom:2px solid #eef0f5;">
+        <button onclick="TravelApp.setTipsTab('checklist')" style="padding:10px 22px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:${_tipsSubTab==='checklist'?'#5E4BC4':'#aaa'};border-bottom:3px solid ${_tipsSubTab==='checklist'?'#5E4BC4':'transparent'};margin-bottom:-2px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:6px;transition:color .15s;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="6" height="6" rx="1"/><rect x="3" y="13" width="6" height="6" rx="1"/><line x1="13" y1="8" x2="21" y2="8"/><line x1="13" y1="16" x2="21" y2="16"/></svg>
+          준비물
         </button>
-      `).join('')}
-    </div>
-    <div class="tp-tips-grid">
-      <div class="tp-tips-card">
-        <div class="tp-tips-title">📋 해외여행 필수 서류</div>
-        <ul class="tp-tips-list">
-          <li>여권 (유효기간 6개월 이상 확인)</li>
-          <li>비자 (국가별 확인)</li>
-          <li>항공권 출력본 또는 모바일</li>
-          <li>여행자 보험 증권</li>
-          <li>숙소 예약 확인서</li>
-          <li>국제운전면허증 (필요시)</li>
-          <li>외화 환전 또는 트래블월렛</li>
-        </ul>
+        <button onclick="TravelApp.setTipsTab('tips')" style="padding:10px 22px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:${_tipsSubTab==='tips'?'#5E4BC4':'#aaa'};border-bottom:3px solid ${_tipsSubTab==='tips'?'#5E4BC4':'transparent'};margin-bottom:-2px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:6px;transition:color .15s;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          유용한 팁
+        </button>
       </div>
-      <div class="tp-tips-card">
-        <div class="tp-tips-title">🧳 짐 체크리스트</div>
-        <ul class="tp-tips-list">
-          <li>옷 (여행 일수 + 1일치)</li>
-          <li>속옷 및 양말</li>
-          <li>세면도구 (샴푸, 칫솔, 치약)</li>
-          <li>충전기 및 보조배터리</li>
-          <li>상비약 (소화제, 진통제, 밴드)</li>
-          <li>선크림 및 기초화장품</li>
-          <li>카메라 / 스마트폰</li>
-          <li>우산 또는 우비</li>
-        </ul>
-      </div>
-      <div class="tp-tips-card">
-        <div class="tp-tips-title">💡 여행 꿀팁</div>
-        <ul class="tp-tips-list">
-          <li>📱 오프라인 지도 미리 다운로드 (Google Maps)</li>
-          <li>💳 해외 수수료 없는 카드 준비</li>
-          <li>🔌 나라별 콘센트 어댑터 확인</li>
-          <li>📞 유심 또는 포켓와이파이 예약</li>
-          <li>🏥 현지 비상연락처 메모</li>
-          <li>📸 귀중품 사진 찍어두기 (여권 등)</li>
-          <li>💰 현금 소액 준비 (택시, 시장용)</li>
-        </ul>
-      </div>
-      <div class="tp-tips-card">
-        <div class="tp-tips-title">🚗 국내여행 체크리스트</div>
-        <ul class="tp-tips-list">
-          <li>신분증</li>
-          <li>숙소 예약 확인서</li>
-          <li>대중교통 앱 확인 (KTX, 버스)</li>
-          <li>현지 맛집 사전 예약</li>
-          <li>날씨 확인 및 우비 준비</li>
-          <li>주차 정보 확인 (자가용 시)</li>
-          <li>여행지 운영시간 사전 확인</li>
-        </ul>
+      <div style="margin-top:20px;">
+        ${_tipsSubTab === 'checklist' ? renderChecklistTab() : renderTipsTab()}
       </div>
     </div>
   `;
+}
+
+// ── 체크리스트 탭 렌더 ────────────────────────────────────
+function renderChecklistTab() {
+  const cl = (S.travels && S.travels.checklist) || { common: [], overseas: [] };
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+    ${renderChecklistPanel('common', cl.common || [], '🧳 공통 준비물', '#5E4BC4', '#F0EEFF')}
+    ${renderChecklistPanel('overseas', cl.overseas || [], '✈️ 해외 준비물', '#4CAF82', '#E8F5EE')}
+  </div>`;
+}
+
+function _countChecklistDone(items) {
+  let done = 0, total = 0;
+  (items || []).forEach(item => {
+    if (item.subItems && item.subItems.length > 0) {
+      item.subItems.forEach(si => { total++; if (si.checked) done++; });
+    } else { total++; if (item.checked) done++; }
+  });
+  return { done, total };
+}
+
+function renderChecklistPanel(type, items, label, accent, bg) {
+  const { done, total } = _countChecklistDone(items);
+  const allDone = total > 0 && done === total;
+  const itemsHtml = (items || []).map(item => {
+    const hasSubs = item.subItems && item.subItems.length > 0;
+    const isExpanded = _checklistExpandedGroups[item.id] !== false;
+    if (hasSubs) {
+      const subDone = item.subItems.filter(s => s.checked).length;
+      const allSubDone = item.subItems.length > 0 && subDone === item.subItems.length;
+      return `<div style="margin-bottom:4px;">
+        <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:${bg};border-radius:14px;">
+          <button onclick="TravelApp.toggleChecklistGroup('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;color:${accent};flex-shrink:0;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${isExpanded?90:0}deg);transition:transform .18s;display:block;"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <input type="checkbox" ${item.checked?'checked':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
+          <span style="font-size:13px;font-weight:700;color:${allSubDone?'#aaa':'var(--text-main)'};text-decoration:${allSubDone?'line-through':'none'};flex:1;">${item.text}</span>
+          <span style="font-size:10px;font-weight:700;background:${accent}22;color:${accent};border-radius:20px;padding:1px 7px;flex-shrink:0;">${subDone}/${item.subItems.length}</span>
+          <button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;flex-shrink:0;" title="삭제">✕</button>
+        </div>
+        ${isExpanded ? `<div style="padding-left:26px;margin-top:2px;">
+          ${item.subItems.map(si => `
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:10px;background:${si.checked?'#fafafa':'transparent'};">
+              <div style="width:1px;height:13px;background:#ddd;flex-shrink:0;border-radius:1px;"></div>
+              <input type="checkbox" ${si.checked?'checked':''} style="width:13px;height:13px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistSubItem('${type}','${item.id}','${si.id}',this.checked)"/>
+              <span style="font-size:12px;color:${si.checked?'#aaa':'var(--text-main)'};text-decoration:${si.checked?'line-through':'none'};flex:1;">${si.text}</span>
+              <button onclick="TravelApp.deleteChecklistSubItem('${type}','${item.id}','${si.id}')" style="background:none;border:none;cursor:pointer;color:#ddd;font-size:11px;padding:0;">✕</button>
+            </div>`).join('')}
+          <div id="tp-sub-form-${type}-${item.id}" style="display:none;align-items:center;gap:6px;padding:4px 0 2px 10px;">
+            <input type="text" id="tp-sub-inp-${type}-${item.id}" placeholder="하위 항목..." style="flex:1;border:1.5px solid ${accent}55;border-radius:8px;padding:4px 8px;font-size:12px;outline:none;" onkeydown="if(event.key==='Enter')TravelApp.addChecklistSubItem('${type}','${item.id}')"/>
+            <button onclick="TravelApp.addChecklistSubItem('${type}','${item.id}')" style="background:${accent};color:white;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600;">추가</button>
+            <button onclick="document.getElementById('tp-sub-form-${type}-${item.id}').style.display='none'" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;">취소</button>
+          </div>
+          <button onclick="(function(){var f=document.getElementById('tp-sub-form-${type}-${item.id}');if(f){f.style.display='flex';var i=document.getElementById('tp-sub-inp-${type}-${item.id}');if(i)i.focus();}})()" style="background:none;border:none;cursor:pointer;color:${accent};font-size:11px;font-weight:600;padding:3px 6px;display:flex;align-items:center;gap:3px;margin-top:2px;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 하위 항목
+          </button>
+        </div>` : ''}
+      </div>`;
+    } else {
+      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:12px;background:${item.checked?'#fafafa':'transparent'};">
+        <input type="checkbox" ${item.checked?'checked':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
+        <span style="font-size:13px;color:${item.checked?'#aaa':'var(--text-main)'};text-decoration:${item.checked?'line-through':'none'};flex:1;">${item.text}</span>
+        <button onclick="TravelApp.addChecklistGroupToItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:9px;padding:0 2px;border-radius:50%;line-height:1;" title="하위분류 추가">⊕</button>
+        <button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;">✕</button>
+      </div>`;
+    }
+  }).join('');
+
+  return `<div style="background:white;border-radius:20px;box-shadow:0 2px 16px rgba(94,75,196,.07);overflow:hidden;border:1.5px solid ${accent}15;">
+    <!-- 패널 헤더 -->
+    <div style="background:linear-gradient(135deg,${accent}12,${bg});padding:14px 16px 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:14px;font-weight:800;color:${accent};">${label}</span>
+        <span style="font-size:11px;font-weight:700;background:${allDone?accent:'white'};color:${allDone?'white':accent};border:1.5px solid ${accent};border-radius:20px;padding:2px 9px;">${done} / ${total}</span>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;">
+        <button onclick="TravelApp.checkAllChecklist('${type}',true)" style="font-size:11px;font-weight:600;padding:4px 12px;background:white;border:1.5px solid ${accent}44;border-radius:20px;cursor:pointer;color:${accent};">전체 체크</button>
+        <button onclick="TravelApp.checkAllChecklist('${type}',false)" style="font-size:11px;font-weight:600;padding:4px 12px;background:white;border:1.5px solid ${accent}44;border-radius:20px;cursor:pointer;color:${accent};">전체 해제</button>
+        <button onclick="TravelApp.lockChecklist('${type}')" style="font-size:11px;font-weight:600;padding:4px 12px;background:${accent}15;border:1.5px solid ${accent}30;border-radius:20px;cursor:pointer;color:${accent};">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>잠금
+        </button>
+      </div>
+    </div>
+    <!-- 아이템 목록 -->
+    <div style="padding:12px 14px;">
+      ${itemsHtml || `<div style="text-align:center;padding:24px;color:#bbb;font-size:13px;">✨ 항목을 추가해보세요!</div>`}
+      <div id="tp-add-form-${type}" style="display:none;align-items:center;gap:6px;margin-top:8px;padding-top:10px;border-top:1px dashed ${accent}30;">
+        <input type="text" id="tp-add-inp-${type}" placeholder="항목 이름..."
+          style="flex:1;border:1.5px solid ${accent}55;border-radius:10px;padding:7px 12px;font-size:13px;outline:none;"
+          onkeydown="if(event.key==='Enter')TravelApp.addChecklistItem('${type}')"/>
+        <button onclick="TravelApp.addChecklistItem('${type}')" style="background:${accent};color:white;border:none;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">추가</button>
+        <button onclick="document.getElementById('tp-add-form-${type}').style.display='none'" style="background:none;border:1.5px solid #ddd;border-radius:10px;padding:7px 10px;font-size:12px;cursor:pointer;color:#aaa;">취소</button>
+      </div>
+      <button onclick="(function(){var f=document.getElementById('tp-add-form-${type}');if(f){f.style.display='flex';var i=document.getElementById('tp-add-inp-${type}');if(i)i.focus();}})()" style="width:100%;margin-top:10px;padding:9px;background:transparent;border:1.5px dashed ${accent}35;border-radius:14px;cursor:pointer;color:${accent};font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;" onmouseover="this.style.background='${bg}'" onmouseout="this.style.background='transparent'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        항목 추가
+      </button>
+    </div>
+  </div>`;
+}
+
+// ── 유용한 팁 탭 렌더 ─────────────────────────────────────
+function renderTipsTab() {
+  const tips = (S.travels && S.travels.travelTips) || [];
+  const allTags = [...new Set(tips.flatMap(t => t.tags || []))];
+  const activeTag = _tipsTagFilter || '전체';
+  const filtered = activeTag === '전체' ? tips : tips.filter(t => (t.tags||[]).includes(activeTag));
+  return `<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:800;color:var(--text-main);display:flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FDCB6E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        유용한 팁
+      </div>
+      <button onclick="TravelApp.openTipWriter()" style="padding:8px 18px;background:linear-gradient(135deg,#5E4BC4,#7B68EE);color:white;border:none;border-radius:50px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;box-shadow:0 3px 10px #5E4BC433;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        글 작성
+      </button>
+    </div>
+    ${_tipsWriting ? `
+    <div style="background:white;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 24px rgba(94,75,196,.1);border:1.5px solid #A29BFE44;">
+      <input type="text" id="tp-tip-title" placeholder="제목을 입력하세요"
+        style="width:100%;border:1.5px solid #A29BFE;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:10px;"/>
+      <input type="text" id="tp-tip-tags-input" placeholder="태그 입력 후 Enter (예: 일본  공항)"
+        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:6px;"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();TravelApp.addTipTag()}"/>
+      <div id="tp-tip-tags-display" style="display:flex;flex-wrap:wrap;gap:5px;min-height:4px;margin-bottom:10px;"></div>
+      <textarea id="tp-tip-content" placeholder="내용을 작성하세요... (선택사항)"
+        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;min-height:90px;resize:vertical;font-family:inherit;"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <button onclick="TravelApp.closeTipWriter()" style="padding:8px 16px;background:white;border:1.5px solid #ddd;border-radius:50px;font-size:13px;cursor:pointer;color:var(--text-sub);">취소</button>
+        <button onclick="TravelApp.saveTip()" style="padding:8px 20px;background:linear-gradient(135deg,#5E4BC4,#7B68EE);color:white;border:none;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
+      </div>
+    </div>` : ''}
+    ${allTags.length > 0 ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;">
+      <button onclick="TravelApp.setTipsTagFilter('전체')" style="padding:5px 14px;border-radius:50px;border:1.5px solid ${activeTag==='전체'?'#5E4BC4':'#ddd'};background:${activeTag==='전체'?'#5E4BC4':'white'};color:${activeTag==='전체'?'white':'var(--text-sub)'};font-size:12px;font-weight:600;cursor:pointer;">전체</button>
+      ${allTags.map(tag=>`<button onclick="TravelApp.setTipsTagFilter('${tag}')" style="padding:5px 14px;border-radius:50px;border:1.5px solid ${activeTag===tag?'#5E4BC4':'#ddd'};background:${activeTag===tag?'#5E4BC4':'white'};color:${activeTag===tag?'white':'var(--text-sub)'};font-size:12px;font-weight:600;cursor:pointer;">#${tag}</button>`).join('')}
+    </div>` : ''}
+    ${filtered.length === 0 ? `<div style="text-align:center;padding:48px 20px;background:white;border-radius:20px;border:1.5px solid #f0f0f0;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;display:block;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div style="font-size:14px;font-weight:700;color:#bbb;margin-bottom:4px;">아직 등록된 팁이 없어요</div>
+      <div style="font-size:12px;color:#ccc;">+ 글 작성 버튼으로 첫 번째 팁을 추가해봐요!</div>
+    </div>` :
+    filtered.map(tip=>`<div style="background:white;border-radius:16px;padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.04);border:1.5px solid #f0f0f5;display:flex;align-items:flex-start;gap:10px;">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:5px;">${tip.title}</div>
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+          ${(tip.tags||[]).map(t=>`<span style="background:#F0EEFF;color:#5E4BC4;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;">#${t}</span>`).join('')}
+          ${tip.link?`<span style="color:#ccc;font-size:11px;"> — </span><a href="${tip.link}" target="_blank" style="color:#5E4BC4;font-size:11px;text-decoration:none;">${tip.link.length>45?tip.link.slice(0,45)+'…':tip.link}</a>`:''}
+        </div>
+        ${tip.content?`<div style="font-size:12px;color:var(--text-sub);margin-top:6px;line-height:1.6;">${tip.content}</div>`:''}
+      </div>
+      <button onclick="TravelApp.deleteTip('${tip.id}')" style="background:none;border:none;cursor:pointer;color:#ddd;font-size:13px;padding:0;flex-shrink:0;" title="삭제">✕</button>
+    </div>`).join('')}
+  </div>`;
 }
 
 // ===== RENDER: 여행 상세 =====
@@ -511,14 +678,14 @@ function renderScheduleList(trip) {
             ? `<tr><td colspan="9" class="tp-table-empty">📅 아래 "추가" 버튼에서 일정을 추가하세요</td></tr>`
             : schedule.map(s => `
               <tr class="tp-hover-parent">
-                <td><span class="tp-scat-badge" style="background:${getSchedCatColor(s.category)}">${s.category||'기타'}</span></td>
+                <td><span class="tp-scat-badge" style="background:${getSchedCatStyle(s.category).bg};color:${getSchedCatStyle(s.category).color};">${getSchedCatStyle(s.category).emoji} ${s.category||'기타'}</span></td>
                 <td>${s.date||''}</td>
                 <td>${s.time||''}</td>
                 <td>${s.place||''}</td>
                 <td>${s.content||''}</td>
                 <td>${s.transport ? `<span class="tp-transport-badge">${s.transport}</span>` : ''}</td>
                 <td>${s.notes||''}</td>
-                <td>${s.mapLink ? `<a href="${s.mapLink}" target="_blank" class="tp-map-link">🗺️</a>` : ''}</td>
+                <td>${s.mapLink ? `<button class="tp-map-link-btn" onclick="TravelApp.openMapModal(this)" data-map-url="${s.mapLink.replace(/"/g,'&quot;')}" title="지도 열기">🗺️ 지도</button>` : ''}</td>
                 <td>
                   <div class="tp-row-actions tp-hover-actions">
                     <button class="icon-btn" onclick="TravelApp.editSchedule('${trip.id}','${s.id}')" title="수정">✏️</button>
@@ -577,7 +744,7 @@ function renderScheduleTimetable(trip) {
                 ${items.map(s => `
                   <div class="tp-tt-item">
                     <span class="tp-tt-name">${s.place || s.content || ''}</span>
-                    <span class="tp-scat-badge sm" style="background:${getSchedCatColor(s.category)}">${s.category||'기타'}</span>
+                    <span class="tp-scat-badge sm" style="background:${getSchedCatStyle(s.category).bg};color:${getSchedCatStyle(s.category).color};">${getSchedCatStyle(s.category).emoji} ${s.category||'기타'}</span>
                     ${s.transport ? `<span class="tp-transport-badge sm">${s.transport}</span>` : ''}
                   </div>
                 `).join('')}
@@ -614,12 +781,48 @@ function renderScheduleAddForm(trip) {
   `;
 }
 
-function getSchedCatColor(cat) {
-  const colors = {
-    '관광': '#74B9FF', '식사': '#FF7675', '카페': '#FDCB6E', '쇼핑': '#A29BFE',
-    '체험': '#55EFC4', '숙소': '#81ECEC', '교통': '#B2BEC3', '기타': '#DFE6E9'
+// ── 일정 배지 스타일 (파스텔 배경 + 진한 텍스트) ─────────────
+function getSchedCatStyle(cat) {
+  const styles = {
+    '관광': { bg: '#E8F4FF', color: '#1A6BAF', emoji: '🔭' },
+    '식사': { bg: '#FFF0EE', color: '#C0392B', emoji: '🍽' },
+    '카페': { bg: '#FFFBEA', color: '#A0720A', emoji: '☕' },
+    '쇼핑': { bg: '#F3EEFF', color: '#6C3FC3', emoji: '🛍' },
+    '체험': { bg: '#E8FFF4', color: '#1A7A50', emoji: '🎯' },
+    '숙소': { bg: '#E6FAFA', color: '#127A7A', emoji: '🛏' },
+    '교통': { bg: '#F0F1F2', color: '#555E68', emoji: '🚌' },
+    '이동': { bg: '#E8F5EE', color: '#27AE60', emoji: '🚶' },
+    '기타': { bg: '#F4F4F4', color: '#777',    emoji: '📌' },
   };
-  return colors[cat] || '#DFE6E9';
+  return styles[cat] || styles['기타'];
+}
+// 하위호환 (renderExpenseList 등에서 색상만 쓰는 곳)
+function getSchedCatColor(cat) { return getSchedCatStyle(cat).bg; }
+
+// ── 버킷/지출 배지 스타일 ──────────────────────────────────────
+function getBucketCatStyle(cat) {
+  const styles = {
+    '풍경': { bg: '#E8F5EE', color: '#1E7A45', emoji: '🏔' },
+    '맛집': { bg: '#FFF0EE', color: '#C0392B', emoji: '🍽' },
+    '카페': { bg: '#FFF5E6', color: '#A0600A', emoji: '☕' },
+    '체험': { bg: '#E8F4FF', color: '#1A6BAF', emoji: '🎯' },
+    '기념품': { bg: '#F3EEFF', color: '#6C3FC3', emoji: '🎁' },
+    '기타': { bg: '#F4F4F4', color: '#777',    emoji: '⭐' },
+  };
+  return styles[cat] || styles['기타'];
+}
+// 지출 분류 스타일
+function getExpCatStyleObj(cat) {
+  const styles = {
+    '항공': { bg: '#E8F4FF', color: '#1A6BAF' },
+    '숙소': { bg: '#F3EEFF', color: '#6C3FC3' },
+    '식비': { bg: '#FFF0EE', color: '#C0392B' },
+    '교통': { bg: '#F0F1F2', color: '#555E68' },
+    '쇼핑': { bg: '#FFFBEA', color: '#A0720A' },
+    '관광': { bg: '#E8F5EE', color: '#1E7A45' },
+    '기타': { bg: '#F4F4F4', color: '#777'    },
+  };
+  return styles[cat] || styles['기타'];
 }
 
 function renderExpenseList(trip) {
@@ -644,7 +847,7 @@ function renderExpenseList(trip) {
             ? `<tr><td colspan="${trip.type==='foreign'?6:5}" class="tp-table-empty">💸 아래 "추가" 버튼에서 지출을 기록하세요</td></tr>`
             : expenses.map(e => `
               <tr class="tp-hover-parent">
-                <td><span class="tp-scat-badge" style="background:${getExpCatColor(e.category)}">${e.category||'기타'}</span></td>
+                <td><span class="tp-scat-badge" style="background:${getBucketCatStyle(e.category).bg};color:${getBucketCatStyle(e.category).color};">${getBucketCatStyle(e.category).emoji} ${e.category||'기타'}</span></td>
                 <td style="font-size:12px;">${e.date||''}</td>
                 <td>${e.title||''}</td>
                 <td style="text-align:right;font-weight:700;">${(parseFloat(e.amount)||0).toLocaleString('ko-KR')}원</td>
@@ -799,7 +1002,7 @@ function renderTravelBucket() {
                 <td>
                   <input type="checkbox" ${b.checked?'checked':''} onchange="TravelApp.toggleBucket('${b.id}',this.checked)" style="accent-color:var(--green);width:16px;height:16px;cursor:pointer;"/>
                 </td>
-                <td><span class="tp-bucket-type-badge" style="background:${getExpCatColor(b.type)}">${getCatEmoji(b.type)} ${b.type||'기타'}</span></td>
+                <td><span class="tp-bucket-type-badge" style="background:${getBucketCatStyle(b.type).bg};color:${getBucketCatStyle(b.type).color};">${getBucketCatStyle(b.type).emoji} ${b.type||'기타'}</span></td>
                 <td>${b.country||'-'}</td>
                 <td>${b.region||'-'}</td>
                 <td class="tp-bucket-place">${b.place||''}</td>
@@ -1386,6 +1589,199 @@ ${(trip.expenses||[]).map(e => `  ${e.date||''} | ${e.category} | ${e.title} | $
   URL.revokeObjectURL(url);
 }
 
+// ===== 준비물 체크리스트 관리 =====
+function _rerenderTips() {
+  const el = document.getElementById('travel-my-content');
+  if (el) el.innerHTML = renderTipsHTML();
+}
+
+function toggleChecklistItem(type, id, checked) {
+  const cl = (S.travels.checklist && S.travels.checklist[type]) || [];
+  const item = cl.find(i => i.id === id);
+  if (!item) return;
+  item.checked = checked;
+  if (item.subItems && item.subItems.length > 0) item.subItems.forEach(si => si.checked = checked);
+  saveState(); _rerenderTips();
+}
+
+function toggleChecklistSubItem(type, parentId, subId, checked) {
+  const cl = (S.travels.checklist && S.travels.checklist[type]) || [];
+  const item = cl.find(i => i.id === parentId);
+  if (!item || !item.subItems) return;
+  const si = item.subItems.find(s => s.id === subId);
+  if (si) si.checked = checked;
+  item.checked = item.subItems.length > 0 && item.subItems.every(s => s.checked);
+  saveState(); _rerenderTips();
+}
+
+function toggleChecklistGroup(type, id) {
+  _checklistExpandedGroups[id] = _checklistExpandedGroups[id] === false ? true : false;
+  _rerenderTips();
+}
+
+function addChecklistItem(type) {
+  const input = document.getElementById('tp-add-inp-' + type);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  if (!S.travels.checklist) S.travels.checklist = { common: [], overseas: [] };
+  if (!S.travels.checklist[type]) S.travels.checklist[type] = [];
+  S.travels.checklist[type].push({ id: 'cl_' + Date.now(), text, checked: false, subItems: [] });
+  saveState(); _rerenderTips();
+}
+
+function addChecklistSubItem(type, parentId) {
+  const input = document.getElementById('tp-sub-inp-' + type + '-' + parentId);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const item = ((S.travels.checklist || {})[type] || []).find(i => i.id === parentId);
+  if (!item) return;
+  if (!item.subItems) item.subItems = [];
+  item.subItems.push({ id: 'cls_' + Date.now(), text, checked: false });
+  saveState(); _rerenderTips();
+}
+
+function deleteChecklistItem(type, id) {
+  if (!S.travels.checklist || !S.travels.checklist[type]) return;
+  S.travels.checklist[type] = S.travels.checklist[type].filter(i => i.id !== id);
+  saveState(); _rerenderTips();
+}
+
+function deleteChecklistSubItem(type, parentId, subId) {
+  const item = ((S.travels.checklist || {})[type] || []).find(i => i.id === parentId);
+  if (item && item.subItems) {
+    item.subItems = item.subItems.filter(s => s.id !== subId);
+    saveState();
+  }
+  _rerenderTips();
+}
+
+function checkAllChecklist(type, checked) {
+  ((S.travels.checklist || {})[type] || []).forEach(item => {
+    item.checked = checked;
+    if (item.subItems) item.subItems.forEach(si => si.checked = checked);
+  });
+  saveState(); _rerenderTips();
+}
+
+function lockChecklist(type) {
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:10px 22px;border-radius:30px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+  toast.textContent = '🔒 잠금 기능은 준비 중이에요!';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+function addChecklistGroupToItem(type, id) {
+  const item = ((S.travels.checklist || {})[type] || []).find(i => i.id === id);
+  if (!item) return;
+  if (!item.subItems) item.subItems = [];
+  _checklistExpandedGroups[id] = true;
+  _rerenderTips();
+  setTimeout(() => {
+    const form = document.getElementById('tp-sub-form-' + type + '-' + id);
+    if (form) form.style.display = 'flex';
+    const inp = document.getElementById('tp-sub-inp-' + type + '-' + id);
+    if (inp) inp.focus();
+  }, 50);
+}
+
+// ===== 유용한 팁 관리 =====
+function openTipWriter() {
+  _tipsWriting = true; _tipPendingTags = [];
+  _rerenderTips();
+}
+
+function closeTipWriter() {
+  _tipsWriting = false; _tipPendingTags = [];
+  _rerenderTips();
+}
+
+function addTipTag() {
+  const input = document.getElementById('tp-tip-tags-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val && !_tipPendingTags.includes(val)) {
+    _tipPendingTags.push(val);
+    input.value = '';
+    _refreshTipTagsDisplay();
+  }
+}
+
+function removeTipTag(tag) {
+  _tipPendingTags = _tipPendingTags.filter(t => t !== tag);
+  _refreshTipTagsDisplay();
+}
+
+function _refreshTipTagsDisplay() {
+  const display = document.getElementById('tp-tip-tags-display');
+  if (!display) return;
+  display.innerHTML = _tipPendingTags.map(t =>
+    `<span style="background:#F0EEFF;color:#5E4BC4;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">#${t} <button onclick="TravelApp.removeTipTag('${t}')" style="background:none;border:none;cursor:pointer;color:#A29BFE;font-size:11px;padding:0;line-height:1;">✕</button></span>`
+  ).join(' ');
+}
+
+function saveTip() {
+  const title = (document.getElementById('tp-tip-title')?.value || '').trim();
+  const content = (document.getElementById('tp-tip-content')?.value || '').trim();
+  if (!title) { alert('제목을 입력해주세요.'); return; }
+  if (!S.travels.travelTips) S.travels.travelTips = [];
+  S.travels.travelTips.unshift({ id: 'tip_' + Date.now(), title, tags: [..._tipPendingTags], content, link: '', createdAt: new Date().toISOString() });
+  saveState();
+  _tipsWriting = false; _tipPendingTags = [];
+  _rerenderTips();
+}
+
+function deleteTip(id) {
+  S.travels.travelTips = (S.travels.travelTips || []).filter(t => t.id !== id);
+  saveState(); _rerenderTips();
+}
+
+function setTipsTagFilter(tag) {
+  _tipsTagFilter = tag; _rerenderTips();
+}
+
+
+// ===== 구글 지도 모달 =====
+function _getMapsEmbedUrl(url) {
+  if (!url) return '';
+  // Already embed format
+  if (url.includes('/maps/embed') || url.includes('output=embed')) return url;
+  // Standard google maps URL — convert to embed
+  if (url.includes('google.com/maps') || url.includes('maps.google')) {
+    return url + (url.includes('?') ? '&' : '?') + 'output=embed';
+  }
+  // Anything else: use as q= search
+  return `https://maps.google.com/maps?q=${encodeURIComponent(url)}&output=embed&hl=ko`;
+}
+
+function openMapModal(btn) {
+  const rawUrl = btn ? btn.getAttribute('data-map-url') : '';
+  const embedUrl = _getMapsEmbedUrl(rawUrl);
+  // Build overlay
+  const existing = document.getElementById('tp-map-modal-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'tp-map-modal-overlay';
+  overlay.innerHTML = `
+    <div class="tp-map-modal-box">
+      <div class="tp-map-modal-header">
+        <span>🗺️ 지도</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <a href="${rawUrl}" target="_blank" class="tp-map-open-link">새 탭에서 열기 ↗</a>
+          <button class="tp-map-modal-close" onclick="document.getElementById('tp-map-modal-overlay').remove()">✕</button>
+        </div>
+      </div>
+      <div class="tp-map-modal-body">
+        ${embedUrl ? `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-sub);font-size:14px;">지도 링크를 불러올 수 없습니다.</div>'}
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 // ===== NAV GROUP TOGGLE =====
 function toggleNavGroup(group) {
   const submenu = document.getElementById(`nav-${group}-submenu`);
@@ -1405,6 +1801,8 @@ window.TravelApp = {
   openTrip(id) { _travelView = id; _travelDetailTab = 'schedule-list'; renderTravelMy(); },
   backToList() { _travelView = null; renderTravelMy(); },
   setDetailTab(tab, tripId) { _travelDetailTab = tab; renderTravelDetail(document.getElementById('travel-my-content'), tripId); },
+  // 준비물·팁 서브탭
+  setTipsTab(tab) { _tipsSubTab = tab; _rerenderTips(); },
   // Trip CRUD
   openNewTripModal() { openNewTripModal(); },
   openEditTripModal(id) { openNewTripModal(getTripById(id)); },
@@ -1461,4 +1859,25 @@ window.TravelApp = {
   onForeignInput,
   // Flag util
   getCountryFlag,
+  // ── 체크리스트 ─────────────────────────────────────────
+  toggleChecklistItem,
+  toggleChecklistSubItem,
+  toggleChecklistGroup,
+  addChecklistItem,
+  addChecklistSubItem,
+  deleteChecklistItem,
+  deleteChecklistSubItem,
+  checkAllChecklist,
+  lockChecklist,
+  addChecklistGroupToItem,
+  // ── 팁 게시글 ──────────────────────────────────────────
+  openTipWriter,
+  closeTipWriter,
+  addTipTag,
+  removeTipTag,
+  saveTip,
+  deleteTip,
+  setTipsTagFilter,
+  // Map modal
+  openMapModal,
 };
