@@ -1163,32 +1163,43 @@ function renderWishPlaces(trip, regionFilter) {
     </div>`;
   }
 
+  // 항목 수 내림차순 정렬
+  const sortedGroups = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+
   return `
     ${settingBadge}
-    <div class="tp-wish-grid-v2">
-      ${Object.entries(groups).map(([cat, items]) => {
+    <div class="tp-wish-accordion">
+      ${sortedGroups.map(([cat, items], idx) => {
         const st = getBucketCatStyle(cat);
+        const acId = `tp-wac-${trip.id}-${cat}`;
         return `
-          <div class="tp-wish-col-v2" style="border-top:3px solid ${st.bg};">
-            <div class="tp-wish-cat-header-v2">
-              <span class="tp-wish-cat-emoji">${st.emoji}</span>
-              <span class="tp-wish-cat-name">${cat}</span>
-              <span class="tp-wish-count-v2" style="background:${st.bg};color:${st.color};">${items.length}곳</span>
+          <div class="tp-wac-item" id="${acId}">
+            <div class="tp-wac-header" style="--wac-accent:${st.color};" onclick="TravelApp.toggleWishAccordion('${acId}')">
+              <span class="tp-wac-emoji">${st.emoji}</span>
+              <span class="tp-wac-name">${cat}</span>
+              <span class="tp-wac-count" style="background:${st.bg};color:${st.color};">${items.length}곳</span>
+              <svg class="tp-wac-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            ${items.map(b => `
-              <div class="tp-wish-item-v2 tp-hover-parent ${b.checked?'visited':''}"
-                onmouseover="this.style.background='${st.bg}44'"
-                onmouseout="this.style.background=''">
-                <span class="tp-wish-radio-circle ${b.checked?'checked':''}" style="${b.checked?'border-color:'+st.color+';background:'+st.color:''}" onclick="TravelApp.toggleBucket('${b.id}')"></span>
-                <span class="tp-wish-name-v2 ${b.checked?'done':''}">${b.place||''}</span>
-                ${b.region ? `<span class="tp-wish-region-v2">${b.region}</span>` : ''}
-                ${b.country ? `<span class="tp-wish-region-v2" style="background:#FFF5E6;color:#C07A1A;">${b.country}</span>` : ''}
-                ${b.notes ? `<span class="tp-wish-notes-v2">${b.notes}</span>` : ''}
-                <div class="tp-item-actions tp-hover-actions">
-                  <button class="icon-btn tp-trash-btn" onclick="event.stopPropagation();TravelApp.deleteBucket('${b.id}')" title="삭제"><span class="tp-trash-svg"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
+            <div class="tp-wac-body">
+              ${items.map(b => `
+                <div class="tp-wish-item-v2 tp-hover-parent ${b.checked?'visited':''}"
+                  onmouseover="this.style.background='${st.bg}55'"
+                  onmouseout="this.style.background=''">
+                  <span class="tp-wish-radio-circle ${b.checked?'checked':''}"
+                    style="${b.checked?`border-color:${st.color};background:${st.color}`:''}"
+                    onclick="event.stopPropagation();TravelApp.toggleBucket('${b.id}')"></span>
+                  <span class="tp-wish-name-v2 ${b.checked?'done':''}">${b.place||''}</span>
+                  ${b.region ? `<span class="tp-wish-region-v2">${b.region}</span>` : ''}
+                  ${b.country ? `<span class="tp-wish-region-v2" style="background:#FFF5E6;color:#C07A1A;">${b.country}</span>` : ''}
+                  ${b.notes ? `<span class="tp-wish-notes-v2">${b.notes}</span>` : ''}
+                  <div class="tp-item-actions tp-hover-actions">
+                    <button class="icon-btn tp-trash-btn" onclick="event.stopPropagation();TravelApp.deleteBucket('${b.id}')" title="삭제">
+                      <span class="tp-trash-svg"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
           </div>
         `;
       }).join('')}
@@ -1829,6 +1840,11 @@ function deleteWish(tripId, wishId) {
   renderTravelDetail(document.getElementById('travel-my-content'), tripId);
 }
 
+function toggleWishAccordion(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
 function toggleWishVisited(tripId, wishId, checked) {
   const trip = getTripById(tripId);
   if (!trip) return;
@@ -2186,6 +2202,7 @@ window.TravelApp = {
   openAddWishModal,
   saveWish,
   deleteWish,
+  toggleWishAccordion,
   toggleWishVisited,
   filterWishPlaces,
   // Bucket
