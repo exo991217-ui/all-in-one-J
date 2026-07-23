@@ -2519,7 +2519,16 @@ tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!importa
 .tp-wish-cat-name{font-size:13px;font-weight:800;color:var(--text-main);flex:1;}
 .tp-wish-count-v2{font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px;}
 
-/* 시간표 item 간격 개선 */
-.tp-tt-item{display:flex;flex-wrap:wrap;gap:3px;align-items:center;padding:3px 0;border-bottom:1px dashed transparent;}
-.tp-tt-day-col>.tp-tt-item:last-child{border-bottom:none;}
+/* 시간표 — 이동 보기 토글 버튼 */
+.tp-tt-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.tp-tt-transport-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:#F5F3FF;color:#5E4BC4;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s;}
+.tp-tt-transport-btn.on{background:#EDE9FF;border-color:#A29BFE;color:#5E4BC4;}
+.tp-tt-transport-btn.off{background:#F8F8FB;border-color:#DDD;color:#AAA;}
+.tp-tt-tbtn-badge{display:inline-block;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px;}
+.tp-tt-transport-btn.on .tp-tt-tbtn-badge{background:#A29BFE;color:#fff;}
+.tp-tt-transport-btn.off .tp-tt-tbtn-badge{background:#DDD;color:#888;}
+
+/* 시간표 — 항목 카드 스타일 */
+.tp-tt-item{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:4px 7px;margin-bottom:3px;border-radius:7px;border-left:3px solid #A29BFE;background:#F8F7FF;}
+.tp-tt-day-col>.tp-tt-item:last-child{margin-bottom:0;}
 .tp-tt-name{font-size:11px;font-weight:700;color:var(--text-main);margin-right:2px;}
