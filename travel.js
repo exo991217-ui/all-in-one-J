@@ -666,6 +666,14 @@ function renderTravelDetail(el, tripId) {
             <div style="font-size:18px;font-weight:800;color:var(--orange);">${expense.toLocaleString('ko-KR')}원</div>
           </div>
         </div>
+        ${trip.link ? `
+          <div class="tp-detail-link-row">
+            <a class="tp-card-link-btn" href="${trip.link}" target="_blank" rel="noopener noreferrer">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              ${trip.link.length > 55 ? trip.link.slice(0, 55) + '…' : trip.link}
+            </a>
+          </div>
+        ` : ''}
         ${trip.type === 'foreign' ? `
           <div class="tp-currency-row">
             <span style="font-size:13px;color:var(--text-sub);">🔄 환율</span>
