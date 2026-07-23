@@ -414,7 +414,10 @@ function renderTripCard(t) {
         </div>
         <div class="tp-card-body">
           <div class="tp-card-top">
-            <div class="tp-card-name">${t.name}</div>
+            <div class="tp-card-name" style="display:flex;align-items:center;gap:6px;">
+              <span>${t.name}</span>
+              ${t.link ? `<a href="${t.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;color:#A29BFE;flex-shrink:0;" title="링크 열기"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>` : ''}
+            </div>
             <div class="tp-card-expense">${expense > 0 ? expense.toLocaleString('ko-KR') + '원' : '0원'}</div>
           </div>
           <div class="tp-card-meta">
@@ -422,7 +425,6 @@ function renderTripCard(t) {
             ${t.regions ? `<span class="tp-dot">·</span><span>${t.regions}</span>` : ''}
             ${t.companions ? `<span class="tp-dot">·</span><span>${t.companions}</span>` : ''}
           </div>
-          ${t.link ? `<div class="tp-card-link-row"><a class="tp-card-link-btn" href="${t.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> 링크 열기</a></div>` : ''}
         </div>
       </div>
     </div>
@@ -639,7 +641,10 @@ function renderTravelDetail(el, tripId) {
       <!-- 헤더 카드 -->
       <div class="tp-detail-header card">
         <div class="tp-detail-title-row">
-          <h2 class="tp-detail-title" title="클릭해서 수정" onclick="TravelApp.openEditTripModal('${trip.id}')" style="cursor:pointer;">${trip.name} <span style="font-size:13px;color:var(--text-sub);font-weight:400;">클릭해서 수정</span></h2>
+          <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+            <h2 class="tp-detail-title" onclick="TravelApp.openEditTripModal('${trip.id}')" style="cursor:pointer;margin:0;">${trip.name}</h2>
+            ${trip.link ? `<a class="tp-card-link-btn" href="${trip.link}" target="_blank" rel="noopener noreferrer" style="white-space:nowrap;flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> 루트 플로우 이동</a>` : ''}
+          </div>
           <div style="display:flex;gap:8px;">
             <button class="icon-btn tp-del-btn tp-trash-btn" onclick="TravelApp.deleteTrip('${trip.id}')" title="삭제"><span class="tp-trash-svg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
           </div>
@@ -666,14 +671,6 @@ function renderTravelDetail(el, tripId) {
             <div style="font-size:18px;font-weight:800;color:var(--orange);">${expense.toLocaleString('ko-KR')}원</div>
           </div>
         </div>
-        ${trip.link ? `
-          <div class="tp-detail-link-row">
-            <a class="tp-card-link-btn" href="${trip.link}" target="_blank" rel="noopener noreferrer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-              ${trip.link.length > 55 ? trip.link.slice(0, 55) + '…' : trip.link}
-            </a>
-          </div>
-        ` : ''}
         ${trip.type === 'foreign' ? `
           <div class="tp-currency-row">
             <span style="font-size:13px;color:var(--text-sub);">🔄 환율</span>
