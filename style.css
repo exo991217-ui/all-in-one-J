@@ -2556,3 +2556,5 @@ tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!importa
 .tp-card-link-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;background:#EDE9FF;color:#5E4BC4;font-size:11px;font-weight:700;text-decoration:none;border:1.5px solid #C4B5FD;transition:background .15s,border-color .15s;}
 .tp-card-link-btn:hover{background:#DDD6FE;border-color:#A29BFE;color:#4338CA;}
 .tp-card-link-btn svg{flex-shrink:0;}
+.tp-detail-link-row{margin:10px 0 4px;display:flex;align-items:center;}
+.tp-detail-link-row .tp-card-link-btn{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
