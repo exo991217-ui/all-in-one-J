@@ -416,7 +416,7 @@ function renderTripCard(t) {
           <div class="tp-card-top">
             <div class="tp-card-name" style="display:flex;align-items:center;gap:6px;">
               <span>${t.name}</span>
-              ${t.link ? `<a href="${t.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;color:#A29BFE;flex-shrink:0;" title="링크 열기"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>` : ''}
+              ${t.link ? `<span class="tp-link-icon-wrap"><a href="${t.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="tp-link-icon-box"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a><span class="tp-link-tooltip">링크 열기</span></span>` : ''}
             </div>
             <div class="tp-card-expense">${expense > 0 ? expense.toLocaleString('ko-KR') + '원' : '0원'}</div>
           </div>
