@@ -2248,6 +2248,15 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .tp-status-badge.done{background:rgba(255,255,255,.85);color:var(--green)}
 .tp-status-badge.ongoing{background:rgba(255,255,255,.85);color:var(--orange)}
 
+/* ── 여행 플래너: 식비 캘린더 월별 테마 색상 격리 ──
+   --t-bg 가 9월=노란색 등으로 전역 변경되어도 여행 UI는 항상 보라 계열 유지 */
+#travel-my-content {
+  --t-bg: rgba(162,155,254,.08);
+  --t2: #A29BFE;
+  --t1: #5E4BC4;
+  --t-border: #D4CCFF;
+}
+
 /* Sidebar */
 .tp-sidebar{background:white;border-radius:var(--radius);border:1.5px solid var(--border);box-shadow:var(--shadow);padding:20px;position:sticky;top:24px}
 .tp-sidebar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:14px;font-weight:800;color:var(--text-main)}
@@ -2528,7 +2537,15 @@ tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!importa
 .tp-tt-transport-btn.on .tp-tt-tbtn-badge{background:#A29BFE;color:#fff;}
 .tp-tt-transport-btn.off .tp-tt-tbtn-badge{background:#DDD;color:#888;}
 
-/* 시간표 — 항목 카드 스타일 */
-.tp-tt-item{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:4px 7px;margin-bottom:3px;border-radius:7px;border-left:3px solid #A29BFE;background:#F8F7FF;}
+/* 시간표 — 항목: 깔끔한 인라인 스타일 (카드 없음) */
+.tp-tt-item{display:flex;flex-wrap:nowrap;gap:5px;align-items:center;padding:2px 0;margin-bottom:2px;background:none!important;border-left:none!important;border-radius:0!important;}
 .tp-tt-day-col>.tp-tt-item:last-child{margin-bottom:0;}
-.tp-tt-name{font-size:11px;font-weight:700;color:var(--text-main);margin-right:2px;}
+.tp-tt-name{font-size:11.5px;font-weight:700;color:var(--text-main);margin-right:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;}
+
+/* 시간표 — 헤더·행 색상 정비 */
+.tp-tt-head{background:#EBF1FF;}
+.tp-tt-day-label{color:#2563EB;}
+.tp-tt-date{color:#6B8FC8;}
+.tp-tt-time-col{background:#F8FAFF;color:#95A8C5;border-right-color:#DDE8F5;}
+.tp-tt-row{border-bottom-color:#EEF3FA;}
+.tp-tt-day-col{border-right-color:#EEF3FA;}
