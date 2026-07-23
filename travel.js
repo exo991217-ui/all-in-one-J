@@ -53,6 +53,7 @@ let _travelFilter = '전체';
 let _travelView = null; // null = list, tripId = detail
 let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable' | 'schedule-summary'
 let _bucketFilter = '전체';
+let _showTransport = true; // 이동 카테고리 표시 여부
 // 가고싶은 곳 지역 설정: 여행 ID별 독립 저장 (localStorage)
 function _getWishRegion(tripId) {
   return localStorage.getItem('travel_wish_region_' + tripId) || '';
@@ -749,6 +750,7 @@ function renderBookingSection(trip, type, label) {
               ${b.checkin ? `<div class="tp-booking-sub">${b.checkin} ~ ${b.checkout || ''}</div>` : ''}
             </div>
             <div class="tp-item-actions tp-hover-actions" onclick="event.stopPropagation()">
+              ${b.link ? renderLinkOrText(b.link) : ''}
               <button class="icon-btn tp-trash-btn" onclick="TravelApp.deleteBooking('${trip.id}','${type}','${b.id}')" title="삭제"><span class="tp-trash-svg"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
             </div>
           </div>
@@ -842,7 +844,21 @@ function renderScheduleTimetable(trip) {
   if (minH > maxH) { minH = 10; maxH = 21; }
   const hours = Array.from({ length: Math.max(maxH - minH + 2, 4) }, (_, i) => minH + i);
 
+  // 이동 필터 적용
+  const filterFn = s => _showTransport || s.category !== '이동';
+  Object.keys(dateGroups).forEach(d => { dateGroups[d] = dateGroups[d].filter(filterFn); });
+  Object.keys(pinnedByDate).forEach(d => { pinnedByDate[d] = pinnedByDate[d].filter(filterFn); });
+
+  // 필터 후 실제 콘텐츠 있는지 재확인
+  const hasPinnedFiltered = Object.values(pinnedByDate).some(a => a.length > 0);
+
   return `
+    <div class="tp-tt-toolbar">
+      <button class="tp-tt-transport-btn ${_showTransport ? 'on' : 'off'}"
+        onclick="TravelApp.toggleTransportView('${trip.id}')">
+        🚌 이동 보기 <span class="tp-tt-tbtn-badge">${_showTransport ? 'ON' : 'OFF'}</span>
+      </button>
+    </div>
     <div class="tp-timetable-wrap">
       <div class="tp-timetable">
         <!-- 헤더 -->
@@ -853,7 +869,7 @@ function renderScheduleTimetable(trip) {
             return `<div class="tp-tt-day-col"><div class="tp-tt-day-label">${i+1}일차</div><div class="tp-tt-date">${dateStr}</div></div>`;
           }).join('')}
         </div>
-        ${hasPinned ? `
+        ${hasPinnedFiltered ? `
         <!-- 핀 고정 행 (시간 미지정) -->
         <div class="tp-tt-row tp-tt-pinned-row">
           <div class="tp-tt-time-col" style="font-size:13px;color:#A29BFE;">📌</div>
@@ -861,7 +877,10 @@ function renderScheduleTimetable(trip) {
             const items = pinnedByDate[d] || [];
             return `<div class="tp-tt-day-col">${items.map(s => {
               const cs = getSchedCatStyle(s.category);
-              return `<div class="tp-tt-item"><span class="tp-tt-name">${s.place||s.content||''}</span><span class="tp-scat-badge sm" style="background:${cs.bg};color:${cs.color};">${s.category||'기타'}</span></div>`;
+              return `<div class="tp-tt-item" style="border-left-color:${cs.color};background:${cs.bg}33;">
+                <span class="tp-tt-name">${s.place||s.content||''}</span>
+                <span class="tp-scat-badge sm" style="background:${cs.bg};color:${cs.color};">${s.category||'기타'}</span>
+              </div>`;
             }).join('')}</div>`;
           }).join('')}
         </div>` : ''}
@@ -877,7 +896,7 @@ function renderScheduleTimetable(trip) {
               return `<div class="tp-tt-day-col">${items.map(s => {
                 const cs = getSchedCatStyle(s.category);
                 const ts = s.transport ? getTransportBadgeStyle(s.transport) : null;
-                return `<div class="tp-tt-item">
+                return `<div class="tp-tt-item" style="border-left-color:${cs.color};background:${cs.bg}33;">
                   <span class="tp-tt-name">${s.place||s.content||''}</span>
                   <span class="tp-scat-badge sm" style="background:${cs.bg};color:${cs.color};">${s.category||'기타'}</span>
                   ${ts ? `<span class="tp-transport-badge sm" style="background:${ts.bg};color:${ts.color};border-color:${ts.border};">${s.transport}</span>`
@@ -1003,6 +1022,7 @@ function getExpCatStyleObj(cat) {
 function renderExpenseList(trip) {
   const expenses = (trip.expenses || []).sort((a, b) => (a.date||'').localeCompare(b.date||''));
   const total = expenses.reduce((s, e) => s + (parseFloat(e.amount)||0), 0);
+  const foreignTotal = expenses.reduce((s, e) => s + (parseFloat(e.foreignAmount)||0), 0);
 
   const rate = parseFloat(trip.exchangeRate) || (trip.currency ? (DEFAULT_RATES[trip.currency] || 1) : 1);
   return `
@@ -1043,9 +1063,9 @@ function renderExpenseList(trip) {
               }).join('')
           }
           <tr class="tp-expense-total">
-            <td colspan="${trip.type==='foreign'?4:3}">합계</td>
-            <td style="text-align:right;font-weight:800;">₩${total.toLocaleString('ko-KR')}</td>
-            ${trip.type==='foreign' ? `<td></td>` : ''}
+            <td colspan="3">합계</td>
+            <td style="text-align:right;font-weight:800;color:#6C5CE7;">₩${total.toLocaleString('ko-KR')}</td>
+            ${trip.type==='foreign' ? `<td style="text-align:right;font-weight:800;color:#0D47A1;">${foreignTotal > 0 ? getCurrencySymbol(trip.currency) + foreignTotal.toLocaleString('ko-KR', {maximumFractionDigits:2}) : '-'}</td>` : ''}
             <td></td>
           </tr>
         </tbody>
@@ -1845,6 +1865,11 @@ function toggleWishAccordion(id) {
   if (el) el.classList.toggle('open');
 }
 
+function toggleTransportView(tripId) {
+  _showTransport = !_showTransport;
+  renderTravelDetail(document.getElementById('travel-my-content'), tripId);
+}
+
 function toggleWishVisited(tripId, wishId, checked) {
   const trip = getTripById(tripId);
   if (!trip) return;
@@ -2203,6 +2228,7 @@ window.TravelApp = {
   saveWish,
   deleteWish,
   toggleWishAccordion,
+  toggleTransportView,
   toggleWishVisited,
   filterWishPlaces,
   // Bucket
