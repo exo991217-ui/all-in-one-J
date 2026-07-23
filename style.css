@@ -2549,3 +2549,10 @@ tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!importa
 .tp-tt-time-col{background:#F8FAFF;color:#95A8C5;border-right-color:#DDE8F5;}
 .tp-tt-row{border-bottom-color:#EEF3FA;}
 .tp-tt-day-col{border-right-color:#EEF3FA;}
+
+/* ── 여행 카드 링크 버튼 ─────────────────────────────────────── */
+.tp-card-inner{height:auto!important;min-height:72px;}
+.tp-card-link-row{margin-top:5px;}
+.tp-card-link-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;background:#EDE9FF;color:#5E4BC4;font-size:11px;font-weight:700;text-decoration:none;border:1.5px solid #C4B5FD;transition:background .15s,border-color .15s;}
+.tp-card-link-btn:hover{background:#DDD6FE;border-color:#A29BFE;color:#4338CA;}
+.tp-card-link-btn svg{flex-shrink:0;}
