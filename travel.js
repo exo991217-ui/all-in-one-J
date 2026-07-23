@@ -1968,7 +1968,7 @@ function downloadSummary(tripId) {
 
 📋 여행 일정
 ${Object.entries(dateGroups).sort().map(([date, items]) =>
-  `\n[${date}]\n` + items.map(s => `  ${s.time||'--:--'} | ${s.place||''} | ${s.content||''} | ${s.category||''}`).join('\n')
+  `\n[${date}]\n` + items.map(s => `  ${s.time||'--:--'} | ${s.place||''} | ${s.content||''} | ${s.category||''}${s.transport ? ` | ${s.transport}` : ''}`
 ).join('\n')}
 
 💸 지출 내역
