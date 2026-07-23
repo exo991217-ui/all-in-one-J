@@ -422,6 +422,7 @@ function renderTripCard(t) {
             ${t.regions ? `<span class="tp-dot">·</span><span>${t.regions}</span>` : ''}
             ${t.companions ? `<span class="tp-dot">·</span><span>${t.companions}</span>` : ''}
           </div>
+          ${t.link ? `<div class="tp-card-link-row"><a class="tp-card-link-btn" href="${t.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> 링크 열기</a></div>` : ''}
         </div>
       </div>
     </div>
@@ -1359,6 +1360,7 @@ function openNewTripModal(editTrip) {
     </div>
     <div class="form-group"><label>여행지 (도시/국가)</label><input type="text" class="form-input" id="tp-m-regions" value="${t.regions||''}" placeholder="시드니, 호주"/></div>
     <div class="form-group"><label>동행자</label><input type="text" class="form-input" id="tp-m-companions" value="${t.companions||''}" placeholder="혼자, 친구, 가족, 둘..."/></div>
+    <div class="form-group"><label>링크 (예약확인, 항공권, 숙소 등)</label><input type="url" class="form-input" id="tp-m-link" value="${t.link||''}" placeholder="https://..."/></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="TravelApp.closeModal()">취소</button>
       <button class="btn-save" onclick="TravelApp.saveTrip(${isEdit?`'${t.id}'`:'null'})">${isEdit ? '수정 완료' : '저장'}</button>
@@ -1426,14 +1428,15 @@ function saveTrip(editId) {
   const endDate = document.getElementById('tp-m-end').value;
   const regions = document.getElementById('tp-m-regions').value.trim();
   const companions = document.getElementById('tp-m-companions').value.trim();
+  const link = document.getElementById('tp-m-link').value.trim();
 
   let savedTrip;
   if (editId) {
     const t = getTripById(editId);
-    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions }); savedTrip = t; }
+    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions, link }); savedTrip = t; }
   } else {
     const newTrip = {
-      id: genTravelId(), name, type, startDate, endDate, regions, companions,
+      id: genTravelId(), name, type, startDate, endDate, regions, companions, link,
       currency: 'USD', exchangeRate: 0,
       bookings: { flights: [], hotels: [], others: [] },
       schedule: [], expenses: [], wishPlaces: []
