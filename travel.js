@@ -1966,13 +1966,8 @@ function downloadSummary(tripId) {
 💰 총 경비: ${expense.toLocaleString('ko-KR')}원
 ========================
 
-📋 여행 일정
-${Object.entries(dateGroups).sort().map(([date, items]) =>
-  `\n[${date}]\n` +
-  items.map(s =>
-    `  ${s.time||'--:--'} | ${s.place||''} | ${s.content||''} | ${s.category||''}${s.transport ? ` | ${s.transport}` : ''}`
-  ).join('\n')
-).join('\n')}
+📋 여행 일정 
+${Object.entries(dateGroups).sort().map(([date, items]) => \n[${date}]\n + items.map(s => ${s.time||'--:--'} | ${s.place||''} | ${s.content||''} | ${s.category||''}).join('\n') ).join('\n')} 
 
 💸 지출 내역
 ${(trip.expenses||[]).map(e => `  ${e.date||''} | ${e.category} | ${e.title} | ${(e.amount||0).toLocaleString('ko-KR')}원`).join('\n')}
