@@ -2566,3 +2566,34 @@ tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!importa
 .tp-link-tooltip{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);background:#3D3566;color:#fff;font-size:11px;font-weight:600;white-space:nowrap;padding:4px 8px;border-radius:6px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10;}
 .tp-link-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#3D3566;}
 .tp-link-icon-wrap:hover .tp-link-tooltip{opacity:1;}
+
+/* ===== 간단 여행 행 (Simple Trip Row) ============================= */
+.tp-simple-trip-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;background:white;border:1.5px solid var(--border);cursor:pointer;transition:all .15s;margin-bottom:6px;}
+.tp-simple-trip-row:hover{background:#F8F6FF;border-color:#C4B5FD;transform:translateX(2px);}
+.tp-simple-trip-row.done{opacity:.65;}
+.tp-simple-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.tp-simple-name{font-size:14px;font-weight:700;color:var(--text-main);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tp-simple-date{font-size:12px;color:var(--text-sub);flex-shrink:0;white-space:nowrap;}
+
+/* ===== 투두 리스트 아코디언 (Todo List Accordion) ================= */
+.tp-todo-accordion{margin-top:16px;border-top:1.5px solid #E8F5EE;padding-top:12px;}
+.tp-todo-header{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:6px 4px;border-radius:8px;transition:background .13s;}
+.tp-todo-header:hover{background:#F0FBF5;}
+.tp-todo-title{font-size:13.5px;font-weight:700;color:#2E7D52;flex:1;}
+.tp-todo-count{font-size:11px;font-weight:700;background:#E8F5EE;color:#4CAF82;border-radius:20px;padding:2px 9px;flex-shrink:0;}
+.tp-todo-chevron{color:#A0C9B0;flex-shrink:0;transition:transform .2s;}
+.tp-todo-chevron.open{transform:rotate(180deg);color:#4CAF82;}
+.tp-todo-body{display:none;padding:10px 4px 4px;}
+.tp-todo-body.open{display:block;}
+.tp-todo-empty{font-size:12px;color:#aaa;text-align:center;padding:12px 0;}
+.tp-todo-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed #E8F5EE;}
+.tp-todo-item:last-of-type{border-bottom:none;}
+.tp-todo-text{flex:1;font-size:13px;color:var(--text-main);transition:all .15s;}
+.tp-todo-text.done{text-decoration:line-through;color:#aaa;}
+.tp-todo-del{background:none;border:none;cursor:pointer;color:#ddd;font-size:12px;padding:0 2px;line-height:1;flex-shrink:0;transition:color .13s;}
+.tp-todo-del:hover{color:#ff7675;}
+.tp-todo-add-row{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px dashed #D4EDE0;}
+.tp-todo-input{flex:1;border:1.5px solid #C3E6D0;border-radius:8px;padding:6px 10px;font-size:13px;outline:none;font-family:inherit;transition:border-color .15s;}
+.tp-todo-input:focus{border-color:#4CAF82;}
+.tp-todo-add-btn{padding:6px 14px;background:#4CAF82;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s;}
+.tp-todo-add-btn:hover{background:#3A9E6E;}
