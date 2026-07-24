@@ -1797,6 +1797,35 @@ function renderTodoList(trip) {
   const tripId = trip.id;
   const isOpen = _todoAccordionOpen[tripId] !== false; // 기본: 열림
   const doneCount = todos.filter(td => td.checked).length;
+  const allTips = (S && S.travels && S.travels.travelTips) || [];
+
+  // 북마크된 팁 뱃지 렌더 (인라인, 툴팁 포함)
+  function renderTipBadges(td) {
+    const tipIds = td.tipIds || [];
+    if (!tipIds.length) return '';
+    return tipIds.map(tid => {
+      const tip = allTips.find(t => t.id === tid);
+      if (!tip) return '';
+      const safeTitle = (tip.title || '').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+      const safeContent = ((tip.content || '').slice(0, 120) + (tip.content && tip.content.length > 120 ? '...' : '')).replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+      const safeLink = (tip.link || '').replace(/"/g,'&quot;');
+      const tags = (tip.tags || []).map(t => `#${t}`).join(' ');
+      const tooltipHtml = `${safeTitle}${tags ? ' · ' + tags : ''}${safeContent ? '\\n' + safeContent : ''}`;
+      return `
+        <span class="tp-bm-badge" style="position:relative;display:inline-flex;align-items:center;gap:3px;">
+          <span class="tp-bm-inner" title="${tooltipHtml}"
+            onmouseenter="TravelApp._showBmTooltip(this,'${safeTitle}','${tags}','${safeContent}','${safeLink}')"
+            onmouseleave="TravelApp._hideBmTooltip()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#5E4BC4" stroke="#5E4BC4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <span style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tip.title || '팁'}</span>
+          </span>
+          ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="tp-bm-link" title="링크 열기">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </a>` : ''}
+        </span>
+      `;
+    }).join('');
+  }
 
   return `
     <div class="tp-todo-accordion">
@@ -1813,7 +1842,15 @@ function renderTodoList(trip) {
             <input type="checkbox" ${td.checked ? 'checked' : ''}
               onchange="TravelApp.toggleTodo('${tripId}', '${td.id}', this.checked)"
               style="width:15px;height:15px;accent-color:#4CAF82;cursor:pointer;flex-shrink:0;border-radius:4px;"/>
-            <span class="tp-todo-text${td.checked ? ' done' : ''}">${td.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+            <div class="tp-todo-main">
+              <span class="tp-todo-text${td.checked ? ' done' : ''}">${td.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+              ${(td.tipIds && td.tipIds.length) ? `<div class="tp-bm-badges">${renderTipBadges(td)}</div>` : ''}
+            </div>
+            <button class="tp-todo-bm${(td.tipIds && td.tipIds.length) ? ' has-bm' : ''}"
+              onclick="TravelApp.openTipBookmarkModal('${tripId}','${td.id}')"
+              title="${(td.tipIds && td.tipIds.length) ? '북마크 수정 (' + td.tipIds.length + '개)' : '유용한 팁 북마크'}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="${(td.tipIds && td.tipIds.length) ? '#5E4BC4' : 'none'}" stroke="${(td.tipIds && td.tipIds.length) ? '#5E4BC4' : '#bbb'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
             <button class="tp-todo-del" onclick="TravelApp.deleteTodo('${tripId}', '${td.id}')" title="삭제">✕</button>
           </div>
         `).join('')}
@@ -1824,6 +1861,7 @@ function renderTodoList(trip) {
         </div>
       </div>
     </div>
+    <div id="tp-bm-tooltip" class="tp-bm-tooltip" style="display:none;"></div>
   `;
 }
 
@@ -1835,7 +1873,7 @@ function addTodo(tripId) {
   const trip = getTripById(tripId);
   if (!trip) return;
   if (!trip.todos) trip.todos = [];
-  trip.todos.push({ id: 'td_' + Date.now() + '_' + Math.floor(Math.random()*999), text, checked: false });
+  trip.todos.push({ id: 'td_' + Date.now() + '_' + Math.floor(Math.random()*999), text, checked: false, tipIds: [] });
   saveState();
   renderTravelDetail(document.getElementById('travel-my-content'), tripId);
 }
@@ -1861,6 +1899,161 @@ function deleteTodo(tripId, todoId) {
 function toggleTodoAccordion(tripId) {
   _todoAccordionOpen[tripId] = !(_todoAccordionOpen[tripId] !== false);
   renderTravelDetail(document.getElementById('travel-my-content'), tripId);
+}
+
+// ===== 투두 팁 북마크 모달 =====
+let _bmModalTripId = null;
+let _bmModalTodoId = null;
+let _bmModalSelected = new Set();
+let _bmModalTagFilter = '전체';
+let _bmModalSearch = '';
+
+function openTipBookmarkModal(tripId, todoId) {
+  _bmModalTripId = tripId;
+  _bmModalTodoId = todoId;
+  const trip = getTripById(tripId);
+  if (!trip) return;
+  const td = (trip.todos || []).find(x => x.id === todoId);
+  _bmModalSelected = new Set(td ? (td.tipIds || []) : []);
+  _bmModalTagFilter = '전체';
+  _bmModalSearch = '';
+  _renderBmModal();
+}
+
+function _renderBmModal() {
+  const allTips = (S && S.travels && S.travels.travelTips) || [];
+  const allTags = ['전체', ...new Set(allTips.flatMap(t => t.tags || []))];
+
+  const filtered = allTips.filter(tip => {
+    const matchTag = _bmModalTagFilter === '전체' || (tip.tags || []).includes(_bmModalTagFilter);
+    const q = _bmModalSearch.trim().toLowerCase();
+    const matchSearch = !q || (tip.title || '').toLowerCase().includes(q) || (tip.content || '').toLowerCase().includes(q) || (tip.tags || []).some(t => t.toLowerCase().includes(q));
+    return matchTag && matchSearch;
+  });
+
+  const tipRows = filtered.length === 0
+    ? `<div style="text-align:center;padding:32px 0;color:#bbb;font-size:13px;">검색 결과가 없어요</div>`
+    : filtered.map(tip => {
+        const checked = _bmModalSelected.has(tip.id);
+        const tags = (tip.tags || []).map(t => `<span style="background:#F0EEFF;color:#5E4BC4;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:600;">#${t}</span>`).join(' ');
+        const preview = (tip.content || '').slice(0, 60) + ((tip.content || '').length > 60 ? '...' : '');
+        return `
+          <div class="tp-bm-modal-row ${checked ? 'selected' : ''}" onclick="TravelApp._bmToggleTip('${tip.id}')">
+            <div class="tp-bm-modal-check">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="${checked ? '#5E4BC4' : 'none'}" stroke="${checked ? '#5E4BC4' : '#ccc'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tip.title || '제목 없음'}</div>
+              ${tags ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:3px;">${tags}</div>` : ''}
+              ${preview ? `<div style="font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview}</div>` : ''}
+            </div>
+            ${tip.link ? `<a href="${tip.link.replace(/"/g,'&quot;')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="flex-shrink:0;display:flex;align-items:center;padding:4px;color:#A29BFE;" title="링크 열기">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </a>` : ''}
+          </div>
+        `;
+      }).join('');
+
+  const selCount = _bmModalSelected.size;
+
+  renderTravelModal(`
+    <div class="modal-header" style="padding-bottom:12px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#5E4BC4" stroke="#5E4BC4" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      유용한 팁 북마크
+      ${selCount > 0 ? `<span style="font-size:12px;font-weight:700;background:#5E4BC4;color:white;border-radius:20px;padding:2px 10px;margin-left:8px;">${selCount}개 선택</span>` : ''}
+    </div>
+
+    <!-- 검색 -->
+    <div style="position:relative;margin-bottom:10px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" value="${_bmModalSearch.replace(/"/g,'&quot;')}" placeholder="팁 제목·내용·태그 검색..."
+        style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;outline:none;box-sizing:border-box;font-family:inherit;"
+        oninput="TravelApp._bmSearch(this.value)"
+        onfocus="this.style.borderColor='#A29BFE'" onblur="this.style.borderColor='var(--border)'"/>
+    </div>
+
+    <!-- 태그 필터 -->
+    ${allTags.length > 1 ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">
+      ${allTags.map(tag => `
+        <button onclick="TravelApp._bmSetTag('${tag}')" style="padding:4px 12px;border-radius:20px;border:1.5px solid ${_bmModalTagFilter===tag?'#5E4BC4':'#ddd'};background:${_bmModalTagFilter===tag?'#5E4BC4':'white'};color:${_bmModalTagFilter===tag?'white':'var(--text-sub)'};font-size:11.5px;font-weight:600;cursor:pointer;">${tag === '전체' ? tag : '#'+tag}</button>
+      `).join('')}
+    </div>` : ''}
+
+    <!-- 팁 목록 -->
+    ${allTips.length === 0 ? `
+      <div style="text-align:center;padding:40px 20px;color:#bbb;">
+        <div style="font-size:36px;margin-bottom:10px;">💡</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">아직 등록된 팁이 없어요</div>
+        <div style="font-size:12px;">준비물과팁 → 유용한 팁에서 먼저 글을 작성해보세요!</div>
+      </div>
+    ` : `
+      <div class="tp-bm-modal-list">${tipRows}</div>
+    `}
+
+    <div class="modal-actions" style="margin-top:14px;">
+      ${selCount > 0 ? `<button class="btn-cancel" style="color:#ff7675;" onclick="TravelApp._bmClearAll()">전체 해제</button>` : '<div></div>'}
+      <div style="display:flex;gap:8px;">
+        <button class="btn-cancel" onclick="TravelApp.closeModal()">취소</button>
+        <button class="btn-save" onclick="TravelApp.saveTipBookmarks()">저장 (${selCount}개)</button>
+      </div>
+    </div>
+  `);
+}
+
+function saveTipBookmarks() {
+  const trip = getTripById(_bmModalTripId);
+  if (!trip || !trip.todos) return;
+  const td = trip.todos.find(x => x.id === _bmModalTodoId);
+  if (!td) return;
+  td.tipIds = [..._bmModalSelected];
+  saveState();
+  closeTravelModal();
+  renderTravelDetail(document.getElementById('travel-my-content'), _bmModalTripId);
+}
+
+function _bmToggleTip(tipId) {
+  if (_bmModalSelected.has(tipId)) _bmModalSelected.delete(tipId);
+  else _bmModalSelected.add(tipId);
+  _renderBmModal();
+}
+
+function _bmSetTag(tag) {
+  _bmModalTagFilter = tag;
+  _renderBmModal();
+}
+
+function _bmSearch(val) {
+  _bmModalSearch = val;
+  _renderBmModal();
+}
+
+function _bmClearAll() {
+  _bmModalSelected.clear();
+  _renderBmModal();
+}
+
+// 툴팁 표시/숨김
+let _bmTooltipTimer = null;
+function _showBmTooltip(el, title, tags, content, link) {
+  clearTimeout(_bmTooltipTimer);
+  let tip = document.getElementById('tp-bm-tooltip');
+  if (!tip) { tip = document.createElement('div'); tip.id = 'tp-bm-tooltip'; tip.className = 'tp-bm-tooltip'; document.body.appendChild(tip); }
+  tip.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:#3D2B8E;margin-bottom:4px;">${title}</div>
+    ${tags ? `<div style="font-size:10px;color:#A29BFE;margin-bottom:5px;">${tags}</div>` : ''}
+    ${content ? `<div style="font-size:11px;color:#555;line-height:1.55;">${content}</div>` : ''}
+    ${link ? `<div style="margin-top:6px;font-size:10px;color:#5E4BC4;font-weight:600;">🔗 링크 있음</div>` : ''}
+  `;
+  const rect = el.getBoundingClientRect();
+  tip.style.display = 'block';
+  tip.style.left = Math.min(rect.left, window.innerWidth - 260) + 'px';
+  tip.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+}
+function _hideBmTooltip() {
+  _bmTooltipTimer = setTimeout(() => {
+    const tip = document.getElementById('tp-bm-tooltip');
+    if (tip) tip.style.display = 'none';
+  }, 120);
 }
 
 // ===== 쌍방향 환율 자동계산 =====
@@ -2448,4 +2641,13 @@ window.TravelApp = {
   toggleTodo,
   deleteTodo,
   toggleTodoAccordion,
+  // 투두 팁 북마크
+  openTipBookmarkModal,
+  saveTipBookmarks,
+  _bmToggleTip,
+  _bmSetTag,
+  _bmSearch,
+  _bmClearAll,
+  _showBmTooltip,
+  _hideBmTooltip,
 };
