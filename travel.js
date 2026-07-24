@@ -70,6 +70,7 @@ let _tipsSubTab = 'checklist'; // 'checklist' | 'tips'
 let _tipsWriting = false;
 let _tipsTagFilter = '전체';
 let _tipPendingTags = [];
+let _tipEditingId = null;
 let _checklistExpandedGroups = {}; // { itemId: boolean }
 
 const TRIP_TYPE_ICONS = { domestic: '🏔', foreign: '✈️' };
@@ -596,6 +597,8 @@ function renderTipsTab() {
       <div id="tp-tip-tags-display" style="display:flex;flex-wrap:wrap;gap:5px;min-height:4px;margin-bottom:10px;"></div>
       <textarea id="tp-tip-content" placeholder="내용을 작성하세요... (선택사항)"
         style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;min-height:90px;resize:vertical;font-family:inherit;"></textarea>
+      <input type="url" id="tp-tip-link" placeholder="링크 (선택사항, https://...)"
+        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-top:8px;"/>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
         <button onclick="TravelApp.closeTipWriter()" style="padding:8px 16px;background:white;border:1.5px solid #ddd;border-radius:50px;font-size:13px;cursor:pointer;color:var(--text-sub);">취소</button>
         <button onclick="TravelApp.saveTip()" style="padding:8px 20px;background:linear-gradient(135deg,#5E4BC4,#7B68EE);color:white;border:none;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
@@ -610,17 +613,39 @@ function renderTipsTab() {
       <div style="font-size:14px;font-weight:700;color:#bbb;margin-bottom:4px;">아직 등록된 팁이 없어요</div>
       <div style="font-size:12px;color:#ccc;">+ 글 작성 버튼으로 첫 번째 팁을 추가해봐요!</div>
     </div>` :
-    filtered.map(tip=>`<div style="background:white;border-radius:16px;padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.04);border:1.5px solid #f0f0f5;display:flex;align-items:flex-start;gap:10px;">
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:5px;">${tip.title}</div>
-        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-          ${(tip.tags||[]).map(t=>`<span style="background:#F0EEFF;color:#5E4BC4;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;">#${t}</span>`).join('')}
-          ${tip.link?`<span style="color:#ccc;font-size:11px;"> — </span><a href="${tip.link}" target="_blank" style="color:#5E4BC4;font-size:11px;text-decoration:none;">${tip.link.length>45?tip.link.slice(0,45)+'…':tip.link}</a>`:''}
-        </div>
-        ${tip.content?`<div style="font-size:12px;color:var(--text-sub);margin-top:6px;line-height:1.6;">${tip.content}</div>`:''}
+    filtered.map(tip=> _tipEditingId === tip.id ? `
+    <div style="background:white;border-radius:16px;padding:16px 18px;margin-bottom:10px;box-shadow:0 4px 20px rgba(94,75,196,.12);border:1.5px solid #A29BFE;">
+      <div style="font-size:12px;font-weight:700;color:#7B68EE;margin-bottom:10px;">✏️ 팁 수정</div>
+      <input type="text" id="tp-edit-title-${tip.id}" value="${tip.title.replace(/"/g,'&quot;')}"
+        style="width:100%;border:1.5px solid #A29BFE;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:8px;"/>
+      <input type="text" id="tp-edit-tags-${tip.id}" value="${(tip.tags||[]).join(' ')}"
+        placeholder="태그 (공백으로 구분, 예: 일본 공항)"
+        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:8px;"/>
+      <textarea id="tp-edit-content-${tip.id}"
+        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;min-height:80px;resize:vertical;font-family:inherit;margin-bottom:8px;">${tip.content||''}</textarea>
+      <input type="url" id="tp-edit-link-${tip.id}" value="${tip.link||''}"
+        placeholder="링크 (https://...)"
+        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:12px;"/>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="TravelApp.closeTipEdit()" style="padding:8px 16px;background:white;border:1.5px solid #ddd;border-radius:50px;font-size:13px;cursor:pointer;color:var(--text-sub);">취소</button>
+        <button onclick="TravelApp.saveTipEdit('${tip.id}')" style="padding:8px 20px;background:linear-gradient(135deg,#5E4BC4,#7B68EE);color:white;border:none;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
       </div>
-      <button onclick="TravelApp.deleteTip('${tip.id}')" style="background:none;border:none;cursor:pointer;color:#ddd;font-size:13px;padding:0;flex-shrink:0;" title="삭제">✕</button>
-    </div>`).join('')}
+    </div>` :
+    `<div onclick="TravelApp.openTipEdit('${tip.id}')" style="background:white;border-radius:16px;padding:14px 18px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.04);border:1.5px solid #f0f0f5;cursor:pointer;transition:box-shadow .15s,border-color .15s;" onmouseenter="this.style.boxShadow='0 4px 18px rgba(94,75,196,.12)';this.style.borderColor='#C7BFF8';" onmouseleave="this.style.boxShadow='0 2px 10px rgba(0,0,0,.04)';this.style.borderColor='#f0f0f5';">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div style="flex:1;">
+          ${(tip.tags||[]).length>0 ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px;">${(tip.tags||[]).map(t=>`<span onclick="event.stopPropagation();TravelApp.setTipsTagFilter('${t}')" style="background:#F0EEFF;color:#5E4BC4;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;transition:background .15s;" onmouseenter="this.style.background='#5E4BC4';this.style.color='white'" onmouseleave="this.style.background='#F0EEFF';this.style.color='#5E4BC4'">#${t}</span>`).join('')}</div>` : ''}
+          <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:4px;">${tip.title}</div>
+          ${tip.link ? `<a href="${tip.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;color:#5E4BC4;font-size:11px;text-decoration:none;margin-bottom:4px;word-break:break-all;" onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>${tip.link.length>48?tip.link.slice(0,48)+'…':tip.link}</a>` : ''}
+          ${tip.content ? `<div style="font-size:12px;color:var(--text-sub);line-height:1.6;">${tip.content}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
+          <button onclick="event.stopPropagation();TravelApp.openTipEdit('${tip.id}')" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:13px;padding:2px;" title="수정">✏️</button>
+          <button onclick="event.stopPropagation();TravelApp.deleteTip('${tip.id}')" style="background:none;border:none;cursor:pointer;color:#ddd;font-size:13px;padding:2px;" title="삭제">✕</button>
+        </div>
+      </div>
+    </div>`
+    ).join('')}
   </div>`;
 }
 
@@ -2132,7 +2157,8 @@ function saveTip() {
   const content = (document.getElementById('tp-tip-content')?.value || '').trim();
   if (!title) { alert('제목을 입력해주세요.'); return; }
   if (!S.travels.travelTips) S.travels.travelTips = [];
-  S.travels.travelTips.unshift({ id: 'tip_' + Date.now(), title, tags: [..._tipPendingTags], content, link: '', createdAt: new Date().toISOString() });
+  const link = (document.getElementById('tp-tip-link')?.value || '').trim();
+  S.travels.travelTips.unshift({ id: 'tip_' + Date.now(), title, tags: [..._tipPendingTags], content, link, createdAt: new Date().toISOString() });
   saveState();
   _tipsWriting = false; _tipPendingTags = [];
   _rerenderTips();
@@ -2141,6 +2167,32 @@ function saveTip() {
 function deleteTip(id) {
   S.travels.travelTips = (S.travels.travelTips || []).filter(t => t.id !== id);
   saveState(); _rerenderTips();
+}
+
+
+function openTipEdit(id) {
+  _tipEditingId = id;
+  _rerenderTips();
+}
+
+function closeTipEdit() {
+  _tipEditingId = null;
+  _rerenderTips();
+}
+
+function saveTipEdit(id) {
+  const tip = (S.travels.travelTips || []).find(t => t.id === id);
+  if (!tip) return;
+  const title = (document.getElementById('tp-edit-title-' + id)?.value || '').trim();
+  if (!title) { alert('제목을 입력해주세요.'); return; }
+  const tagsRaw = (document.getElementById('tp-edit-tags-' + id)?.value || '').trim();
+  const tags = tagsRaw ? tagsRaw.split(/\s+/).filter(Boolean) : [];
+  const content = (document.getElementById('tp-edit-content-' + id)?.value || '').trim();
+  const link = (document.getElementById('tp-edit-link-' + id)?.value || '').trim();
+  Object.assign(tip, { title, tags, content, link });
+  saveState();
+  _tipEditingId = null;
+  _rerenderTips();
 }
 
 function setTipsTagFilter(tag) {
@@ -2279,6 +2331,9 @@ window.TravelApp = {
   addChecklistGroupToItem,
   // ── 팁 게시글 ──────────────────────────────────────────
   openTipWriter,
+  openTipEdit,
+  closeTipEdit,
+  saveTipEdit,
   closeTipWriter,
   addTipTag,
   removeTipTag,
