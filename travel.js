@@ -49,11 +49,12 @@ function initTravelState() {
 }
 
 // ===== TRAVEL HELPERS =====
-let _travelFilter = '전체';
-let _travelView = null; // null = list, tripId = detail
+let _travelFilter = localStorage.getItem('travel_filter') || '전체';
+let _travelView = localStorage.getItem('travel_view') || null; // null = list, tripId = detail
 let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable' | 'schedule-summary'
 let _bucketFilter = '전체';
 let _showTransport = true; // 이동 카테고리 표시 여부
+let _todoAccordionOpen = {}; // { tripId: boolean } 투두 리스트 아코디언 상태
 // 가고싶은 곳 지역 설정: 여행 ID별 독립 저장 (localStorage)
 function _getWishRegion(tripId) {
   return localStorage.getItem('travel_wish_region_' + tripId) || '';
@@ -400,6 +401,7 @@ function renderTravelMy() {
 }
 
 function renderTripCard(t) {
+  if (t.isSimple) return renderSimpleTripCard(t);
   const status = getTripStatusLabel(t);
   const expense = getTripTotalExpense(t);
   const bgColor = getTripFlagBg(t);
@@ -426,6 +428,21 @@ function renderTripCard(t) {
           </div>
         </div>
       </div>
+    </div>
+  `;
+}
+
+function renderSimpleTripCard(t) {
+  const status = getTripStatusLabel(t);
+  const bgColor = getTripFlagBg(t);
+  const dateStr = formatTravelDateRange(t.startDate, t.endDate);
+  const isOngoing = status === 'ongoing';
+  const isDone = status === 'done';
+  return `
+    <div class="tp-simple-trip-row ${isDone ? 'done' : ''}" onclick="TravelApp.openTrip('${t.id}')">
+      <span class="tp-simple-dot" style="background:${bgColor};"></span>
+      <span class="tp-simple-name">${t.name}${isOngoing ? ' <span style="font-size:10px;background:#00b894;color:white;border-radius:20px;padding:1px 6px;font-weight:700;">여행중</span>' : ''}${isDone ? ' <span style="font-size:11px;color:#aaa;">✓</span>' : ''}</span>
+      ${dateStr ? `<span class="tp-simple-date">${dateStr}</span>` : '<span class="tp-simple-date" style="color:#ccc;">일정 미정</span>'}
     </div>
   `;
 }
@@ -698,6 +715,7 @@ function renderTravelDetail(el, tripId) {
             <div style="font-size:18px;font-weight:800;color:var(--orange);">${expense.toLocaleString('ko-KR')}원</div>
           </div>
         </div>
+        ${renderTodoList(trip)}
         ${trip.type === 'foreign' ? `
           <div class="tp-currency-row">
             <span style="font-size:13px;color:var(--text-sub);">🔄 환율</span>
@@ -1393,9 +1411,16 @@ function openNewTripModal(editTrip) {
     <div class="form-group"><label>여행지 (도시/국가)</label><input type="text" class="form-input" id="tp-m-regions" value="${t.regions||''}" placeholder="시드니, 호주"/></div>
     <div class="form-group"><label>동행자</label><input type="text" class="form-input" id="tp-m-companions" value="${t.companions||''}" placeholder="혼자, 친구, 가족, 둘..."/></div>
     <div class="form-group"><label>링크 (예약확인, 항공권, 숙소 등)</label><input type="url" class="form-input" id="tp-m-link" value="${t.link||''}" placeholder="https://..."/></div>
+    <div class="form-group" style="margin-top:2px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:10px 14px;background:${t.isSimple?'#F0EEFF':'#fafafa'};border:1.5px solid ${t.isSimple?'#A29BFE':'var(--border)'};border-radius:10px;transition:all .15s;">
+        <input type="checkbox" id="tp-m-simple" ${t.isSimple?'checked':''} style="width:16px;height:16px;accent-color:#5E4BC4;cursor:pointer;flex-shrink:0;" onchange="this.closest('label').style.background=this.checked?'#F0EEFF':'#fafafa';this.closest('label').style.borderColor=this.checked?'#A29BFE':'var(--border)';"/>
+        <span style="font-size:14px;font-weight:600;color:#5E4BC4;">🗒️ 간단 여행</span>
+        <span style="font-size:12px;color:var(--text-sub);">이름·기간만 간단히 표시</span>
+      </label>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="TravelApp.closeModal()">취소</button>
-      <button class="btn-save" onclick="TravelApp.saveTrip(${isEdit?`'${t.id}'`:'null'})">${isEdit ? '수정 완료' : '저장'}</button>
+      <button class="btn-save" onclick="TravelApp.saveTrip(${isEdit?`'${t.id}'`:'null'})">${isEdit ? '수정 완료' : '여행 만들기'}</button>
     </div>
   `);
 }
@@ -1461,17 +1486,18 @@ function saveTrip(editId) {
   const regions = document.getElementById('tp-m-regions').value.trim();
   const companions = document.getElementById('tp-m-companions').value.trim();
   const link = document.getElementById('tp-m-link').value.trim();
+  const isSimple = !!(document.getElementById('tp-m-simple')?.checked);
 
   let savedTrip;
   if (editId) {
     const t = getTripById(editId);
-    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions, link }); savedTrip = t; }
+    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions, link, isSimple }); savedTrip = t; }
   } else {
     const newTrip = {
-      id: genTravelId(), name, type, startDate, endDate, regions, companions, link,
+      id: genTravelId(), name, type, startDate, endDate, regions, companions, link, isSimple,
       currency: 'USD', exchangeRate: 0,
       bookings: { flights: [], hotels: [], others: [] },
-      schedule: [], expenses: [], wishPlaces: []
+      schedule: [], expenses: [], wishPlaces: [], todos: []
     };
     S.travels.trips.push(newTrip);
     savedTrip = newTrip;
@@ -1762,6 +1788,78 @@ function saveEditExpense(tripId, expId) {
   };
   saveState();
   closeTravelModal();
+  renderTravelDetail(document.getElementById('travel-my-content'), tripId);
+}
+
+// ===== 투두 리스트 =====
+function renderTodoList(trip) {
+  const todos = trip.todos || [];
+  const tripId = trip.id;
+  const isOpen = _todoAccordionOpen[tripId] !== false; // 기본: 열림
+  const doneCount = todos.filter(td => td.checked).length;
+
+  return `
+    <div class="tp-todo-accordion">
+      <div class="tp-todo-header" onclick="TravelApp.toggleTodoAccordion('${tripId}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4CAF82" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="5" width="6" height="6" rx="1"/><rect x="3" y="13" width="6" height="6" rx="1"/><line x1="13" y1="8" x2="21" y2="8"/><line x1="13" y1="16" x2="21" y2="16"/></svg>
+        <span class="tp-todo-title">투두 리스트</span>
+        ${todos.length > 0 ? `<span class="tp-todo-count">${doneCount}/${todos.length}</span>` : ''}
+        <svg class="tp-todo-chevron${isOpen ? ' open' : ''}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="tp-todo-body${isOpen ? ' open' : ''}">
+        ${todos.length === 0 ? '<div class="tp-todo-empty">할 일을 추가해보세요 ✏️</div>' : ''}
+        ${todos.map(td => `
+          <div class="tp-todo-item">
+            <input type="checkbox" ${td.checked ? 'checked' : ''}
+              onchange="TravelApp.toggleTodo('${tripId}', '${td.id}', this.checked)"
+              style="width:15px;height:15px;accent-color:#4CAF82;cursor:pointer;flex-shrink:0;border-radius:4px;"/>
+            <span class="tp-todo-text${td.checked ? ' done' : ''}">${td.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+            <button class="tp-todo-del" onclick="TravelApp.deleteTodo('${tripId}', '${td.id}')" title="삭제">✕</button>
+          </div>
+        `).join('')}
+        <div class="tp-todo-add-row">
+          <input type="text" id="tp-todo-inp-${tripId}" class="tp-todo-input" placeholder="할 일 추가..."
+            onkeydown="if(event.key==='Enter'){TravelApp.addTodo('${tripId}');event.preventDefault();}"/>
+          <button class="tp-todo-add-btn" onclick="TravelApp.addTodo('${tripId}')">+ 추가</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function addTodo(tripId) {
+  const inp = document.getElementById('tp-todo-inp-' + tripId);
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  const trip = getTripById(tripId);
+  if (!trip) return;
+  if (!trip.todos) trip.todos = [];
+  trip.todos.push({ id: 'td_' + Date.now() + '_' + Math.floor(Math.random()*999), text, checked: false });
+  saveState();
+  renderTravelDetail(document.getElementById('travel-my-content'), tripId);
+}
+
+function toggleTodo(tripId, todoId, checked) {
+  const trip = getTripById(tripId);
+  if (!trip || !trip.todos) return;
+  const td = trip.todos.find(x => x.id === todoId);
+  if (td) { td.checked = checked; saveState(); }
+  // 체크 상태만 바꾸므로 UI는 DOM 직접 업데이트 (re-render 없이)
+  const detailEl = document.getElementById('travel-my-content');
+  if (detailEl) renderTravelDetail(detailEl, tripId);
+}
+
+function deleteTodo(tripId, todoId) {
+  const trip = getTripById(tripId);
+  if (!trip || !trip.todos) return;
+  trip.todos = trip.todos.filter(x => x.id !== todoId);
+  saveState();
+  renderTravelDetail(document.getElementById('travel-my-content'), tripId);
+}
+
+function toggleTodoAccordion(tripId) {
+  _todoAccordionOpen[tripId] = !(_todoAccordionOpen[tripId] !== false);
   renderTravelDetail(document.getElementById('travel-my-content'), tripId);
 }
 
@@ -2253,11 +2351,11 @@ function toggleNavGroup(group) {
 // ===== PUBLIC API =====
 window.TravelApp = {
   // Filter
-  setTravelFilter(f) { _travelFilter = f; _travelView = null; renderTravelMy(); },
+  setTravelFilter(f) { _travelFilter = f; localStorage.setItem('travel_filter', f); _travelView = null; localStorage.removeItem('travel_view'); renderTravelMy(); },
   setBucketFilter(f) { _bucketFilter = f; renderTravelBucket(); },
   // View
-  openTrip(id) { _travelView = id; _travelDetailTab = 'schedule-list'; renderTravelMy(); },
-  backToList() { _travelView = null; renderTravelMy(); },
+  openTrip(id) { _travelView = id; localStorage.setItem('travel_view', id); _travelDetailTab = 'schedule-list'; renderTravelMy(); },
+  backToList() { _travelView = null; localStorage.removeItem('travel_view'); renderTravelMy(); },
   setDetailTab(tab, tripId) { _travelDetailTab = tab; renderTravelDetail(document.getElementById('travel-my-content'), tripId); },
   // 준비물·팁 서브탭
   setTipsTab(tab) { _tipsSubTab = tab; _rerenderTips(); },
@@ -2345,4 +2443,9 @@ window.TravelApp = {
   deleteTip,
   setTipsTagFilter,
   openMapModal,
+  // 투두 리스트
+  addTodo,
+  toggleTodo,
+  deleteTodo,
+  toggleTodoAccordion,
 };
