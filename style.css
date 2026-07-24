@@ -2597,3 +2597,29 @@ tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!importa
 .tp-todo-input:focus{border-color:#4CAF82;}
 .tp-todo-add-btn{padding:6px 14px;background:#4CAF82;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s;}
 .tp-todo-add-btn:hover{background:#3A9E6E;}
+
+/* ===== 투두 북마크 뱃지 =========================================== */
+.tp-todo-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+.tp-bm-badges{display:flex;gap:5px;flex-wrap:wrap;}
+.tp-bm-badge{display:inline-flex;align-items:center;gap:2px;}
+.tp-bm-inner{display:inline-flex;align-items:center;gap:3px;background:#F0EEFF;color:#5E4BC4;border-radius:20px;padding:2px 8px 2px 6px;font-size:11px;font-weight:600;cursor:default;border:1px solid #D4CAFF;max-width:120px;transition:background .13s;}
+.tp-bm-inner:hover{background:#E4DAFF;}
+.tp-bm-link{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:#EDE9FF;border-radius:50%;color:#7B68EE;text-decoration:none;transition:background .13s;}
+.tp-bm-link:hover{background:#C9C2F8;color:#4338CA;}
+.tp-todo-bm{background:none;border:none;cursor:pointer;padding:3px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .13s,opacity .13s;opacity:.5;}
+.tp-todo-bm:hover{background:#F0EEFF;opacity:1;}
+.tp-todo-bm.has-bm{opacity:1;}
+.tp-todo-bm.has-bm:hover{background:#E4DAFF;}
+
+/* ===== 북마크 툴팁 ================================================ */
+.tp-bm-tooltip{position:fixed;z-index:9999;background:white;border:1.5px solid #D4CAFF;border-radius:12px;padding:10px 13px;max-width:240px;min-width:160px;box-shadow:0 6px 24px rgba(94,75,196,.18);pointer-events:none;}
+
+/* ===== 팁 북마크 선택 모달 ======================================== */
+.tp-bm-modal-list{max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:2px;}
+.tp-bm-modal-list::-webkit-scrollbar{width:4px;}
+.tp-bm-modal-list::-webkit-scrollbar-thumb{background:#D4CAFF;border-radius:4px;}
+.tp-bm-modal-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all .13s;background:white;}
+.tp-bm-modal-row:hover{background:#F8F6FF;border-color:#C4B5FD;}
+.tp-bm-modal-row.selected{background:#F0EEFF;border-color:#A29BFE;}
+.tp-bm-modal-check{width:22px;height:22px;border-radius:6px;border:1.5px solid #ddd;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .13s;}
+.tp-bm-modal-row.selected .tp-bm-modal-check{background:#F0EEFF;border-color:#A29BFE;}
