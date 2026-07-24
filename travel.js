@@ -1795,35 +1795,40 @@ function saveEditExpense(tripId, expId) {
 function renderTodoList(trip) {
   const todos = trip.todos || [];
   const tripId = trip.id;
-  const isOpen = _todoAccordionOpen[tripId] !== false; // 기본: 열림
+  const isOpen = _todoAccordionOpen[tripId] !== false;
   const doneCount = todos.filter(td => td.checked).length;
   const allTips = (S && S.travels && S.travels.travelTips) || [];
 
-  // 북마크된 팁 뱃지 렌더 (인라인, 툴팁 포함)
-  function renderTipBadges(td) {
+  // 북마크 팁 아이콘들 (오른쪽 배치, 아이콘만)
+  function renderTipIcons(td) {
     const tipIds = td.tipIds || [];
     if (!tipIds.length) return '';
     return tipIds.map(tid => {
       const tip = allTips.find(t => t.id === tid);
       if (!tip) return '';
-      const safeTitle = (tip.title || '').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-      const safeContent = ((tip.content || '').slice(0, 120) + (tip.content && tip.content.length > 120 ? '...' : '')).replace(/'/g,"&#39;").replace(/"/g,'&quot;');
-      const safeLink = (tip.link || '').replace(/"/g,'&quot;');
-      const tags = (tip.tags || []).map(t => `#${t}`).join(' ');
-      const tooltipHtml = `${safeTitle}${tags ? ' · ' + tags : ''}${safeContent ? '\\n' + safeContent : ''}`;
-      return `
-        <span class="tp-bm-badge" style="position:relative;display:inline-flex;align-items:center;gap:3px;">
-          <span class="tp-bm-inner" title="${tooltipHtml}"
-            onmouseenter="TravelApp._showBmTooltip(this,'${safeTitle}','${tags}','${safeContent}','${safeLink}')"
-            onmouseleave="TravelApp._hideBmTooltip()">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="#5E4BC4" stroke="#5E4BC4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-            <span style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tip.title || '팁'}</span>
-          </span>
-          ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="tp-bm-link" title="링크 열기">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          </a>` : ''}
-        </span>
-      `;
+      const safeTitle = (tip.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const safeContent = ((tip.content || '').slice(0, 100) + ((tip.content || '').length > 100 ? '...' : '')).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const safeTags = (tip.tags || []).map(t => '#' + t).join(' ').replace(/'/g, "\\'");
+      const safeLink = (tip.link || '').replace(/"/g, '&quot;');
+      const hasLink = !!(tip.link);
+      // 링크 있으면 🔗(chain) 아이콘 → 클릭 시 링크 이동, 없으면 ✏️(pencil) 아이콘 → 클릭 없음
+      if (hasLink) {
+        return `<a href="${safeLink}" target="_blank" rel="noopener noreferrer"
+          class="tp-tip-icon has-link"
+          onclick="event.stopPropagation()"
+          onmouseenter="TravelApp._showBmTooltip(this,'${safeTitle}','${safeTags}','${safeContent}','${safeLink}')"
+          onmouseleave="TravelApp._hideBmTooltip()"
+          title="${safeTitle}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </a>`;
+      } else {
+        return `<span class="tp-tip-icon no-link"
+          onmouseenter="TravelApp._showBmTooltip(this,'${safeTitle}','${safeTags}','${safeContent}','')"
+          onmouseleave="TravelApp._hideBmTooltip()"
+          title="${safeTitle}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </span>`;
+      }
     }).join('');
   }
 
@@ -1838,14 +1843,14 @@ function renderTodoList(trip) {
       <div class="tp-todo-body${isOpen ? ' open' : ''}">
         ${todos.length === 0 ? '<div class="tp-todo-empty">할 일을 추가해보세요 ✏️</div>' : ''}
         ${todos.map(td => `
-          <div class="tp-todo-item">
+          <div class="tp-todo-item" id="tp-todo-row-${td.id}">
             <input type="checkbox" ${td.checked ? 'checked' : ''}
               onchange="TravelApp.toggleTodo('${tripId}', '${td.id}', this.checked)"
-              style="width:15px;height:15px;accent-color:#4CAF82;cursor:pointer;flex-shrink:0;border-radius:4px;"/>
-            <div class="tp-todo-main">
-              <span class="tp-todo-text${td.checked ? ' done' : ''}">${td.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
-              ${(td.tipIds && td.tipIds.length) ? `<div class="tp-bm-badges">${renderTipBadges(td)}</div>` : ''}
-            </div>
+              style="width:15px;height:15px;accent-color:#4CAF82;cursor:pointer;flex-shrink:0;"/>
+            <span class="tp-todo-text${td.checked ? ' done' : ''}"
+              onclick="TravelApp.startEditTodo('${tripId}','${td.id}')"
+              title="클릭해서 수정">${td.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>
+            <div class="tp-tip-icons">${renderTipIcons(td)}</div>
             <button class="tp-todo-bm${(td.tipIds && td.tipIds.length) ? ' has-bm' : ''}"
               onclick="TravelApp.openTipBookmarkModal('${tripId}','${td.id}')"
               title="${(td.tipIds && td.tipIds.length) ? '북마크 수정 (' + td.tipIds.length + '개)' : '유용한 팁 북마크'}">
@@ -1863,6 +1868,40 @@ function renderTodoList(trip) {
     </div>
     <div id="tp-bm-tooltip" class="tp-bm-tooltip" style="display:none;"></div>
   `;
+}
+
+function startEditTodo(tripId, todoId) {
+  const trip = getTripById(tripId);
+  if (!trip || !trip.todos) return;
+  const td = trip.todos.find(x => x.id === todoId);
+  if (!td) return;
+  const row = document.getElementById('tp-todo-row-' + todoId);
+  if (!row) return;
+  const span = row.querySelector('.tp-todo-text');
+  if (!span) return;
+  const currentText = td.text;
+  // span을 인라인 input으로 교체
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = currentText;
+  inp.className = 'tp-todo-edit-inp';
+  inp.style.cssText = 'flex:1;min-width:0;border:none;border-bottom:1.5px solid #4CAF82;outline:none;font-size:13px;font-family:inherit;background:transparent;padding:0 2px;color:var(--text-main);';
+  span.replaceWith(inp);
+  inp.focus();
+  inp.select();
+  function commit() {
+    const newText = inp.value.trim();
+    if (newText && newText !== currentText) {
+      td.text = newText;
+      saveState();
+    }
+    renderTravelDetail(document.getElementById('travel-my-content'), tripId);
+  }
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { renderTravelDetail(document.getElementById('travel-my-content'), tripId); }
+  });
+  inp.addEventListener('blur', commit);
 }
 
 function addTodo(tripId) {
@@ -2641,6 +2680,7 @@ window.TravelApp = {
   toggleTodo,
   deleteTodo,
   toggleTodoAccordion,
+  startEditTodo,
   // 투두 팁 북마크
   openTipBookmarkModal,
   saveTipBookmarks,
