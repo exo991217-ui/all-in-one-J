@@ -589,17 +589,21 @@ function renderTipsTab() {
     </div>
     ${_tipsWriting ? `
     <div style="background:white;border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 4px 24px rgba(94,75,196,.1);border:1.5px solid #A29BFE44;">
-      <input type="text" id="tp-tip-title" placeholder="제목을 입력하세요"
-        style="width:100%;border:1.5px solid #A29BFE;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:10px;"/>
-      <input type="text" id="tp-tip-tags-input" placeholder="태그 입력 후 Enter (예: 일본  공항)"
-        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:6px;"
+      <div style="font-size:11px;font-weight:700;color:#7B68EE;margin-bottom:5px;letter-spacing:.4px;">제목 *</div>
+      <input type="text" id="tp-tip-title" placeholder="예: 뉴질랜드 여행 꿀팁"
+        style="width:100%;border:2px solid #A29BFE;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;outline:none;box-sizing:border-box;margin-bottom:14px;background:#FAFAFF;"/>
+      <div style="font-size:11px;font-weight:700;color:#7B68EE;margin-bottom:5px;letter-spacing:.4px;">태그 <span style="font-weight:400;color:#aaa;">(Enter로 추가)</span></div>
+      <input type="text" id="tp-tip-tags-input" placeholder="예: 뉴질랜드  공항  숙소"
+        style="width:100%;border:2px solid #E8E5FF;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:8px;background:#FAFAFF;"
         onkeydown="if(event.key==='Enter'){event.preventDefault();TravelApp.addTipTag()}"/>
-      <div id="tp-tip-tags-display" style="display:flex;flex-wrap:wrap;gap:5px;min-height:4px;margin-bottom:10px;"></div>
-      <textarea id="tp-tip-content" placeholder="내용을 작성하세요... (선택사항)"
-        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;min-height:90px;resize:vertical;font-family:inherit;"></textarea>
-      <input type="url" id="tp-tip-link" placeholder="링크 (선택사항, https://...)"
-        style="width:100%;border:1.5px solid #eee;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;margin-top:8px;"/>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+      <div id="tp-tip-tags-display" style="display:flex;flex-wrap:wrap;gap:5px;min-height:4px;margin-bottom:14px;"></div>
+      <div style="font-size:11px;font-weight:700;color:#7B68EE;margin-bottom:5px;letter-spacing:.4px;">내용 <span style="font-weight:400;color:#aaa;">(선택)</span></div>
+      <textarea id="tp-tip-content" placeholder="자유롭게 내용을 작성하세요..."
+        style="width:100%;border:2px solid #E8E5FF;border-radius:12px;padding:10px 14px;font-size:13px;outline:none;box-sizing:border-box;min-height:90px;resize:vertical;font-family:inherit;background:#FAFAFF;margin-bottom:14px;"></textarea>
+      <div style="font-size:11px;font-weight:700;color:#7B68EE;margin-bottom:5px;letter-spacing:.4px;">링크 <span style="font-weight:400;color:#aaa;">(선택)</span></div>
+      <input type="url" id="tp-tip-link" placeholder="https://..."
+        style="width:100%;border:2px solid #E8E5FF;border-radius:12px;padding:9px 14px;font-size:13px;outline:none;box-sizing:border-box;background:#FAFAFF;"/>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
         <button onclick="TravelApp.closeTipWriter()" style="padding:8px 16px;background:white;border:1.5px solid #ddd;border-radius:50px;font-size:13px;cursor:pointer;color:var(--text-sub);">취소</button>
         <button onclick="TravelApp.saveTip()" style="padding:8px 20px;background:linear-gradient(135deg,#5E4BC4,#7B68EE);color:white;border:none;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;">저장</button>
       </div>
