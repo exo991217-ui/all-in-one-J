@@ -52,10 +52,20 @@ function initTravelState() {
 let _travelFilter = localStorage.getItem('travel_filter') || '전체';
 let _travelView = localStorage.getItem('travel_view') || null; // null = list, tripId = detail
 let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable' | 'schedule-summary'
-let _bucketFilter = '전체';
-let _bucketTypeFilter = '전체'; // 버킷플레이스 유형 필터
-let _bucketRegionFilter = ''; // 버킷플레이스 지역 필터 (빈 문자열 = 전체)
+let _bucketFilter = '전체'; // 하위 호환용 (내부에서만)
+let _bucketTypeFilter = '전체'; // 하위 호환용
+let _bucketRegionFilter = ''; // 하위 호환용
 let _bucketSort = 'default'; // 'default' | 'place' | 'region' | 'type' | 'undone'
+// 엑셀 스타일 컬럼 필터 상태
+let _bucketColFilters = {
+  checked: [],   // [] = 전체, ['done'] / ['undone'] / ['done','undone']
+  type: [],      // [] = 전체, else 선택된 유형 배열
+  country: [],   // [] = 전체, else 선택된 나라 배열
+  region: '',    // 텍스트 검색
+  season: [],    // [] = 전체
+};
+let _bucketOpenDropdown = null; // 현재 열린 드롭다운 컬럼 키
+let _bucketDropdownRegionSearch = ''; // 지역 드롭다운 내 검색어
 let _showTransport = true; // 이동 카테고리 표시 여부
 let _todoAccordionOpen = {}; // { tripId: boolean } 투두 리스트 아코디언 상태
 // 가고싶은 곳 지역 설정: 여행 ID별 독립 저장 (localStorage)
@@ -1286,6 +1296,117 @@ function getCatEmoji(cat) {
   return e[cat] || '⭐';
 }
 
+// ── 엑셀 필터 드롭다운 닫기 (외부 클릭) ──────────────────────────
+function _closeBucketDropdown() {
+  if (_bucketOpenDropdown) {
+    _bucketOpenDropdown = null;
+    _bucketDropdownRegionSearch = '';
+    renderTravelBucket();
+  }
+}
+
+// ── 컬럼 필터 활성화 여부 확인 ────────────────────────────────────
+function _isBucketColActive(col) {
+  const f = _bucketColFilters;
+  if (col === 'checked') return f.checked.length > 0;
+  if (col === 'type')    return f.type.length > 0;
+  if (col === 'country') return f.country.length > 0;
+  if (col === 'region')  return f.region.trim() !== '';
+  if (col === 'season')  return f.season.length > 0;
+  return false;
+}
+
+// ── 엑셀 스타일 TH 필터 버튼 렌더 ────────────────────────────────
+function _renderBucketTh(label, col, width) {
+  const active = _isBucketColActive(col);
+  const open   = _bucketOpenDropdown === col;
+  const btnStyle = `background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:${active?'#5E4BC4':'var(--text-sub)'};`;
+  const arrow = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="flex-shrink:0;"><polygon points="1,3 9,3 5,8" fill="${active?'#5E4BC4':'#9490A8'}"/></svg>`;
+  const dot   = active ? `<span style="width:6px;height:6px;background:#5E4BC4;border-radius:50%;flex-shrink:0;"></span>` : '';
+  return `<th style="${width?'width:'+width+';':''}position:relative;">
+    <button class="bk-th-btn" onclick="event.stopPropagation();TravelApp.toggleBucketDropdown('${col}')" style="${btnStyle}">
+      ${dot}${label}${arrow}
+    </button>
+    ${open ? _renderBucketDropdown(col) : ''}
+  </th>`;
+}
+
+// ── 드롭다운 패널 렌더 ────────────────────────────────────────────
+function _renderBucketDropdown(col) {
+  const bucketAll = (S && S.travels && S.travels.bucketList) || [];
+  const f = _bucketColFilters;
+
+  // 지역 컬럼: 검색 + 값 목록
+  if (col === 'region') {
+    const allRegions = [...new Set(bucketAll.map(b => b.region || '').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+    const q = _bucketDropdownRegionSearch.toLowerCase();
+    const shown = q ? allRegions.filter(r => r.toLowerCase().includes(q)) : allRegions;
+    const items = shown.map(r => {
+      const checked = f.region === r;
+      return `<label class="bk-dd-item" onclick="event.stopPropagation()">
+        <input type="radio" name="bk-dd-region" ${checked?'checked':''} style="accent-color:#5E4BC4;" onchange="TravelApp.setBucketColFilter('region','${r.replace(/'/g,"\\'")}')"/>
+        <span>${r}</span>
+      </label>`;
+    }).join('');
+    return `<div class="bk-dropdown" onclick="event.stopPropagation()">
+      <input type="text" class="bk-dd-search" placeholder="지역·나라 검색..." value="${_bucketDropdownRegionSearch.replace(/"/g,'&quot;')}"
+        oninput="TravelApp.setBucketDropdownSearch(this.value)" autofocus/>
+      <label class="bk-dd-item" onclick="event.stopPropagation()">
+        <input type="radio" name="bk-dd-region" ${f.region===''?'checked':''} style="accent-color:#5E4BC4;" onchange="TravelApp.setBucketColFilter('region','')"/>
+        <span style="font-weight:700;">(모두 선택)</span>
+      </label>
+      ${items || '<div style="font-size:12px;color:var(--text-sub);padding:4px 6px;">결과 없음</div>'}
+      <div class="bk-dd-footer">
+        <button class="bk-dd-apply" onclick="TravelApp.closeBucketDropdown()">확인</button>
+      </div>
+    </div>`;
+  }
+
+  // 방문여부 컬럼
+  if (col === 'checked') {
+    const opts = [['(모두 선택)',''], ['✅ 방문완료','done'], ['⬜ 미방문','undone']];
+    const isAll = f.checked.length === 0;
+    return `<div class="bk-dropdown" onclick="event.stopPropagation()">
+      ${opts.map(([label, val]) => {
+        const chk = val === '' ? isAll : f.checked.includes(val);
+        return `<label class="bk-dd-item" onclick="event.stopPropagation()">
+          <input type="checkbox" ${chk?'checked':''} style="accent-color:#5E4BC4;"
+            onchange="TravelApp.toggleBucketColVal('checked','${val}',this.checked)"/>
+          <span${val===''?' style="font-weight:700;"':''}>${label}</span>
+        </label>`;
+      }).join('')}
+      <div class="bk-dd-footer"><button class="bk-dd-apply" onclick="TravelApp.closeBucketDropdown()">확인</button></div>
+    </div>`;
+  }
+
+  // 나머지: 고유값 체크박스 (유형, 나라, 계절)
+  let allVals;
+  if (col === 'type')    allVals = [...new Set(bucketAll.map(b => b.type||'기타'))].sort((a,b)=>a.localeCompare(b,'ko'));
+  else if (col==='country') allVals = [...new Set(bucketAll.map(b => b.country||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  else if (col==='season')  allVals = [...new Set(bucketAll.map(b => b.season||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  else allVals = [];
+
+  const sel = f[col] || [];
+  const isAll = sel.length === 0;
+  const items = allVals.map(v => {
+    const esc = v.replace(/'/g,"\\'");
+    return `<label class="bk-dd-item" onclick="event.stopPropagation()">
+      <input type="checkbox" ${(isAll||sel.includes(v))?'checked':''} style="accent-color:#5E4BC4;"
+        onchange="TravelApp.toggleBucketColVal('${col}','${esc}',this.checked)"/>
+      <span>${v}</span>
+    </label>`;
+  }).join('');
+  return `<div class="bk-dropdown" onclick="event.stopPropagation()">
+    <label class="bk-dd-item" onclick="event.stopPropagation()">
+      <input type="checkbox" ${isAll?'checked':''} style="accent-color:#5E4BC4;"
+        onchange="TravelApp.clearBucketColFilter('${col}')"/>
+      <span style="font-weight:700;">(모두 선택)</span>
+    </label>
+    ${items}
+    <div class="bk-dd-footer"><button class="bk-dd-apply" onclick="TravelApp.closeBucketDropdown()">확인</button></div>
+  </div>`;
+}
+
 // ===== RENDER: 버킷플레이스 탭 =====
 function renderTravelBucket() {
   const el = document.getElementById('travel-bucket-content');
@@ -1297,27 +1418,45 @@ function renderTravelBucket() {
   initTravelState();
 
   const bucketList = S.travels.bucketList || [];
+  const f = _bucketColFilters;
 
-  // 1단계: 국내/해외 필터
-  let filtered = _bucketFilter === '전체' ? [...bucketList] :
-    _bucketFilter === '국내' ? bucketList.filter(b => !b.country || b.country === '한국' || b.country === 'Korea') :
-    bucketList.filter(b => b.country && b.country !== '한국' && b.country !== 'Korea');
+  // 필터 적용
+  let filtered = _bucketFilter === '국내'
+    ? bucketList.filter(b => !b.country || b.country === '한국' || b.country === 'Korea')
+    : _bucketFilter === '해외'
+    ? bucketList.filter(b => b.country && b.country !== '한국' && b.country !== 'Korea')
+    : [...bucketList];
 
-  // 2단계: 유형 필터
-  if (_bucketTypeFilter && _bucketTypeFilter !== '전체') {
-    filtered = filtered.filter(b => (b.type || '기타') === _bucketTypeFilter);
+  // 방문여부
+  if (f.checked.length > 0) {
+    filtered = filtered.filter(b => {
+      if (f.checked.includes('done')   &&  b.checked) return true;
+      if (f.checked.includes('undone') && !b.checked) return true;
+      return false;
+    });
   }
-
-  // 3단계: 지역 필터 (부분 일치)
-  if (_bucketRegionFilter && _bucketRegionFilter.trim()) {
-    const rLower = _bucketRegionFilter.trim().toLowerCase();
+  // 유형
+  if (f.type.length > 0) {
+    filtered = filtered.filter(b => f.type.includes(b.type || '기타'));
+  }
+  // 나라
+  if (f.country.length > 0) {
+    filtered = filtered.filter(b => f.country.includes(b.country || ''));
+  }
+  // 지역 (텍스트 검색)
+  if (f.region.trim()) {
+    const rL = f.region.trim().toLowerCase();
     filtered = filtered.filter(b =>
-      (b.region || '').toLowerCase().includes(rLower) ||
-      (b.country || '').toLowerCase().includes(rLower)
+      (b.region || '').toLowerCase().includes(rL) ||
+      (b.country || '').toLowerCase().includes(rL)
     );
   }
+  // 계절
+  if (f.season.length > 0) {
+    filtered = filtered.filter(b => f.season.includes(b.season || ''));
+  }
 
-  // 4단계: 정렬
+  // 정렬
   if (_bucketSort === 'place') {
     filtered.sort((a, b) => (a.place || '').localeCompare(b.place || '', 'ko'));
   } else if (_bucketSort === 'region') {
@@ -1328,8 +1467,14 @@ function renderTravelBucket() {
     filtered.sort((a, b) => (a.checked ? 1 : 0) - (b.checked ? 1 : 0));
   }
 
-  // 유형 목록 추출 (필터 칩용)
-  const allTypes = ['전체', ...[...new Set((S.travels.bucketList||[]).map(b => b.type||'기타'))].sort((a,b)=>a.localeCompare(b,'ko'))];
+  // 활성 필터 개수
+  const activeFilterCount = [
+    f.checked.length > 0,
+    f.type.length > 0,
+    f.country.length > 0,
+    f.region.trim() !== '',
+    f.season.length > 0,
+  ].filter(Boolean).length;
 
   el.innerHTML = `
     <div class="page-header">
@@ -1337,56 +1482,33 @@ function renderTravelBucket() {
         <h1 class="page-title">버킷플레이스 ⭐</h1>
         <p class="page-sub">가보고 싶은 장소를 모아두는 곳</p>
       </div>
-      <button class="add-btn primary" onclick="TravelApp.openAddBucketModal()">+ 추가</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        ${activeFilterCount > 0 ? `<button onclick="TravelApp.clearAllBucketFilters()" style="font-size:12px;padding:5px 12px;border-radius:8px;border:1.5px solid #A29BFE;background:#F0EEFF;color:#5E4BC4;cursor:pointer;font-weight:700;">✕ 필터 초기화 (${activeFilterCount})</button>` : ''}
+        <button class="add-btn primary" onclick="TravelApp.openAddBucketModal()">+ 추가</button>
+      </div>
     </div>
 
-    <div class="tp-filter-bar" style="flex-wrap:wrap;gap:6px;">
-      <span style="font-size:11px;color:var(--text-sub);font-weight:700;align-self:center;white-space:nowrap;">국내/해외</span>
+    <div class="tp-filter-bar" style="flex-wrap:wrap;gap:6px;margin-bottom:8px;">
       ${['전체','국내','해외'].map(f => `
         <button class="tp-filter-chip ${_bucketFilter===f?'active':''}" onclick="TravelApp.setBucketFilter('${f}')">
-          ${f === '국내' ? '🏔 ' : f === '해외' ? '🌏 ' : ''}${f}
+          ${f==='국내'?'🏔 ':f==='해외'?'🌏 ':''}${f}
         </button>
       `).join('')}
+      <span style="font-size:12px;color:var(--text-sub);align-self:center;margin-left:4px;">${filtered.length}/${bucketList.length}개</span>
     </div>
 
-    <div class="tp-filter-bar" style="flex-wrap:wrap;gap:6px;margin-top:6px;">
-      <span style="font-size:11px;color:var(--text-sub);font-weight:700;align-self:center;white-space:nowrap;">유형</span>
-      ${allTypes.map(t => `
-        <button class="tp-filter-chip ${_bucketTypeFilter===t?'active':''}" onclick="TravelApp.setBucketTypeFilter('${t.replace(/'/g,"\\'")}')">${t}</button>
-      `).join('')}
-    </div>
-
-    <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;flex-wrap:wrap;">
-      <span style="font-size:11px;color:var(--text-sub);font-weight:700;white-space:nowrap;">지역 검색</span>
-      <input type="text" value="${_bucketRegionFilter.replace(/"/g,'&quot;')}" placeholder="지역·나라 입력..."
-        style="padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;width:140px;"
-        oninput="TravelApp.setBucketRegionFilter(this.value)"
-        onchange="TravelApp.setBucketRegionFilter(this.value)"/>
-      ${_bucketRegionFilter?`<button onclick="TravelApp.setBucketRegionFilter('')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-sub);">✕ 초기화</button>`:''}
-      <span style="font-size:11px;color:var(--text-sub);font-weight:700;white-space:nowrap;margin-left:8px;">정렬</span>
-      <select style="padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;background:white;cursor:pointer;"
-        onchange="TravelApp.setBucketSort(this.value)">
-        <option value="default" ${_bucketSort==='default'?'selected':''}>기본순</option>
-        <option value="undone" ${_bucketSort==='undone'?'selected':''}>미방문 우선</option>
-        <option value="place" ${_bucketSort==='place'?'selected':''}>장소명순</option>
-        <option value="region" ${_bucketSort==='region'?'selected':''}>지역순</option>
-        <option value="type" ${_bucketSort==='type'?'selected':''}>유형순</option>
-      </select>
-      <span style="font-size:11px;color:var(--text-sub);margin-left:auto;">${filtered.length}개</span>
-    </div>
-
-    <div class="card" style="margin-top:8px;overflow:hidden;">
+    <div class="card" style="margin-top:0;overflow:visible;">
       <table class="tp-bucket-table">
         <thead>
           <tr>
-            <th style="width:40px;">✓</th>
-            <th>유형</th>
-            <th>나라</th>
-            <th>지역</th>
+            ${_renderBucketTh('✓', 'checked', '40px')}
+            ${_renderBucketTh('유형', 'type', '')}
+            ${_renderBucketTh('나라', 'country', '')}
+            ${_renderBucketTh('지역', 'region', '')}
             <th>장소</th>
-            <th>계절</th>
+            ${_renderBucketTh('계절', 'season', '')}
             <th>비고</th>
-            <th></th>
+            <th style="width:32px;"></th>
           </tr>
         </thead>
         <tbody>
@@ -1418,6 +1540,21 @@ function renderTravelBucket() {
       </table>
     </div>
   `;
+
+  // 드롭다운 열려있으면 외부 클릭 리스너 등록
+  if (_bucketOpenDropdown) {
+    setTimeout(() => {
+      const handler = (e) => {
+        if (!e.target.closest('.bk-dropdown') && !e.target.closest('.bk-th-btn')) {
+          _bucketOpenDropdown = null;
+          _bucketDropdownRegionSearch = '';
+          renderTravelBucket();
+          document.removeEventListener('click', handler);
+        }
+      };
+      document.addEventListener('click', handler, { once: false });
+    }, 50);
+  }
 }
 
 // ===== MODALS =====
@@ -2647,6 +2784,64 @@ window.TravelApp = {
   setBucketTypeFilter(f) { _bucketTypeFilter = f; renderTravelBucket(); },
   setBucketRegionFilter(v) { _bucketRegionFilter = v; renderTravelBucket(); },
   setBucketSort(s) { _bucketSort = s; renderTravelBucket(); },
+  // 엑셀 스타일 컬럼 필터
+  toggleBucketDropdown(col) {
+    if (_bucketOpenDropdown === col) {
+      _bucketOpenDropdown = null;
+      _bucketDropdownRegionSearch = '';
+    } else {
+      _bucketOpenDropdown = col;
+      _bucketDropdownRegionSearch = '';
+    }
+    renderTravelBucket();
+  },
+  closeBucketDropdown() {
+    _bucketOpenDropdown = null;
+    _bucketDropdownRegionSearch = '';
+    renderTravelBucket();
+  },
+  // 단일 값 설정 (라디오 스타일 — 지역 검색)
+  setBucketColFilter(col, val) {
+    if (col === 'region') {
+      _bucketColFilters.region = val;
+    }
+    renderTravelBucket();
+  },
+  // 체크박스 토글 (다중 선택 컬럼)
+  toggleBucketColVal(col, val, checked) {
+    if (col === 'checked' && val === '') {
+      _bucketColFilters.checked = [];
+      renderTravelBucket();
+      return;
+    }
+    const arr = _bucketColFilters[col];
+    if (!Array.isArray(arr)) return;
+    if (checked) {
+      if (!arr.includes(val)) arr.push(val);
+    } else {
+      const idx = arr.indexOf(val);
+      if (idx !== -1) arr.splice(idx, 1);
+    }
+    renderTravelBucket();
+  },
+  // (모두 선택) 클릭 → 해당 컬럼 필터 초기화
+  clearBucketColFilter(col) {
+    if (col === 'region') _bucketColFilters.region = '';
+    else if (Array.isArray(_bucketColFilters[col])) _bucketColFilters[col] = [];
+    renderTravelBucket();
+  },
+  // 전체 필터 초기화
+  clearAllBucketFilters() {
+    _bucketColFilters = { checked: [], type: [], country: [], region: '', season: [] };
+    _bucketOpenDropdown = null;
+    _bucketDropdownRegionSearch = '';
+    renderTravelBucket();
+  },
+  // 지역 드롭다운 내 검색
+  setBucketDropdownSearch(v) {
+    _bucketDropdownRegionSearch = v;
+    renderTravelBucket();
+  },
   // View
   openTrip(id) { _travelView = id; localStorage.setItem('travel_view', id); _travelDetailTab = 'schedule-list'; renderTravelMy(); },
   backToList() { _travelView = null; localStorage.removeItem('travel_view'); renderTravelMy(); },
