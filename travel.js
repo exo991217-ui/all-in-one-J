@@ -53,6 +53,9 @@ let _travelFilter = localStorage.getItem('travel_filter') || '전체';
 let _travelView = localStorage.getItem('travel_view') || null; // null = list, tripId = detail
 let _travelDetailTab = 'schedule-list'; // 'schedule-list' | 'schedule-timetable' | 'schedule-summary'
 let _bucketFilter = '전체';
+let _bucketTypeFilter = '전체'; // 버킷플레이스 유형 필터
+let _bucketRegionFilter = ''; // 버킷플레이스 지역 필터 (빈 문자열 = 전체)
+let _bucketSort = 'default'; // 'default' | 'place' | 'region' | 'type' | 'undone'
 let _showTransport = true; // 이동 카테고리 표시 여부
 let _todoAccordionOpen = {}; // { tripId: boolean } 투두 리스트 아코디언 상태
 // 가고싶은 곳 지역 설정: 여행 ID별 독립 저장 (localStorage)
@@ -1294,10 +1297,39 @@ function renderTravelBucket() {
   initTravelState();
 
   const bucketList = S.travels.bucketList || [];
-  const filter = _bucketFilter;
-  const filtered = filter === '전체' ? bucketList :
-    filter === '국내' ? bucketList.filter(b => !b.country || b.country === '한국' || b.country === 'Korea') :
+
+  // 1단계: 국내/해외 필터
+  let filtered = _bucketFilter === '전체' ? [...bucketList] :
+    _bucketFilter === '국내' ? bucketList.filter(b => !b.country || b.country === '한국' || b.country === 'Korea') :
     bucketList.filter(b => b.country && b.country !== '한국' && b.country !== 'Korea');
+
+  // 2단계: 유형 필터
+  if (_bucketTypeFilter && _bucketTypeFilter !== '전체') {
+    filtered = filtered.filter(b => (b.type || '기타') === _bucketTypeFilter);
+  }
+
+  // 3단계: 지역 필터 (부분 일치)
+  if (_bucketRegionFilter && _bucketRegionFilter.trim()) {
+    const rLower = _bucketRegionFilter.trim().toLowerCase();
+    filtered = filtered.filter(b =>
+      (b.region || '').toLowerCase().includes(rLower) ||
+      (b.country || '').toLowerCase().includes(rLower)
+    );
+  }
+
+  // 4단계: 정렬
+  if (_bucketSort === 'place') {
+    filtered.sort((a, b) => (a.place || '').localeCompare(b.place || '', 'ko'));
+  } else if (_bucketSort === 'region') {
+    filtered.sort((a, b) => (a.region || '').localeCompare(b.region || '', 'ko'));
+  } else if (_bucketSort === 'type') {
+    filtered.sort((a, b) => (a.type || '기타').localeCompare(b.type || '기타', 'ko'));
+  } else if (_bucketSort === 'undone') {
+    filtered.sort((a, b) => (a.checked ? 1 : 0) - (b.checked ? 1 : 0));
+  }
+
+  // 유형 목록 추출 (필터 칩용)
+  const allTypes = ['전체', ...[...new Set((S.travels.bucketList||[]).map(b => b.type||'기타'))].sort((a,b)=>a.localeCompare(b,'ko'))];
 
   el.innerHTML = `
     <div class="page-header">
@@ -1308,7 +1340,8 @@ function renderTravelBucket() {
       <button class="add-btn primary" onclick="TravelApp.openAddBucketModal()">+ 추가</button>
     </div>
 
-    <div class="tp-filter-bar">
+    <div class="tp-filter-bar" style="flex-wrap:wrap;gap:6px;">
+      <span style="font-size:11px;color:var(--text-sub);font-weight:700;align-self:center;white-space:nowrap;">국내/해외</span>
       ${['전체','국내','해외'].map(f => `
         <button class="tp-filter-chip ${_bucketFilter===f?'active':''}" onclick="TravelApp.setBucketFilter('${f}')">
           ${f === '국내' ? '🏔 ' : f === '해외' ? '🌏 ' : ''}${f}
@@ -1316,7 +1349,33 @@ function renderTravelBucket() {
       `).join('')}
     </div>
 
-    <div class="card" style="margin-top:16px;overflow:hidden;">
+    <div class="tp-filter-bar" style="flex-wrap:wrap;gap:6px;margin-top:6px;">
+      <span style="font-size:11px;color:var(--text-sub);font-weight:700;align-self:center;white-space:nowrap;">유형</span>
+      ${allTypes.map(t => `
+        <button class="tp-filter-chip ${_bucketTypeFilter===t?'active':''}" onclick="TravelApp.setBucketTypeFilter('${t.replace(/'/g,"\\'")}')">${t}</button>
+      `).join('')}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--text-sub);font-weight:700;white-space:nowrap;">지역 검색</span>
+      <input type="text" value="${_bucketRegionFilter.replace(/"/g,'&quot;')}" placeholder="지역·나라 입력..."
+        style="padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;width:140px;"
+        oninput="TravelApp.setBucketRegionFilter(this.value)"
+        onchange="TravelApp.setBucketRegionFilter(this.value)"/>
+      ${_bucketRegionFilter?`<button onclick="TravelApp.setBucketRegionFilter('')" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-sub);">✕ 초기화</button>`:''}
+      <span style="font-size:11px;color:var(--text-sub);font-weight:700;white-space:nowrap;margin-left:8px;">정렬</span>
+      <select style="padding:5px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;background:white;cursor:pointer;"
+        onchange="TravelApp.setBucketSort(this.value)">
+        <option value="default" ${_bucketSort==='default'?'selected':''}>기본순</option>
+        <option value="undone" ${_bucketSort==='undone'?'selected':''}>미방문 우선</option>
+        <option value="place" ${_bucketSort==='place'?'selected':''}>장소명순</option>
+        <option value="region" ${_bucketSort==='region'?'selected':''}>지역순</option>
+        <option value="type" ${_bucketSort==='type'?'selected':''}>유형순</option>
+      </select>
+      <span style="font-size:11px;color:var(--text-sub);margin-left:auto;">${filtered.length}개</span>
+    </div>
+
+    <div class="card" style="margin-top:8px;overflow:hidden;">
       <table class="tp-bucket-table">
         <thead>
           <tr>
@@ -1332,7 +1391,7 @@ function renderTravelBucket() {
         </thead>
         <tbody>
           ${filtered.length === 0
-            ? `<tr><td colspan="8" class="tp-table-empty">⭐ 가보고 싶은 곳을 추가해보세요!</td></tr>`
+            ? `<tr><td colspan="8" class="tp-table-empty">⭐ 조건에 맞는 항목이 없어요</td></tr>`
             : filtered.map(b => `
               <tr class="tp-hover-parent ${b.checked?'tp-bucket-done':''}"
                 onmouseover="(function(r,bg,bc){r.querySelectorAll('td').forEach(function(td,i){td.style.background=bg;if(i===1)td.style.boxShadow='inset 3px 0 0 0 '+bc})})(this,'${getBucketCatStyle(b.type).bg}44','${getBucketCatStyle(b.type).bg}')"
@@ -1795,7 +1854,7 @@ function saveEditExpense(tripId, expId) {
 function renderTodoList(trip) {
   const todos = trip.todos || [];
   const tripId = trip.id;
-  const isOpen = _todoAccordionOpen[tripId] !== false;
+  const isOpen = _todoAccordionOpen[tripId] === true; // 기본값 접힘(false)
   const doneCount = todos.filter(td => td.checked).length;
   const allTips = (S && S.travels && S.travels.travelTips) || [];
 
@@ -2585,6 +2644,9 @@ window.TravelApp = {
   // Filter
   setTravelFilter(f) { _travelFilter = f; localStorage.setItem('travel_filter', f); _travelView = null; localStorage.removeItem('travel_view'); renderTravelMy(); },
   setBucketFilter(f) { _bucketFilter = f; renderTravelBucket(); },
+  setBucketTypeFilter(f) { _bucketTypeFilter = f; renderTravelBucket(); },
+  setBucketRegionFilter(v) { _bucketRegionFilter = v; renderTravelBucket(); },
+  setBucketSort(s) { _bucketSort = s; renderTravelBucket(); },
   // View
   openTrip(id) { _travelView = id; localStorage.setItem('travel_view', id); _travelDetailTab = 'schedule-list'; renderTravelMy(); },
   backToList() { _travelView = null; localStorage.removeItem('travel_view'); renderTravelMy(); },
