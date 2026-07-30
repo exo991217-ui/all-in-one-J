@@ -56,6 +56,7 @@ let _bucketFilter = '전체'; // 하위 호환용 (내부에서만)
 let _bucketTypeFilter = '전체'; // 하위 호환용
 let _bucketRegionFilter = ''; // 하위 호환용
 let _bucketSort = 'default'; // 'default' | 'place' | 'region' | 'type' | 'undone'
+let _bucketSortDir = 'asc'; // 'asc' | 'desc'
 // 엑셀 스타일 컬럼 필터 상태
 let _bucketColFilters = {
   checked: [],   // [] = 전체, ['done'] / ['undone'] / ['done','undone']
@@ -1379,6 +1380,20 @@ function _renderBucketDropdown(col) {
     </div>`;
   }
 
+  // 정렬 가능한 컬럼 여부 및 정렬 UI 생성
+  const sortableCols = { type: true, country: true, region: false, season: true, place: true };
+  const isSortable = sortableCols[col] || false;
+  const isActiveSort = _bucketSort === col;
+  const sortHtml = isSortable ? `
+    <div style="display:flex;gap:4px;padding:6px 10px 4px;border-bottom:1px solid var(--border);margin-bottom:2px;" onclick="event.stopPropagation()">
+      <button onclick="TravelApp.setBucketSortCol('${col}','asc')" style="flex:1;padding:4px 0;border-radius:6px;border:1.5px solid ${isActiveSort&&_bucketSortDir==='asc'?'#5E4BC4':'var(--border)'};background:${isActiveSort&&_bucketSortDir==='asc'?'#F0EEFF':'white'};color:${isActiveSort&&_bucketSortDir==='asc'?'#5E4BC4':'var(--text-sub)'};font-size:11.5px;font-weight:700;cursor:pointer;">
+        ▲ 오름차순
+      </button>
+      <button onclick="TravelApp.setBucketSortCol('${col}','desc')" style="flex:1;padding:4px 0;border-radius:6px;border:1.5px solid ${isActiveSort&&_bucketSortDir==='desc'?'#5E4BC4':'var(--border)'};background:${isActiveSort&&_bucketSortDir==='desc'?'#F0EEFF':'white'};color:${isActiveSort&&_bucketSortDir==='desc'?'#5E4BC4':'var(--text-sub)'};font-size:11.5px;font-weight:700;cursor:pointer;">
+        ▼ 내림차순
+      </button>
+    </div>` : '';
+
   // 나머지: 고유값 체크박스 (유형, 나라, 계절)
   let allVals;
   if (col === 'type')    allVals = [...new Set(bucketAll.map(b => b.type||'기타'))].sort((a,b)=>a.localeCompare(b,'ko'));
@@ -1397,6 +1412,7 @@ function _renderBucketDropdown(col) {
     </label>`;
   }).join('');
   return `<div class="bk-dropdown" onclick="event.stopPropagation()">
+    ${sortHtml}
     <label class="bk-dd-item" onclick="event.stopPropagation()">
       <input type="checkbox" ${isAll?'checked':''} style="accent-color:#5E4BC4;"
         onchange="TravelApp.clearBucketColFilter('${col}')"/>
@@ -1457,14 +1473,19 @@ function renderTravelBucket() {
   }
 
   // 정렬
+  const _dir = _bucketSortDir === 'desc' ? -1 : 1;
   if (_bucketSort === 'place') {
-    filtered.sort((a, b) => (a.place || '').localeCompare(b.place || '', 'ko'));
+    filtered.sort((a, b) => _dir * (a.place || '').localeCompare(b.place || '', 'ko'));
   } else if (_bucketSort === 'region') {
-    filtered.sort((a, b) => (a.region || '').localeCompare(b.region || '', 'ko'));
+    filtered.sort((a, b) => _dir * (a.region || '').localeCompare(b.region || '', 'ko'));
   } else if (_bucketSort === 'type') {
-    filtered.sort((a, b) => (a.type || '기타').localeCompare(b.type || '기타', 'ko'));
+    filtered.sort((a, b) => _dir * (a.type || '기타').localeCompare(b.type || '기타', 'ko'));
+  } else if (_bucketSort === 'country') {
+    filtered.sort((a, b) => _dir * (a.country || '').localeCompare(b.country || '', 'ko'));
+  } else if (_bucketSort === 'season') {
+    filtered.sort((a, b) => _dir * (a.season || '').localeCompare(b.season || '', 'ko'));
   } else if (_bucketSort === 'undone') {
-    filtered.sort((a, b) => (a.checked ? 1 : 0) - (b.checked ? 1 : 0));
+    filtered.sort((a, b) => _dir * ((a.checked ? 1 : 0) - (b.checked ? 1 : 0)));
   }
 
   // 활성 필터 개수
@@ -2784,6 +2805,11 @@ window.TravelApp = {
   setBucketTypeFilter(f) { _bucketTypeFilter = f; renderTravelBucket(); },
   setBucketRegionFilter(v) { _bucketRegionFilter = v; renderTravelBucket(); },
   setBucketSort(s) { _bucketSort = s; renderTravelBucket(); },
+  setBucketSortCol(col, dir) {
+    _bucketSort = col;
+    _bucketSortDir = dir;
+    renderTravelBucket();
+  },
   // 엑셀 스타일 컬럼 필터
   toggleBucketDropdown(col) {
     if (_bucketOpenDropdown === col) {
