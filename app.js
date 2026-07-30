@@ -7317,8 +7317,8 @@ function renderArchive(){
     ${card('평균 저축률',avgRate+'%',avgRate>=30?'#4CAF82':'#FFB347','')}
     ${card(`최근 마감 월 순자산 (${lastNetWorthY}년 ${lastNetWorthM}월)`,fmt(lastNetWorth),lastNetWorthColor,'')}
   </div>`;
-  const headerRow=`<div style="display:grid;grid-template-columns:90px 115px 115px 115px 58px minmax(160px,1fr) 26px;gap:6px;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">
-    <span>월</span><span>수입</span><span>지출</span><span>저축액</span><span style="text-align:center;">저축률</span><span style="text-align:right;">순자산 (증감)</span><span></span>
+  const headerRow=`<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr 1fr 26px;gap:6px;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">
+    <span>월</span><span>수입</span><span>지출</span><span>저축액</span><span>저축률</span><span style="text-align:right;">순자산 (증감)</span><span></span>
   </div>`;
   const rowsHtml=archived.map(([key,data])=>{
     const{year:y,month:mo,ledgerIncome:income,ledgerExpense:expense,savings,savingsRate,note,categories,netWorth}=data;
@@ -7339,7 +7339,7 @@ function renderArchive(){
     const netChange=(income||0)-(expense||0);
     const netChgColor=netChange>=0?'#4CAF82':'#F06292';
     const netWorthColor=(netWorth||0)>=0?'#4CAF82':'#F06292';
-    const netWorthDisplay=`<span style="font-size:11px;font-weight:700;color:${netWorthColor};white-space:nowrap;">${fmt(netWorth||0)} <span style="font-size:10px;color:${netChgColor};">(${netChange>=0?'+':''}${fmt(netChange)})</span></span>`;
+    const netWorthDisplay=`<span style="font-size:13px;font-weight:700;color:${netWorthColor};white-space:nowrap;text-align:right;display:block;">${fmt(netWorth||0)} <span style="font-size:11px;color:${netChgColor};">(${netChange>=0?'+':''}${fmt(netChange)})</span></span>`;
     const detailHtml=isOpen?`<div class="ana2-closed-detail" style="margin-top:0;border-top:none;border-radius:0 0 14px 14px;border:1.5px solid #A29BFE44;border-top:none;">
       <div class="ana2-closed-kpi-grid">
         <div class="ana2-kpi-box" style="border-color:#4CAF8244;"><div class="ana2-kpi-label">총 수입</div><div class="ana2-kpi-val" style="color:#4CAF82;">${fmt(income||0)}</div></div>
@@ -7360,7 +7360,7 @@ function renderArchive(){
       </div>
     </div>`:'' ;
     return`<div style="margin-bottom:8px;">
-      <div onclick="App._toggleArchiveRow('${key}')" style="display:grid;grid-template-columns:90px 115px 115px 115px 58px minmax(160px,1fr) 26px;gap:6px;align-items:center;padding:14px 16px;background:white;border-radius:${isOpen?'14px 14px 0 0':'14px'};border:1.5px solid ${isOpen?'#A29BFE':'var(--border)'};cursor:pointer;box-shadow:0 1px 8px rgba(160,140,220,.07);">
+      <div onclick="App._toggleArchiveRow('${key}')" style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr 1fr 26px;gap:6px;align-items:center;padding:14px 16px;background:white;border-radius:${isOpen?'14px 14px 0 0':'14px'};border:1.5px solid ${isOpen?'#A29BFE':'var(--border)'};cursor:pointer;box-shadow:0 1px 8px rgba(160,140,220,.07);">
         <span style="font-size:14px;font-weight:800;">${y}년 ${mo}월</span>
         <span style="font-size:13px;font-weight:700;color:#4CAF82;">${fmt(income||0)}</span>
         <span style="font-size:13px;font-weight:700;color:#F06292;">${fmt(expense||0)}</span>
