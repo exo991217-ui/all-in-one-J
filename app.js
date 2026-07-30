@@ -1539,8 +1539,8 @@ function renderDashDonut(y,m){
     legEl.innerHTML='<div style="color:var(--text-sub);font-size:12px;padding:8px 0;">항목 없음</div>';
     return;
   }
-  // 5% 기준: 미만은 기타로 합산
-  const THRESHOLD=0.05;
+  // 3.5% 기준: 미만은 기타로 합산
+  const THRESHOLD=0.035;
   const mainEntries=sorted.filter(([,v])=>v/total>=THRESHOLD);
   const otherEntries=sorted.filter(([,v])=>v/total<THRESHOLD);
   const otherTotal=otherEntries.reduce((s,[,v])=>s+v,0);
@@ -2390,7 +2390,30 @@ async function tryFetchPrice(yahooUrl,isKorean){
   return null;
 }
 
+let _stockSyncStopped = false;
+
+function toggleStockSyncStop(){
+  _stockSyncStopped=!_stockSyncStopped;
+  const stopBtn=document.getElementById('asset-stock-stop-btn');
+  if(stopBtn){
+    stopBtn.textContent=_stockSyncStopped?'▶ 동기화 재개':'⏹ 동기화 정지';
+    stopBtn.style.background=_stockSyncStopped?'#E8F5EE':'#FFF0F0';
+    stopBtn.style.color=_stockSyncStopped?'var(--green)':'var(--red)';
+    stopBtn.style.borderColor=_stockSyncStopped?'var(--green)':'var(--red)';
+  }
+  const status=document.getElementById('asset-stock-refresh-status');
+  if(status){
+    if(_stockSyncStopped){status.textContent='⏹ 자동 동기화가 정지되었습니다';status.style.color='var(--red)';}
+    else{status.textContent='';status.style.color='';}
+  }
+}
+
 async function fetchStockPrices(){
+  if(_stockSyncStopped){
+    const status=document.getElementById('asset-stock-refresh-status');
+    if(status){status.textContent='⏹ 동기화 정지 상태입니다. 재개 버튼을 눌러주세요.';status.style.color='var(--red)';}
+    return;
+  }
   const btn=document.getElementById('asset-stock-refresh-btn');
   const status=document.getElementById('asset-stock-refresh-status');
   if(!btn)return;
@@ -2398,6 +2421,7 @@ async function fetchStockPrices(){
   if(status)status.textContent='현재가를 가져오는 중...';
   let updated=0,failed=[];
   for(const st of S.stocks){
+    if(_stockSyncStopped)break; // 정지 버튼 눌리면 중단
     // Only auto-refresh domestic stocks; foreign/gold are manual
     if(st.stockType==='foreign'||st.stockType==='gold'){continue;}
     try{
@@ -2417,9 +2441,9 @@ async function fetchStockPrices(){
   btn.classList.remove('loading');btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg> 현재가 새로고침';
   const now=new Date().toLocaleTimeString('ko-KR');
   if(status){
-    if(updated>0)status.textContent=`${now} — ${updated}개 업데이트${failed.length>0?' | 실패: '+failed.join(', '):''}`;
-    else status.textContent=`${now} — 새로고침 실패 (장 마감 또는 네트워크 오류)`;
-    status.style.color=failed.length>0?'var(--red)':'var(--green)';
+    if(_stockSyncStopped){status.textContent='⏹ 동기화가 정지 상태에서 중단되었습니다';status.style.color='var(--red)';}
+    else if(updated>0){status.textContent=`${now} — ${updated}개 업데이트${failed.length>0?' | 실패: '+failed.join(', '):''}`;status.style.color=failed.length>0?'var(--red)':'var(--green)';}
+    else{status.textContent=`${now} — 새로고침 실패 (장 마감 또는 네트워크 오류)`;status.style.color='var(--red)';}
   }
   document.querySelectorAll('.stock-price-input').forEach(el=>{
     el.classList.add('refreshed');setTimeout(()=>el.classList.remove('refreshed'),2000);
@@ -2577,13 +2601,8 @@ function renderWeeklySpend(){
     e.type==='expense'&&
     !(e.category||'').includes('공과금')
   );
-  // 활성 자동화 (신용카드 자동화 포함) 금액도 합산
-  const activeAutos=(S.automations||[]).filter(a=>{
-    if(!a.active||a.type!=='expense')return false;
-    const startY=a.startYear||cm.y;const startM=a.startMonth||1;
-    return !(cm.y<startY||(cm.y===startY&&cm.m<startM));
-  });
-  const hasAny=ledgerEntries.length>0||activeAutos.length>0;
+  // 가계부 내역만 집계 (자동결제 제외)
+  const hasAny=ledgerEntries.length>0;
   if(!hasAny){
     container.innerHTML='<div class="weekly-spend-empty">이번 달 소비 내역이 없어요<br><span style="font-size:12px;color:var(--text-sub);">가계부에 지출을 입력하면 여기에 자동 표시됩니다</span></div>';
     return;
@@ -2594,13 +2613,6 @@ function renderWeeklySpend(){
     const d=parseInt((e.date||'').split('-')[2])||1;
     const wn=Math.ceil(d/7);
     weekTotals[wn]=(weekTotals[wn]||0)+e.amount;
-  });
-  // 자동화 항목도 billingDay 기준으로 주차별 합산
-  activeAutos.forEach(a=>{
-    const d=parseInt(a.billingDay)||1;
-    const safeD=Math.min(d,daysInMonth);
-    const wn=Math.ceil(safeD/7);
-    weekTotals[wn]=(weekTotals[wn]||0)+(Number(a.amount)||0);
   });
   const total=Object.values(weekTotals).reduce((s,v)=>s+v,0);
   const maxWeek=Math.max(...Object.values(weekTotals),1);
@@ -2712,14 +2724,12 @@ function _renderTripBarsForWeek(trips, y, m, rowCells) {
 }
 // ===== 여행 일정 캘린더 바 헬퍼 끝 =====
 
-// 날짜별 소비 금액 계산 (가계부 지출 + 자동화) — renderFood 외부에서도 사용 가능
+// 날짜별 소비 금액 계산 (가계부 지출만 — 자동결제 금액 제외) — renderFood 외부에서도 사용 가능
 function _getDaySpendAmount(d, ledgerEntries, activeAutos){
-  const ledgerAmt=ledgerEntries.filter(e=>{
+  return ledgerEntries.filter(e=>{
     const ed=parseInt((e.date||'').split('-')[2])||0;
     return ed===d;
   }).reduce((s,e)=>s+(e.amount||0),0);
-  const autoAmt=activeAutos.filter(a=>(parseInt(a.billingDay)||1)===d).reduce((s,a)=>s+(Number(a.amount)||0),0);
-  return ledgerAmt+autoAmt;
 }
 
 function renderFood(){
@@ -2789,8 +2799,8 @@ function renderFood(){
 
     // 식비 캘린더 주합계
     const foodWeekTotal=rowDays.reduce((s,d)=>s+(Number((days[d]||{}).amount)||0),0);
-    // 소비 주합계 (가계부 + 자동화)
-    const ledgerWeekTotal=rowDays.reduce((s,d)=>s+_getDaySpendAmount(d,ledgerEntries,activeAutos),0);
+    // 소비 주합계 (가계부만)
+    const ledgerWeekTotal=rowDays.reduce((s,d)=>s+_getDaySpendAmount(d,ledgerEntries,null),0);
 
     const rowHTML=rowCells.map(cell=>{
       if(cell.type==='empty')return '<div class="food-day empty"></div>';
@@ -2803,7 +2813,7 @@ function renderFood(){
       const satStyle=!isToday&&dow===6?'color:var(--blue);':'';
 
       if(spendMode){
-        const daySpend=_getDaySpendAmount(d,ledgerEntries,activeAutos);
+        const daySpend=_getDaySpendAmount(d,ledgerEntries,null);
         const ls=_getAmountLegendStyle(daySpend,ft);
         // 오늘: 배경 없음(외곽선만), 나머지: 금액 tier 배경
         const cellBg=isToday?'var(--card-bg)':(ls.bg||'var(--card-bg)');
@@ -2856,7 +2866,7 @@ function renderFood(){
   const spendBanner=spendMode
     ?`<div class="cal-spend-mode-banner" style="background:linear-gradient(135deg,${ft.t1}18,${ft.t2}22);border-bottom:2px solid ${ft.t1}44;color:${ft.t1};">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        소비 금액 보기 모드 — 날짜별 지출액(가계부+자동화)이 표시됩니다
+        소비 금액 보기 모드 — 날짜별 지출액(가계부 내역)이 표시됩니다
       </div>`
     :'';
 
@@ -4827,15 +4837,16 @@ function closeMonth(){
   const budIn=getTotalIncome(cm.y,cm.m);
   const budOut=getTotalFixed(cm.y,cm.m)+getTotalVariable(cm.y,cm.m)+getFoodTotal(cm.y,cm.m);
   const savings=getTotalSavings(cm.y,cm.m);
-  const sr=budIn>0?(savings/budIn*100).toFixed(1):0;
+  const sr=budIn>0?parseFloat((savings/budIn*100).toFixed(1)):0;
   const note=document.getElementById('cm-note').value;
   const ledIn=entries.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
   const ledOut=entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const netWorth=getTotalAssets()+getTotalStockValue();
   const snapshot={
     closedAt:Date.now(),note,
     year:cm.y,month:cm.m,
     ledgerIncome:ledIn,ledgerExpense:ledOut,
-    budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr,
+    budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr,netWorth,
     categories:(()=>{
       const effectiveVars=getEffectiveVariable(cm.y,cm.m);
       const catMap={};
@@ -4851,7 +4862,7 @@ function closeMonth(){
     })(),
     ledgerEntries:entries.map(e=>({...e})),
   };
-  S.closedMonths[key]={closedAt:snapshot.closedAt,note,ledgerIncome:ledIn,ledgerExpense:ledOut,budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr};
+  S.closedMonths[key]={closedAt:snapshot.closedAt,note,ledgerIncome:ledIn,ledgerExpense:ledOut,budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr,netWorth};
   S.monthClosedArchive[key]=snapshot;
   saveState();closeModal();renderLedger();
 }
@@ -4878,13 +4889,14 @@ function closeMonthDirect(y,m){
   const budIn=getTotalIncome(y,m);
   const budOut=getTotalFixed(y,m)+getTotalVariable(y,m)+getFoodTotal(y,m);
   const savings=getTotalSavings(y,m);
-  const sr=budIn>0?(savings/budIn*100).toFixed(1):0;
+  const sr=budIn>0?parseFloat((savings/budIn*100).toFixed(1)):0;
   const ledIn=entries.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0);
   const ledOut=entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const netWorth=getTotalAssets()+getTotalStockValue();
   const snapshot={
     closedAt:Date.now(),note,year:y,month:m,
     ledgerIncome:ledIn,ledgerExpense:ledOut,
-    budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr,
+    budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr,netWorth,
     categories:(()=>{
       const effectiveVars=getEffectiveVariable(y,m);
       const catMap={};
@@ -4896,7 +4908,7 @@ function closeMonthDirect(y,m){
     })(),
     ledgerEntries:entries.map(e=>({...e})),
   };
-  S.closedMonths[key]={closedAt:snapshot.closedAt,note,ledgerIncome:ledIn,ledgerExpense:ledOut,budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr};
+  S.closedMonths[key]={closedAt:snapshot.closedAt,note,ledgerIncome:ledIn,ledgerExpense:ledOut,budgetIncome:budIn,budgetExpense:budOut,savings,savingsRate:sr,netWorth};
   S.monthClosedArchive[key]=snapshot;
   saveState();
   renderAnalysis();
@@ -7280,7 +7292,8 @@ function renderArchive(){
   const totIncome=archived.reduce((s,[,d])=>s+(d.ledgerIncome||0),0);
   const totExpense=archived.reduce((s,[,d])=>s+(d.ledgerExpense||0),0);
   const totSavings=archived.reduce((s,[,d])=>s+(d.savings||0),0);
-  const avgRate=archived.length>0?Math.round(archived.reduce((s,[,d])=>s+(d.savingsRate||0),0)/archived.length):0;
+  // NaN 방지: savingsRate는 문자열 또는 숫자로 저장될 수 있으므로 parseFloat 처리
+  const avgRate=archived.length>0?parseFloat((archived.reduce((s,[,d])=>s+(parseFloat(d.savingsRate)||0),0)/archived.length).toFixed(1)):0;
   const totNetChange=totIncome-totExpense;
   const netPct=totIncome>0?(totNetChange/totIncome*100).toFixed(1):0;
   const netColor=totNetChange>=0?'#4CAF82':'#F06292';
@@ -7299,15 +7312,16 @@ function renderArchive(){
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
     ${card('총 저축 누계',fmt(totSavings),'#5E4BC4','')}
     ${card('평균 저축률',avgRate+'%',avgRate>=30?'#4CAF82':'#FFB347','')}
-    ${card('순 자산 증감 누계',netVal,netColor,'')}
+    ${card('순 자산(순 자산 증감 누계)',netVal,netColor,'')}
   </div>`;
-  const headerRow=`<div style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 70px 90px 28px;gap:8px;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">
-    <span>월</span><span>수입</span><span>지출</span><span>저축액</span><span style="text-align:center;">저축률</span><span style="text-align:right;">순자산 증감</span><span></span>
+  const headerRow=`<div style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 70px 110px 28px;gap:8px;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">
+    <span>월</span><span>수입</span><span>지출</span><span>저축액</span><span style="text-align:center;">저축률</span><span style="text-align:right;">순자산(증감)</span><span></span>
   </div>`;
   const rowsHtml=archived.map(([key,data])=>{
-    const{year:y,month:mo,ledgerIncome:income,ledgerExpense:expense,savings,savingsRate,note,categories}=data;
+    const{year:y,month:mo,ledgerIncome:income,ledgerExpense:expense,savings,savingsRate,note,categories,netWorth}=data;
     const isOpen=(_archExpandedKey===key);
-    const rateColor=(savingsRate||0)>=50?'#4CAF82':(savingsRate||0)>=30?'#FFB347':'#F06292';
+    const srNum=parseFloat(savingsRate)||0;
+    const rateColor=srNum>=50?'#4CAF82':srNum>=30?'#FFB347':'#F06292';
     const{natureMap,totalIncome:closedIncome}=getMonthAnalysisData(y,mo);
     // ★ 수입 기준: 마감 시점에 기록된 예산수입(budgetIncome) 우선 사용 → 재무성격 % 왜곡 방지
     // ?? 사용: budgetIncome=0인 경우도 올바르게 처리 (|| 는 0을 falsy로 취급)
@@ -7319,12 +7333,22 @@ function renderArchive(){
     const catRows=cats.map(c=>`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span style="font-weight:600;">${c.name}</span><span style="font-weight:700;">${fmt(c.amount)}</span></div><div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.min(100,c.amount/(maxCat||1)*100)}%;background:linear-gradient(90deg,#A29BFE,#74B9FF);border-radius:3px;"></div></div></div>`).join('');
     const natCards=ANA_NATURES.map(n=>{const amt=natureMap[n.key]||0;const pct=incomeBase>0?Math.round(amt/incomeBase*100):0;return`<div class="ana2-closed-nature-card" style="background:${n.light};border:1.5px solid ${n.color}22;"><div style="font-size:10px;color:var(--text-sub);">${n.label}</div><div style="font-size:15px;font-weight:900;color:${n.color};">${pct}%</div><div style="font-size:10px;color:var(--text-sub);">${fmt(amt)}</div></div>`;}).join('');
     const scoreHtml=_buildScoreBox(score,grade,scoreColor,feedback,prevScore);
+    // 순자산: 마감 시 저장된 값 우선, 없으면 수입-지출로 대체
+    const netChange=(income||0)-(expense||0);
+    const netChgColor=netChange>=0?'#4CAF82':'#F06292';
+    const netChgStr=(netChange>=0?'+':'')+fmt(Math.abs(netChange));
+    const hasNetWorth=netWorth!==undefined&&netWorth!==null;
+    const netWorthColor=(netWorth||0)>=0?'#4CAF82':'#F06292';
+    const netWorthDisplay=hasNetWorth
+      ?`<span style="font-size:11px;display:block;font-weight:700;color:${netWorthColor};">${fmt(netWorth)}</span><span style="font-size:10px;color:${netChgColor};">(${netChange>=0?'+':''}${fmt(netChange)})</span>`
+      :`<span style="font-size:13px;font-weight:900;color:${netChgColor};">${(netChange>=0?'+':'')+fmt(netChange)}</span>`;
     const detailHtml=isOpen?`<div class="ana2-closed-detail" style="margin-top:0;border-top:none;border-radius:0 0 14px 14px;border:1.5px solid #A29BFE44;border-top:none;">
       <div class="ana2-closed-kpi-grid">
         <div class="ana2-kpi-box" style="border-color:#4CAF8244;"><div class="ana2-kpi-label">총 수입</div><div class="ana2-kpi-val" style="color:#4CAF82;">${fmt(income||0)}</div></div>
         <div class="ana2-kpi-box" style="border-color:#F0629244;"><div class="ana2-kpi-label">총 지출</div><div class="ana2-kpi-val" style="color:#F06292;">${fmt(expense||0)}</div></div>
         <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축액</div><div class="ana2-kpi-val" style="color:#A29BFE;">${fmt(savings||0)}</div></div>
-        <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축률</div><div class="ana2-kpi-val" style="color:#A29BFE;">${savingsRate||0}%</div></div>
+        <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축률</div><div class="ana2-kpi-val" style="color:#A29BFE;">${srNum}%</div></div>
+        ${hasNetWorth?`<div class="ana2-kpi-box" style="border-color:#4DB6AC44;"><div class="ana2-kpi-label">마감 시 순자산</div><div class="ana2-kpi-val" style="color:#4DB6AC;">${fmt(netWorth)}</div></div>`:''}
       </div>
       ${scoreHtml}
       <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">재무 성격 요약</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">${natCards}</div></div>
@@ -7337,17 +7361,14 @@ function renderArchive(){
         ${note?`<div style="background:white;border-radius:10px;border:1.5px solid var(--border);padding:10px 12px;font-size:13px;color:var(--text-main);">${note}</div>`:'<div style="color:var(--text-sub);font-size:12px;">소감 없음</div>'}
       </div>
     </div>`:'' ;
-    const netChange=(income||0)-(expense||0);
-    const netChgColor=netChange>=0?'#4CAF82':'#F06292';
-    const netChgStr=(netChange>=0?'+':'')+fmt(netChange);
     return`<div style="margin-bottom:8px;">
-      <div onclick="App._toggleArchiveRow('${key}')" style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 70px 90px 28px;gap:8px;align-items:center;padding:14px 16px;background:white;border-radius:${isOpen?'14px 14px 0 0':'14px'};border:1.5px solid ${isOpen?'#A29BFE':'var(--border)'};cursor:pointer;box-shadow:0 1px 8px rgba(160,140,220,.07);">
+      <div onclick="App._toggleArchiveRow('${key}')" style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 70px 110px 28px;gap:8px;align-items:center;padding:14px 16px;background:white;border-radius:${isOpen?'14px 14px 0 0':'14px'};border:1.5px solid ${isOpen?'#A29BFE':'var(--border)'};cursor:pointer;box-shadow:0 1px 8px rgba(160,140,220,.07);">
         <span style="font-size:14px;font-weight:800;">${y}년 ${mo}월</span>
         <span style="font-size:13px;font-weight:700;color:#4CAF82;">${fmt(income||0)}</span>
         <span style="font-size:13px;font-weight:700;color:#F06292;">${fmt(expense||0)}</span>
         <span style="font-size:13px;font-weight:700;color:#5E4BC4;">${fmt(savings||0)}</span>
-        <span style="text-align:center;font-size:14px;font-weight:900;color:${rateColor};">${savingsRate||0}%</span>
-        <span style="text-align:right;font-size:13px;font-weight:900;color:${netChgColor};">${netChgStr}</span>
+        <span style="text-align:center;font-size:14px;font-weight:900;color:${rateColor};">${srNum}%</span>
+        <span style="text-align:right;">${netWorthDisplay}</span>
         <span style="text-align:center;font-size:14px;color:var(--text-sub);transition:transform .18s;display:inline-block;transform:${isOpen?'rotate(90deg)':'rotate(0)'};">›</span>
       </div>
       ${detailHtml}
@@ -7653,7 +7674,7 @@ window.App={
   _toggleCatDetail,
   renderAnalysis,changeAnalysisMode,changeAnalysisMonth,_toggleAnaMonth,_toggleClosedMonth,_toggleAnalysisMenu,_openNatureSettings,_setNature,calcConsumeScore,
   _selectNatureKey,_nsPickIcon,_nsToggleCat,openTagMgmtModal,_tagMgmtRender,_addSub,_deleteSub,_deleteSubThisMonth,_deleteSubPermanent,_updateSubName,_updateSubAmount,_openTagSuggest,_applyTagSuggest,_applyTagSuggestPopup,deleteMonthAnalysisData,_openNatureDetail,_closeNatureDetail,closeMonthDirect,reopenMonthDirect,
-  fetchStockPrices,
+  fetchStockPrices,toggleStockSyncStop,
   downloadMonthlyReport,
   showVarPreview,goToLedger,
   _toggleLedgerFilterDropdown(){
