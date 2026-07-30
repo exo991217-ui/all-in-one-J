@@ -3192,14 +3192,12 @@ function renderFoodPanel(d){
     const dateStr=`${cm.y}-${String(cm.m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dayEntries=ledgerEntries.filter(e=>e.date===dateStr);
     const dayAutos=activeAutos.filter(a=>(a.billingDay||1)===d);
-    const total=dayEntries.reduce((s,e)=>s+(Number(e.amount)||0),0)
-      +dayAutos.reduce((s,a)=>s+(Number(a.amount)||0),0);
+    const total=dayEntries.reduce((s,e)=>s+(Number(e.amount)||0),0);
     const cats=S.ledgerCategories||[];
     const getCat=name=>cats.find(c=>c.name===name)||{strip:'#A29BFE',bg:'#F0EBFF',color:'#6C5CE7'};
     const autoRows=dayAutos.map(a=>`
       <div class="food-spend-row food-spend-auto">
         <div class="food-spend-row-left"><span class="food-spend-auto-badge">자동</span><span class="food-spend-memo">💸 ${a.memo||a.name||'자동화'}</span></div>
-        <div class="food-spend-amt">₩${(Number(a.amount)||0).toLocaleString('ko-KR')}</div>
       </div>`).join('');
     const entryRows=dayEntries.map(e=>{
       const cc=getCat(e.category);
