@@ -7314,7 +7314,7 @@ function renderArchive(){
     ${card('평균 저축률',avgRate+'%',avgRate>=30?'#4CAF82':'#FFB347','')}
     ${card('순 자산(순 자산 증감 누계)',netVal,netColor,'')}
   </div>`;
-  const headerRow=`<div style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 70px 110px 28px;gap:8px;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">
+  const headerRow=`<div style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 56px 160px 28px;gap:8px;padding:8px 16px;font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">
     <span>월</span><span>수입</span><span>지출</span><span>저축액</span><span style="text-align:center;">저축률</span><span style="text-align:right;">순자산(증감)</span><span></span>
   </div>`;
   const rowsHtml=archived.map(([key,data])=>{
@@ -7333,22 +7333,17 @@ function renderArchive(){
     const catRows=cats.map(c=>`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span style="font-weight:600;">${c.name}</span><span style="font-weight:700;">${fmt(c.amount)}</span></div><div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.min(100,c.amount/(maxCat||1)*100)}%;background:linear-gradient(90deg,#A29BFE,#74B9FF);border-radius:3px;"></div></div></div>`).join('');
     const natCards=ANA_NATURES.map(n=>{const amt=natureMap[n.key]||0;const pct=incomeBase>0?Math.round(amt/incomeBase*100):0;return`<div class="ana2-closed-nature-card" style="background:${n.light};border:1.5px solid ${n.color}22;"><div style="font-size:10px;color:var(--text-sub);">${n.label}</div><div style="font-size:15px;font-weight:900;color:${n.color};">${pct}%</div><div style="font-size:10px;color:var(--text-sub);">${fmt(amt)}</div></div>`;}).join('');
     const scoreHtml=_buildScoreBox(score,grade,scoreColor,feedback,prevScore);
-    // 순자산: 마감 시 저장된 값 우선, 없으면 수입-지출로 대체
     const netChange=(income||0)-(expense||0);
     const netChgColor=netChange>=0?'#4CAF82':'#F06292';
-    const netChgStr=(netChange>=0?'+':'')+fmt(Math.abs(netChange));
-    const hasNetWorth=netWorth!==undefined&&netWorth!==null;
     const netWorthColor=(netWorth||0)>=0?'#4CAF82':'#F06292';
-    const netWorthDisplay=hasNetWorth
-      ?`<span style="font-size:11px;display:block;font-weight:700;color:${netWorthColor};">${fmt(netWorth)}</span><span style="font-size:10px;color:${netChgColor};">(${netChange>=0?'+':''}${fmt(netChange)})</span>`
-      :`<span style="font-size:13px;font-weight:900;color:${netChgColor};">${(netChange>=0?'+':'')+fmt(netChange)}</span>`;
+    const netWorthDisplay=`<span style="font-size:11px;display:block;font-weight:700;color:${netWorthColor};">${fmt(netWorth||0)}</span><span style="font-size:10px;color:${netChgColor};">(${netChange>=0?'+':''}${fmt(netChange)})</span>`;
     const detailHtml=isOpen?`<div class="ana2-closed-detail" style="margin-top:0;border-top:none;border-radius:0 0 14px 14px;border:1.5px solid #A29BFE44;border-top:none;">
       <div class="ana2-closed-kpi-grid">
         <div class="ana2-kpi-box" style="border-color:#4CAF8244;"><div class="ana2-kpi-label">총 수입</div><div class="ana2-kpi-val" style="color:#4CAF82;">${fmt(income||0)}</div></div>
         <div class="ana2-kpi-box" style="border-color:#F0629244;"><div class="ana2-kpi-label">총 지출</div><div class="ana2-kpi-val" style="color:#F06292;">${fmt(expense||0)}</div></div>
         <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축액</div><div class="ana2-kpi-val" style="color:#A29BFE;">${fmt(savings||0)}</div></div>
         <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축률</div><div class="ana2-kpi-val" style="color:#A29BFE;">${srNum}%</div></div>
-        ${hasNetWorth?`<div class="ana2-kpi-box" style="border-color:#4DB6AC44;"><div class="ana2-kpi-label">마감 시 순자산</div><div class="ana2-kpi-val" style="color:#4DB6AC;">${fmt(netWorth)}</div></div>`:''}
+        <div class="ana2-kpi-box" style="border-color:#4DB6AC44;"><div class="ana2-kpi-label">마감 시 순자산</div><div class="ana2-kpi-val" style="color:#4DB6AC;">${fmt(netWorth||0)}</div></div>
       </div>
       ${scoreHtml}
       <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">재무 성격 요약</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">${natCards}</div></div>
@@ -7362,7 +7357,7 @@ function renderArchive(){
       </div>
     </div>`:'' ;
     return`<div style="margin-bottom:8px;">
-      <div onclick="App._toggleArchiveRow('${key}')" style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 70px 110px 28px;gap:8px;align-items:center;padding:14px 16px;background:white;border-radius:${isOpen?'14px 14px 0 0':'14px'};border:1.5px solid ${isOpen?'#A29BFE':'var(--border)'};cursor:pointer;box-shadow:0 1px 8px rgba(160,140,220,.07);">
+      <div onclick="App._toggleArchiveRow('${key}')" style="display:grid;grid-template-columns:100px 1fr 1fr 1fr 56px 160px 28px;gap:8px;align-items:center;padding:14px 16px;background:white;border-radius:${isOpen?'14px 14px 0 0':'14px'};border:1.5px solid ${isOpen?'#A29BFE':'var(--border)'};cursor:pointer;box-shadow:0 1px 8px rgba(160,140,220,.07);">
         <span style="font-size:14px;font-weight:800;">${y}년 ${mo}월</span>
         <span style="font-size:13px;font-weight:700;color:#4CAF82;">${fmt(income||0)}</span>
         <span style="font-size:13px;font-weight:700;color:#F06292;">${fmt(expense||0)}</span>
