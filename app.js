@@ -7317,17 +7317,12 @@ function renderArchive(){
     ${card('평균 저축률',avgRate+'%',avgRate>=30?'#4CAF82':'#FFB347','')}
     ${card(`최근 마감 월 순자산 (${lastNetWorthY}년 ${lastNetWorthM}월)`,fmt(lastNetWorth),lastNetWorthColor,'')}
   </div>`;
-  const headerRow=`<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr 1fr 26px;gap:6px;padding:8px 14.5px;font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;border:1.5px solid transparent;">
-    <span>월</span><span>수입</span><span>지출</span><span>저축액</span><span>저축률</span><span style="text-align:right;">순자산 (증감)</span><span></span>
-  </div>`;
   const rowsHtml=archived.map(([key,data])=>{
     const{year:y,month:mo,ledgerIncome:income,ledgerExpense:expense,savings,savingsRate,note,categories,netWorth}=data;
     const isOpen=(_archExpandedKey===key);
     const srNum=parseFloat(savingsRate)||0;
     const rateColor=srNum>=50?'#4CAF82':srNum>=30?'#FFB347':'#F06292';
     const{natureMap,totalIncome:closedIncome}=getMonthAnalysisData(y,mo);
-    // ★ 수입 기준: 마감 시점에 기록된 예산수입(budgetIncome) 우선 사용 → 재무성격 % 왜곡 방지
-    // ?? 사용: budgetIncome=0인 경우도 올바르게 처리 (|| 는 0을 falsy로 취급)
     const incomeBase=(data.budgetIncome??income??closedIncome)??0;
     const{score,grade,color:scoreColor,feedback}=calcConsumeScore(natureMap,incomeBase);
     const prevScore=_getPrevScore(y,mo);
@@ -7339,38 +7334,41 @@ function renderArchive(){
     const netChange=(income||0)-(expense||0);
     const netChgColor=netChange>=0?'#4CAF82':'#F06292';
     const netWorthColor=(netWorth||0)>=0?'#4CAF82':'#F06292';
-    const netWorthDisplay=`<span style="font-size:13px;font-weight:700;color:${netWorthColor};white-space:nowrap;text-align:right;display:block;">${fmt(netWorth||0)} <span style="font-size:11px;color:${netChgColor};">(${netChange>=0?'+':''}${fmt(netChange)})</span></span>`;
-    const detailHtml=isOpen?`<div class="ana2-closed-detail" style="margin-top:0;border-top:none;border-radius:0 0 14px 14px;border:1.5px solid #A29BFE44;border-top:none;">
-      <div class="ana2-closed-kpi-grid">
-        <div class="ana2-kpi-box" style="border-color:#4CAF8244;"><div class="ana2-kpi-label">총 수입</div><div class="ana2-kpi-val" style="color:#4CAF82;">${fmt(income||0)}</div></div>
-        <div class="ana2-kpi-box" style="border-color:#F0629244;"><div class="ana2-kpi-label">총 지출</div><div class="ana2-kpi-val" style="color:#F06292;">${fmt(expense||0)}</div></div>
-        <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축액</div><div class="ana2-kpi-val" style="color:#A29BFE;">${fmt(savings||0)}</div></div>
-        <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축률</div><div class="ana2-kpi-val" style="color:#A29BFE;">${srNum}%</div></div>
-        <div class="ana2-kpi-box" style="border-color:#4DB6AC44;"><div class="ana2-kpi-label">마감 시 순자산</div><div class="ana2-kpi-val" style="color:#4DB6AC;">${fmt(netWorth||0)}</div></div>
-      </div>
-      ${scoreHtml}
-      <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">재무 성격 요약</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">${natCards}</div></div>
-      <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">카테고리별 지출</div>${catRows||'<div style="color:var(--text-sub);font-size:12px;">기록 없음</div>'}</div>
-      <div style="margin-bottom:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <div style="font-size:12px;font-weight:700;color:var(--text-sub);">이번 달 소감</div>
-          <button onclick="App.deleteArchiveEntry('${key}')" style="font-size:11px;color:#F06292;background:#FFF0F5;border:1.5px solid #F0629244;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:600;">🗑 이 마감 삭제</button>
+    const netWorthDisplay=`<span style="font-weight:700;color:${netWorthColor};white-space:nowrap;">${fmt(netWorth||0)}</span> <span style="font-size:11px;color:${netChgColor};white-space:nowrap;">(${netChange>=0?'+':''}${fmt(netChange)})</span>`;
+    const detailHtml=isOpen?`<tr><td colspan="7" style="padding:0;border-top:none;">
+      <div class="ana2-closed-detail" style="margin:0;border-radius:0 0 12px 12px;border:1.5px solid #A29BFE44;border-top:none;background:#FDFCFF;">
+        <div class="ana2-closed-kpi-grid">
+          <div class="ana2-kpi-box" style="border-color:#4CAF8244;"><div class="ana2-kpi-label">총 수입</div><div class="ana2-kpi-val" style="color:#4CAF82;">${fmt(income||0)}</div></div>
+          <div class="ana2-kpi-box" style="border-color:#F0629244;"><div class="ana2-kpi-label">총 지출</div><div class="ana2-kpi-val" style="color:#F06292;">${fmt(expense||0)}</div></div>
+          <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축액</div><div class="ana2-kpi-val" style="color:#A29BFE;">${fmt(savings||0)}</div></div>
+          <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축률</div><div class="ana2-kpi-val" style="color:#A29BFE;">${srNum}%</div></div>
+          <div class="ana2-kpi-box" style="border-color:#4DB6AC44;"><div class="ana2-kpi-label">마감 시 순자산</div><div class="ana2-kpi-val" style="color:#4DB6AC;">${fmt(netWorth||0)}</div></div>
         </div>
-        ${note?`<div style="background:white;border-radius:10px;border:1.5px solid var(--border);padding:10px 12px;font-size:13px;color:var(--text-main);">${note}</div>`:'<div style="color:var(--text-sub);font-size:12px;">소감 없음</div>'}
+        ${scoreHtml}
+        <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">재무 성격 요약</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">${natCards}</div></div>
+        <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">카테고리별 지출</div>${catRows||'<div style="color:var(--text-sub);font-size:12px;">기록 없음</div>'}</div>
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text-sub);">이번 달 소감</div>
+            <button onclick="App.deleteArchiveEntry('${key}')" style="font-size:11px;color:#F06292;background:#FFF0F5;border:1.5px solid #F0629244;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:600;">🗑 이 마감 삭제</button>
+          </div>
+          ${note?`<div style="background:white;border-radius:10px;border:1.5px solid var(--border);padding:10px 12px;font-size:13px;color:var(--text-main);">${note}</div>`:'<div style="color:var(--text-sub);font-size:12px;">소감 없음</div>'}
+        </div>
       </div>
-    </div>`:'' ;
-    return`<div style="margin-bottom:8px;">
-      <div onclick="App._toggleArchiveRow('${key}')" style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr 1fr 26px;gap:6px;align-items:center;padding:14px 16px;background:white;border-radius:${isOpen?'14px 14px 0 0':'14px'};border:1.5px solid ${isOpen?'#A29BFE':'var(--border)'};cursor:pointer;box-shadow:0 1px 8px rgba(160,140,220,.07);">
-        <span style="font-size:14px;font-weight:800;">${y}년 ${mo}월</span>
-        <span style="font-size:13px;font-weight:700;color:#4CAF82;">${fmt(income||0)}</span>
-        <span style="font-size:13px;font-weight:700;color:#F06292;">${fmt(expense||0)}</span>
-        <span style="font-size:13px;font-weight:700;color:#5E4BC4;">${fmt(savings||0)}</span>
-        <span style="text-align:center;font-size:14px;font-weight:900;color:${rateColor};">${srNum}%</span>
-        <span style="text-align:right;">${netWorthDisplay}</span>
-        <span style="text-align:center;font-size:14px;color:var(--text-sub);transition:transform .18s;display:inline-block;transform:${isOpen?'rotate(90deg)':'rotate(0)'};">›</span>
-      </div>
-      ${detailHtml}
-    </div>`;
+    </td></tr>`:'' ;
+    return`
+      <tr onclick="App._toggleArchiveRow('${key}')" style="cursor:pointer;background:white;border-bottom:1px solid var(--border);" onmouseover="this.style.background='#F8F6FF'" onmouseout="this.style.background='white'">
+        <td style="padding:14px 16px;font-size:14px;font-weight:800;white-space:nowrap;">${y}년 ${mo}월</td>
+        <td style="padding:14px 12px;font-size:13px;font-weight:700;color:#4CAF82;">${fmt(income||0)}</td>
+        <td style="padding:14px 12px;font-size:13px;font-weight:700;color:#F06292;">${fmt(expense||0)}</td>
+        <td style="padding:14px 12px;font-size:13px;font-weight:700;color:#5E4BC4;">${fmt(savings||0)}</td>
+        <td style="padding:14px 12px;font-size:14px;font-weight:900;color:${rateColor};">${srNum}%</td>
+        <td style="padding:14px 12px;text-align:right;">${netWorthDisplay}</td>
+        <td style="padding:14px 8px;text-align:center;font-size:14px;color:var(--text-sub);transition:transform .18s;">
+          <span style="display:inline-block;transform:${isOpen?'rotate(90deg)':'rotate(0)'};transition:transform .18s;">›</span>
+        </td>
+      </tr>
+      ${detailHtml}`;
   }).join('');
   container.innerHTML=`
     <div class="page-header"><div>
@@ -7378,8 +7376,22 @@ function renderArchive(){
       <p class="page-sub">월별 마감 기록을 조회하고 재무 변화를 비교해보세요.</p>
     </div></div>
     ${summaryHtml}
-    ${headerRow}
-    ${rowsHtml}
+    <div style="background:white;border-radius:14px;border:1.5px solid var(--border);overflow:hidden;box-shadow:0 1px 8px rgba(160,140,220,.07);">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:linear-gradient(90deg,#F5F2FF,#EEF4FF);">
+            <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);white-space:nowrap;">월</th>
+            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);">수입</th>
+            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);">지출</th>
+            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);">저축액</th>
+            <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);">저축률</th>
+            <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--text-sub);">순자산 (증감)</th>
+            <th style="width:26px;"></th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>
   `;
 }
 
