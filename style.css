@@ -2458,7 +2458,8 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 div.tp-hover-parent{transition:background .13s,box-shadow .13s;}
 div.tp-hover-parent:hover{background:var(--t-bg,rgba(162,155,254,.09));box-shadow:inset 3px 0 0 0 var(--t2,#A29BFE);border-radius:7px;}
 tr.tp-hover-parent{cursor:pointer;}
-tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!important;}
+tr.tp-hover-parent:hover td{background:#EDE9FF!important;}
+tr.tp-hover-parent:hover td:first-child{border-left:3px solid #A29BFE;padding-left:7px;}
 /* SVG 휴지통 버튼 */
 .tp-trash-svg{display:inline-flex;align-items:center;justify-content:center;color:#b2bec3;transition:color .15s;}
 .tp-trash-btn{opacity:1!important;background:none;border:none;cursor:pointer;padding:3px 4px;display:inline-flex;align-items:center;border-radius:5px;transition:background .15s;}
