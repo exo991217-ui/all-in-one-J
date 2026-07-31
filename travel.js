@@ -812,9 +812,17 @@ function renderBookingSection(trip, type, label) {
         : items.map(b => `
           <div class="tp-booking-item tp-hover-parent" onclick="TravelApp.editBooking('${trip.id}','${type}','${b.id}')" style="cursor:pointer;">
             <div class="tp-booking-info">
-              <div class="tp-booking-name">${b.name || b.route || ''}</div>
-              <div class="tp-booking-sub">${b.date || b.departDate || ''} ${b.time || b.departTime || ''} ${b.code ? '· ' + b.code : ''}</div>
-              ${b.checkin ? `<div class="tp-booking-sub">${b.checkin} ~ ${b.checkout || ''}</div>` : ''}
+              ${type === 'flights' ? `
+                <div class="tp-booking-name">${b.from && b.to ? b.from + ' → ' + b.to : (b.name || b.route || '항공편')}${b.flightNo ? ' <span style="font-size:11px;color:#888;font-weight:500;">(' + b.flightNo + ')</span>' : ''}</div>
+                <div class="tp-booking-sub">${(b.departDate || '') + ' ' + (b.departTime || '')}${b.arrivalDate || b.arrivalTime ? ' → ' + (b.arrivalDate || '') + ' ' + (b.arrivalTime || '') : ''}${b.code ? ' · ' + b.code : ''}</div>
+              ` : type === 'hotels' ? `
+                <div class="tp-booking-name">${b.name || '숙소'}</div>
+                <div class="tp-booking-sub">체크인 ${b.checkin || ''}${b.checkinTime ? ' ' + b.checkinTime : ''}</div>
+                <div class="tp-booking-sub">체크아웃 ${b.checkout || ''}${b.checkoutTime ? ' ' + b.checkoutTime : ''}${b.code ? ' · ' + b.code : ''}</div>
+              ` : `
+                <div class="tp-booking-name">${b.name || b.route || ''}</div>
+                <div class="tp-booking-sub">${b.date || ''} ${b.time || ''}${b.code ? ' · ' + b.code : ''}</div>
+              `}
             </div>
             <div class="tp-item-actions tp-hover-actions" onclick="event.stopPropagation()">
               ${b.link ? renderLinkOrText(b.link) : ''}
