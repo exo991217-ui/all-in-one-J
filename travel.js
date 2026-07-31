@@ -759,10 +759,12 @@ function renderTravelDetail(el, tripId) {
       <div class="tp-section card">
         <div class="tp-schedule-header">
           <div class="tp-section-title" style="margin-bottom:0;">📅 여행 일정</div>
-          <div class="tp-tab-btns">
-            <button class="tp-tab-btn ${_travelDetailTab==='schedule-list'?'active':''}" onclick="TravelApp.setDetailTab('schedule-list','${trip.id}')">목록</button>
-            <button class="tp-tab-btn ${_travelDetailTab==='schedule-timetable'?'active':''}" onclick="TravelApp.setDetailTab('schedule-timetable','${trip.id}')">시간표</button>
-            <button class="tp-tab-btn summary" onclick="TravelApp.downloadSummary('${trip.id}')">🗒️ 여행 요약</button>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="tp-tab-btns">
+              <button class="tp-tab-btn ${_travelDetailTab==='schedule-list'?'active':''}" onclick="TravelApp.setDetailTab('schedule-list','${trip.id}')">목록</button>
+              <button class="tp-tab-btn ${_travelDetailTab==='schedule-timetable'?'active':''}" onclick="TravelApp.setDetailTab('schedule-timetable','${trip.id}')">시간표</button>
+            </div>
+            <button onclick="TravelApp.downloadSummary('${trip.id}')" style="padding:6px 13px;border:1.5px solid var(--orange);border-radius:20px;background:var(--orange-light);color:var(--orange);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:4px;">🗒️ 요약 저장</button>
           </div>
         </div>
         ${_travelDetailTab === 'schedule-list' ? renderScheduleList(trip) : renderScheduleTimetable(trip)}
@@ -992,7 +994,7 @@ function renderScheduleAddForm(trip) {
       <input type="text" class="tp-form-input sm" id="tp-snotes-${trip.id}" placeholder="비고"/>
       <input type="text" class="tp-form-input sm" id="tp-smap-${trip.id}" placeholder="지도 링크"/>
       <div class="tp-form-actions">
-        <button class="tp-form-cancel">취소</button>
+        <button class="tp-form-cancel" type="button" onclick="document.getElementById('tp-schedule-form-${trip.id}').style.display='none'">취소</button>
         <button class="tp-form-save" onclick="TravelApp.addSchedule('${trip.id}')">저장</button>
       </div>
     </div>
@@ -2558,7 +2560,7 @@ ${(trip.expenses||[]).map(e => `  ${e.date||''} | ${e.category} | ${e.title} | $
 ━━━━━━━━━━━━━━━━━━━━━━━━
 합계: ${expense.toLocaleString('ko-KR')}원
 `;
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob(['\uFEFF' + content], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `여행요약_${trip.name}.txt`; a.click();
