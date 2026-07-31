@@ -2655,3 +2655,8 @@ tr.tp-hover-parent:hover td{background:var(--t-bg,rgba(162,155,254,.09))!importa
 /* 기존 뱃지/링크 관련 (더 이상 사용 안 함, 충돌 방지용 초기화) */
 .tp-todo-main{display:contents;}
 .tp-bm-badges{display:none;}
+
+/* ===== 인쇄 완전 차단 ===== */
+@media print {
+  body { display: none !important; }
+}
