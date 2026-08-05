@@ -2082,12 +2082,18 @@ function renderCredit(){
   }
   list.innerHTML=Object.entries(cardGroups).map(([cardName,items])=>{
     const oneTimeItems=items.filter(c=>c.months===1&&isCardDueInMonth(c,cm.y,cm.m));
-    // 할부: 해당 월이 이미 결제 완료된 경우 목록에서 제거
+    // 할부: 미래 달에 선결제된 항목만 숨김 (현재·과거 달은 결제완료 배지 그대로 표시)
     const installItems=items.filter(c=>{
       if(c.months<=1)return false;
       if(!isCardDueInMonth(c,cm.y,cm.m))return false;
       const pk=mkey(cm.y,cm.m);
-      if((c.paidMonths||[]).includes(pk))return false;
+      if((c.paidMonths||[]).includes(pk)){
+        // 보고 있는 달이 오늘보다 미래이면 선결제 → 숨김
+        const today=new Date();
+        const todayFirst=new Date(today.getFullYear(),today.getMonth(),1);
+        const viewFirst=new Date(cm.y,cm.m-1,1);
+        if(viewFirst>todayFirst)return false;
+      }
       return true;
     });
     const groupRemaining=items.reduce((s,c)=>s+getCardTotalRemaining(c),0);
