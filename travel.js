@@ -1116,7 +1116,7 @@ function extractMapUrl(input) {
 function renderMapPinBtn(mapLink) {
   if (!mapLink) return '';
   const safe = mapLink.replace(/"/g, '&quot;');
-  return `<button class="tp-map-pin-btn" onclick="event.stopPropagation();TravelApp.openMapModal(this)" data-map-url="${safe}" title="지도 보기"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`;
+  return `<a href="${safe}" target="_blank" rel="noopener noreferrer" class="tp-map-pin-btn" title="지도 보기 (새 탭)" onclick="event.stopPropagation()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></a>`;
 }
 // 지출 분류 스타일
 function getExpCatStyleObj(cat) {
