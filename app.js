@@ -2082,7 +2082,14 @@ function renderCredit(){
   }
   list.innerHTML=Object.entries(cardGroups).map(([cardName,items])=>{
     const oneTimeItems=items.filter(c=>c.months===1&&isCardDueInMonth(c,cm.y,cm.m));
-    const installItems=items.filter(c=>c.months>1&&isCardDueInMonth(c,cm.y,cm.m));
+    // 할부: 해당 월이 이미 결제 완료된 경우 목록에서 제거
+    const installItems=items.filter(c=>{
+      if(c.months<=1)return false;
+      if(!isCardDueInMonth(c,cm.y,cm.m))return false;
+      const pk=mkey(cm.y,cm.m);
+      if((c.paidMonths||[]).includes(pk))return false;
+      return true;
+    });
     const groupRemaining=items.reduce((s,c)=>s+getCardTotalRemaining(c),0);
 
     // 이번 달 이용내역 section (일시불 / months=1)
