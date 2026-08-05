@@ -1113,9 +1113,17 @@ function extractMapUrl(input) {
 }
 
 // ── 지도 핀 버튼 렌더링 ─────────────────────────────────────
+function _isEmbedUrl(url) {
+  return url && (/\/maps\/embed/i.test(url) || /[?&]output=embed/i.test(url));
+}
 function renderMapPinBtn(mapLink) {
   if (!mapLink) return '';
   const safe = mapLink.replace(/"/g, '&quot;');
+  if (_isEmbedUrl(mapLink)) {
+    // embed URL → 모달(iframe)로 표시
+    return `<button class="tp-map-pin-btn" onclick="event.stopPropagation();TravelApp.openMapModal(this)" data-map-url="${safe}" title="지도 보기"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button>`;
+  }
+  // 일반 URL → 새 탭으로 바로 열기
   return `<a href="${safe}" target="_blank" rel="noopener noreferrer" class="tp-map-pin-btn" title="지도 보기 (새 탭)" onclick="event.stopPropagation()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></a>`;
 }
 // 지출 분류 스타일
@@ -2833,18 +2841,10 @@ function openMapModal(btn) {
           <button class="tp-map-modal-close" onclick="document.getElementById('tp-map-modal-overlay').remove()">✕</button>
         </div>
       </div>
-      <div class="tp-map-modal-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px 20px;">
-        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#A29BFE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-        </svg>
-        <div style="font-size:14px;color:var(--text-sub);text-align:center;line-height:1.6;">
-          ${rawUrl ? `<div style="word-break:break-all;font-size:12px;color:#A29BFE;margin-bottom:8px;">${rawUrl.length>60?rawUrl.slice(0,60)+'…':rawUrl}</div>` : ''}
-          지도 링크를 새 탭에서 열어 확인하세요
-        </div>
-        <a href="${rawUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:linear-gradient(135deg,#5E4BC4,#A29BFE);color:white;border-radius:50px;font-size:13px;font-weight:700;text-decoration:none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          새 탭에서 지도 열기
-        </a>
+      <div class="tp-map-modal-body">
+        ${embedUrl
+          ? `<iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" style="border:0;" allowfullscreen loading="lazy"></iframe>`
+          : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:14px;">지도를 불러올 수 없습니다.</div>'}
       </div>
     </div>`;
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
