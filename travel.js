@@ -1072,6 +1072,9 @@ function getTransportBadgeStyle(transport) {
 //   URL 텍스트    → 🔗 아이콘 + 텍스트 표시
 function renderLinkOrText(text) {
   if (!text) return '';
+  // iframe embed 코드가 들어온 경우 src URL만 추출
+  const iframeMatch = text.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  if (iframeMatch) text = iframeMatch[1];
   const LINK_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
   function makeLink(url, label) {
     const safe = url.replace(/"/g, '&quot;');
@@ -1093,7 +1096,8 @@ function renderLinkOrText(text) {
   if (isUrl(parts[0])) {
     return makeLink(parts[0]);
   }
-  return text;
+  // 일반 텍스트: HTML 이스케이프 후 반환 (iframe 등 raw HTML 렌더링 방지)
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── 지도 링크 입력칸에서 iframe HTML → URL 자동 추출 ─────────
@@ -1685,6 +1689,7 @@ function openNewTripModal(editTrip) {
       <button class="btn-save" onclick="TravelApp.saveTrip(${isEdit?`'${t.id}'`:'null'})">${isEdit ? '수정 완료' : '여행 만들기'}</button>
     </div>
   `);
+  setTimeout(() => { const el = document.getElementById('tp-m-maplink'); if (el) extractMapUrl(el); }, 0);
 }
 
 // ===== 캘린더 연동 함수 =====
@@ -1819,7 +1824,7 @@ function openAddBookingModal(tripId, type, editId) {
       <div class="form-group"><label>예약 코드</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}" placeholder="FNS2TO"/></div>
     </div>
     <div class="form-group"><label>메모</label><input type="text" class="form-input" id="tp-b-memo" value="${b.memo||''}" placeholder="수하물 23kg 포함"/></div>
-    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="url" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..."/></div>
+    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="text" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..." oninput="TravelApp.extractMapUrl(this)"/></div>
   ` : type === 'hotels' ? `
     <div class="form-group"><label>숙소명</label><input type="text" class="form-input" id="tp-b-name" value="${b.name||''}" placeholder="호텔 플러스 호스텔"/></div>
     <div class="form-row">
@@ -1835,7 +1840,7 @@ function openAddBookingModal(tripId, type, editId) {
       <div class="form-group"><label>예약번호</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}"/></div>
     </div>
     <div class="form-group"><label>메모</label><input type="text" class="form-input" id="tp-b-memo" value="${b.memo||''}" placeholder="조식 포함, 체크인 오후 3시 이후"/></div>
-    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="url" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..."/></div>
+    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="text" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..." oninput="TravelApp.extractMapUrl(this)"/></div>
   ` : `
     <div class="form-group"><label>예약명</label><input type="text" class="form-input" id="tp-b-name" value="${b.name||''}" placeholder="시드니 오페라하우스 투어"/></div>
     <div class="form-group"><label>유형</label>
@@ -1849,7 +1854,7 @@ function openAddBookingModal(tripId, type, editId) {
     </div>
     <div class="form-group"><label>예약번호</label><input type="text" class="form-input" id="tp-b-code" value="${b.code||''}"/></div>
     <div class="form-group"><label>메모</label><input type="text" class="form-input" id="tp-b-memo" value="${b.memo||''}"/></div>
-    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="url" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..."/></div>
+    <div class="form-group"><label>링크 (지도/예약 URL)</label><input type="text" class="form-input" id="tp-b-link" value="${b.link||''}" placeholder="https://..." oninput="TravelApp.extractMapUrl(this)"/></div>
   `;
 
   renderTravelModal(`
@@ -1860,6 +1865,8 @@ function openAddBookingModal(tripId, type, editId) {
       <button class="btn-save" onclick="TravelApp.saveBooking('${tripId}','${type}',${isEdit?`'${editId}'`:'null'})">저장</button>
     </div>
   `);
+  // 모달 로드 후 저장된 iframe 코드 즉시 정제
+  setTimeout(() => { const el = document.getElementById('tp-b-link'); if (el) extractMapUrl(el); }, 0);
 }
 
 function saveBooking(tripId, type, editId) {
@@ -1869,6 +1876,8 @@ function saveBooking(tripId, type, editId) {
   if (!trip.bookings[type]) trip.bookings[type] = [];
 
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  // iframe embed 코드가 저장되지 않도록 링크 정제
+  const gLink = id => { const v = g(id); const m = v.match(/<iframe[^>]+src=["']([^"']+)["']/i); return m ? m[1] : v; };
   let data = {};
   if (type === 'flights') {
     data = {
@@ -1876,7 +1885,7 @@ function saveBooking(tripId, type, editId) {
       departDate: g('tp-b-ddate'), departTime: g('tp-b-dtime'),
       arrivalDate: g('tp-b-adate'), arrivalTime: g('tp-b-atime'),
       flightNo: g('tp-b-flightno'), code: g('tp-b-code'),
-      memo: g('tp-b-memo'), link: g('tp-b-link'),
+      memo: g('tp-b-memo'), link: gLink('tp-b-link'),
     };
   } else if (type === 'hotels') {
     data = {
@@ -1884,13 +1893,13 @@ function saveBooking(tripId, type, editId) {
       checkin: g('tp-b-checkin'), checkinTime: g('tp-b-cintime'),
       checkout: g('tp-b-checkout'), checkoutTime: g('tp-b-couttime'),
       phone: g('tp-b-phone'), code: g('tp-b-code'),
-      memo: g('tp-b-memo'), link: g('tp-b-link'),
+      memo: g('tp-b-memo'), link: gLink('tp-b-link'),
     };
   } else {
     data = {
       name: g('tp-b-name'), btype: g('tp-b-btype'),
       date: g('tp-b-date'), time: g('tp-b-time'),
-      code: g('tp-b-code'), memo: g('tp-b-memo'), link: g('tp-b-link'),
+      code: g('tp-b-code'), memo: g('tp-b-memo'), link: gLink('tp-b-link'),
     };
   }
 
@@ -1967,6 +1976,7 @@ function editSchedule(tripId, schedId) {
       <button class="btn-save" onclick="TravelApp.saveEditSchedule('${tripId}','${schedId}')">저장</button>
     </div>
   `);
+  setTimeout(() => { const el = document.getElementById('tp-es-map'); if (el) extractMapUrl(el); }, 0);
 }
 
 function saveEditSchedule(tripId, schedId) {
