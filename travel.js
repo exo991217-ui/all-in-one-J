@@ -702,6 +702,7 @@ function renderTravelDetail(el, tripId) {
           <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
             <h2 class="tp-detail-title" onclick="TravelApp.openEditTripModal('${trip.id}')" style="cursor:pointer;margin:0;">${trip.name}</h2>
             ${trip.link ? `<a class="tp-card-link-btn" href="${trip.link}" target="_blank" rel="noopener noreferrer" style="white-space:nowrap;flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> 루트 플로우 이동</a>` : ''}
+            ${trip.mapLink ? `<a class="tp-card-link-btn" href="${trip.mapLink}" target="_blank" rel="noopener noreferrer" style="white-space:nowrap;flex-shrink:0;background:#E8F5EE;color:#1E7A45;border-color:#A8DFC0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 내 지도</a>` : ''}
           </div>
           <div style="display:flex;gap:8px;">
             <button class="icon-btn tp-del-btn tp-trash-btn" onclick="TravelApp.deleteTrip('${trip.id}')" title="삭제"><span class="tp-trash-svg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></span></button>
@@ -1000,7 +1001,7 @@ function renderScheduleAddForm(trip) {
       <input type="text" class="tp-form-input" id="tp-scontent-${trip.id}" placeholder="내용"/>
       <input type="text" class="tp-form-input sm" id="tp-stransp-${trip.id}" placeholder="교통편"/>
       <input type="text" class="tp-form-input sm" id="tp-snotes-${trip.id}" placeholder="비고"/>
-      <input type="text" class="tp-form-input sm" id="tp-smap-${trip.id}" placeholder="지도 링크"/>
+      <input type="text" class="tp-form-input sm" id="tp-smap-${trip.id}" placeholder="지도 링크" oninput="TravelApp.extractMapUrl(this)"/>
       <div class="tp-form-actions">
         <button class="tp-form-cancel" type="button" onclick="document.getElementById('tp-schedule-form-${trip.id}').style.display='none'">취소</button>
         <button class="tp-form-save" onclick="TravelApp.addSchedule('${trip.id}')">저장</button>
@@ -1065,13 +1066,46 @@ function getTransportBadgeStyle(transport) {
 }
 
 // ── URL 감지 → 링크 아이콘 렌더링 ────────────────────────────
+// 지원 형식:
+//   URL           → 🔗 아이콘 링크
+//   URL URL       → 🔗 아이콘 두 개
+//   URL 텍스트    → 🔗 아이콘 + 텍스트 표시
 function renderLinkOrText(text) {
   if (!text) return '';
-  if (/^https?:\/\//i.test(text.trim())) {
-    const safe = text.replace(/"/g, '&quot;');
-    return `<a href="${safe}" target="_blank" rel="noopener" class="tp-link-icon-btn" title="${safe}" onclick="event.stopPropagation()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a>`;
+  const LINK_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+  function makeLink(url, label) {
+    const safe = url.replace(/"/g, '&quot;');
+    const inner = label ? label : LINK_SVG;
+    return `<a href="${safe}" target="_blank" rel="noopener" class="tp-link-icon-btn" title="${safe}" onclick="event.stopPropagation()">${inner}</a>`;
+  }
+  const parts = text.trim().split(/\s+/);
+  const isUrl = s => /^https?:\/\//i.test(s);
+  if (parts.length >= 2 && isUrl(parts[0])) {
+    if (isUrl(parts[1])) {
+      // URL + URL → 링크 두 개
+      return makeLink(parts[0]) + makeLink(parts[1]);
+    } else {
+      // URL + 텍스트 → 🔗 아이콘 + 텍스트
+      const label = parts.slice(1).join(' ');
+      return makeLink(parts[0]) + `<span style="font-size:12px;color:var(--text-sub);margin-left:2px;">${label}</span>`;
+    }
+  }
+  if (isUrl(parts[0])) {
+    return makeLink(parts[0]);
   }
   return text;
+}
+
+// ── 지도 링크 입력칸에서 iframe HTML → URL 자동 추출 ─────────
+function extractMapUrl(input) {
+  const val = input.value;
+  // <iframe src="..."> 또는 <iframe src='...'> 패턴에서 src URL 추출
+  const match = val.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+  if (match) {
+    input.value = match[1];
+    input.style.borderColor = '#4CAF82';
+    setTimeout(() => { input.style.borderColor = ''; }, 1200);
+  }
 }
 
 // ── 지도 핀 버튼 렌더링 ─────────────────────────────────────
@@ -1638,6 +1672,7 @@ function openNewTripModal(editTrip) {
     <div class="form-group"><label>여행지 (도시/국가)</label><input type="text" class="form-input" id="tp-m-regions" value="${t.regions||''}" placeholder="시드니, 호주"/></div>
     <div class="form-group"><label>동행자</label><input type="text" class="form-input" id="tp-m-companions" value="${t.companions||''}" placeholder="혼자, 친구, 가족, 둘..."/></div>
     <div class="form-group"><label>링크 (예약확인, 항공권, 숙소 등)</label><input type="url" class="form-input" id="tp-m-link" value="${t.link||''}" placeholder="https://..."/></div>
+    <div class="form-group"><label>내 지도 링크 <span style="font-size:11px;font-weight:400;color:var(--text-sub);">(Google 지도 등)</span></label><input type="text" class="form-input" id="tp-m-maplink" value="${t.mapLink||''}" placeholder="https://maps.google.com/..." oninput="TravelApp.extractMapUrl(this)"/></div>
     <div class="form-group" style="margin-top:2px;">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;padding:10px 14px;background:${t.isSimple?'#F0EEFF':'#fafafa'};border:1.5px solid ${t.isSimple?'#A29BFE':'var(--border)'};border-radius:10px;transition:all .15s;">
         <input type="checkbox" id="tp-m-simple" ${t.isSimple?'checked':''} style="width:16px;height:16px;accent-color:#5E4BC4;cursor:pointer;flex-shrink:0;" onchange="this.closest('label').style.background=this.checked?'#F0EEFF':'#fafafa';this.closest('label').style.borderColor=this.checked?'#A29BFE':'var(--border)';"/>
@@ -1713,15 +1748,16 @@ function saveTrip(editId) {
   const regions = document.getElementById('tp-m-regions').value.trim();
   const companions = document.getElementById('tp-m-companions').value.trim();
   const link = document.getElementById('tp-m-link').value.trim();
+  const mapLink = (document.getElementById('tp-m-maplink')?.value || '').trim();
   const isSimple = !!(document.getElementById('tp-m-simple')?.checked);
 
   let savedTrip;
   if (editId) {
     const t = getTripById(editId);
-    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions, link, isSimple }); savedTrip = t; }
+    if (t) { Object.assign(t, { name, type, startDate, endDate, regions, companions, link, mapLink, isSimple }); savedTrip = t; }
   } else {
     const newTrip = {
-      id: genTravelId(), name, type, startDate, endDate, regions, companions, link, isSimple,
+      id: genTravelId(), name, type, startDate, endDate, regions, companions, link, mapLink, isSimple,
       currency: 'USD', exchangeRate: 0,
       bookings: { flights: [], hotels: [], others: [] },
       schedule: [], expenses: [], wishPlaces: [], todos: []
@@ -1925,7 +1961,7 @@ function editSchedule(tripId, schedId) {
       <div class="form-group"><label>교통편</label><input type="text" class="form-input" id="tp-es-transport" value="${s.transport||''}"/></div>
       <div class="form-group"><label>비고</label><input type="text" class="form-input" id="tp-es-notes" value="${s.notes||''}"/></div>
     </div>
-    <div class="form-group"><label>지도 링크</label><input type="text" class="form-input" id="tp-es-map" value="${s.mapLink||''}"/></div>
+    <div class="form-group"><label>지도 링크</label><input type="text" class="form-input" id="tp-es-map" value="${s.mapLink||''}" oninput="TravelApp.extractMapUrl(this)" placeholder="URL 또는 iframe 코드 붙여넣기"/></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="TravelApp.closeModal()">취소</button>
       <button class="btn-save" onclick="TravelApp.saveEditSchedule('${tripId}','${schedId}')">저장</button>
@@ -2787,10 +2823,18 @@ function openMapModal(btn) {
           <button class="tp-map-modal-close" onclick="document.getElementById('tp-map-modal-overlay').remove()">✕</button>
         </div>
       </div>
-      <div class="tp-map-modal-body">
-        ${embedUrl
-          ? '<iframe src="' + embedUrl + '" width="100%" height="100%" frameborder="0" style="border:0;" allowfullscreen loading="lazy"></iframe>'
-          : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:14px;">지도를 불러올 수 없습니다.</div>'}
+      <div class="tp-map-modal-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px 20px;">
+        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#A29BFE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        <div style="font-size:14px;color:var(--text-sub);text-align:center;line-height:1.6;">
+          ${rawUrl ? `<div style="word-break:break-all;font-size:12px;color:#A29BFE;margin-bottom:8px;">${rawUrl.length>60?rawUrl.slice(0,60)+'…':rawUrl}</div>` : ''}
+          지도 링크를 새 탭에서 열어 확인하세요
+        </div>
+        <a href="${rawUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 22px;background:linear-gradient(135deg,#5E4BC4,#A29BFE);color:white;border-radius:50px;font-size:13px;font-weight:700;text-decoration:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          새 탭에서 지도 열기
+        </a>
       </div>
     </div>`;
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -2968,6 +3012,7 @@ window.TravelApp = {
   deleteTip,
   setTipsTagFilter,
   openMapModal,
+  extractMapUrl,
   // 투두 리스트
   addTodo,
   toggleTodo,
