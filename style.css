@@ -237,14 +237,12 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .install-current-badge{font-size:10px;color:var(--orange);font-weight:700}
 
 /* ===== ASSETS ===== */
-.asset-summary-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-bottom:20px;align-items:stretch}
+.asset-summary-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:20px}
 .asset-summary-card{border-radius:var(--radius);padding:22px 28px;color:white;box-shadow:0 4px 20px rgba(100,181,246,.22)}
 .blue-grad{background:linear-gradient(135deg,#4F9CF9,#74B9FF)}
 .asset-sum-label{font-size:12px;font-weight:600;opacity:.85}
 .asset-sum-amount{font-size:32px;font-weight:900;margin:6px 0 4px}
 .asset-sum-sub{font-size:12px;opacity:.75}
-.asset-fund-card{margin:0;min-width:0}
-.asset-fund-card .fc-items-list{max-height:220px;overflow:auto}
 .asset-list-items{display:flex;flex-direction:column;gap:4px}
 .asset-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px dashed var(--border);font-size:13.5px}
 .asset-item:last-child{border-bottom:none}
@@ -723,7 +721,6 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
   .sidebar.open{left:0;box-shadow:4px 0 30px rgba(45,45,58,.25)}
   .hamburger-btn{display:flex}
   .main-content{padding:70px 14px 32px;min-height:100vh}
-  .asset-summary-grid{grid-template-columns:1fr}
   .income-expense-grid{grid-template-columns:1fr}
   .installment-grid{grid-template-columns:1fr}
   .dash-ledger-grid{grid-template-columns:1fr 1fr}
