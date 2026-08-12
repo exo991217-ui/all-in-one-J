@@ -495,73 +495,16 @@ if (document.readyState === 'loading') {
       <div class="page-header">
         <div><h1 class="page-title">자산 목록 🏦</h1><p class="page-sub">내 모든 자산을 한눈에 🏦</p></div>
       </div>
-      <div class="asset-summary-grid asset-summary-layout">
-        <div class="asset-summary-card blue-grad asset-total-summary">
-          <div class="asset-sum-label">🏦 총 자산</div>
-          <div class="asset-sum-amount" id="asset-total-display">0원</div>
-          <div class="asset-sum-sub" id="asset-count-display">0개 항목</div>
-        </div>
-        <div class="asset-finance-column">
-          <div class="card asset-income-summary-card">
-            <div class="card-header-row">
-              <div class="card-title-group"><span>💰 수입 / 지출</span></div>
-              <div class="month-nav">
-                <button class="month-btn" onclick="App.changeMonth(-1,'income')">‹</button>
-                <span class="month-label" id="asset-income-month-label"></span>
-                <button class="month-btn" onclick="App.changeMonth(1,'income')">›</button>
-              </div>
-            </div>
-            <div class="asset-income-stats">
-              <div class="asset-income-stat income">
-                <span>수입</span><strong id="asset-income-total">0원</strong>
-              </div>
-              <div class="asset-income-stat expense">
-                <span>지출</span><strong id="asset-expense-total">0원</strong>
-              </div>
-              <div class="asset-income-stat balance">
-                <span>잔액</span><strong id="asset-income-balance">0원</strong>
-              </div>
-            </div>
-            <div class="asset-income-sub" id="asset-income-sub">수입 0원 − 지출 0원</div>
+      <div class="asset-summary-grid">
+        <div class="asset-summary-card blue-grad">
+          <div class="asset-summary-content">
+            <div class="asset-sum-label">🏦 총 자산</div>
+            <div class="asset-sum-amount" id="asset-total-display">0원</div>
+            <div class="asset-sum-sub" id="asset-count-display">0개 항목</div>
           </div>
-          <div class="card fund-calc-card asset-fund-calc-card" id="fund-calc-card">
-            <div class="card-header-row">
-              <div class="card-title-group"><span>💰 자금 분배 계산기</span></div>
-              <button class="add-btn" onclick="App.resetFundCalc()" style="background:#FFF0F0;color:var(--red);">초기화</button>
-            </div>
-            <div class="fc-amount-section">
-              <div class="fc-amount-label">
-                현재 보유 금액
-                <span id="fc-asset-linked-badge" class="fc-asset-link-badge" style="display:none;">🔗 총 자산 연동중</span>
-              </div>
-              <div class="fc-amount-row">
-                <input type="text" inputmode="numeric" id="fc-amount-input" class="fc-amount-input" placeholder="0"
-                  oninput="App.numInputFmt(this);App.previewFundAmount(this.value)"
-                  onchange="App.setFundAmount(this.value)"
-                  onkeydown="if(event.key==='Enter')App.setFundAmount(this.value)"/>
-                <span class="fc-amount-unit">원</span>
-                <button class="add-btn" onclick="App.toggleAssetSelector()" style="white-space:nowrap;flex-shrink:0;">🏦 자산</button>
-              </div>
-              <div id="fc-linked-time" class="fc-linked-time" style="display:none;"></div>
-              <div id="fc-amount-display" class="fc-amount-display"></div>
-            </div>
-            <div id="fc-asset-selector" class="fc-asset-selector" style="display:none;"></div>
-            <div id="fc-items-list" class="fc-items-list"></div>
-            <button class="fc-add-btn" onclick="App.addFundItem()">+ 항목 추가</button>
-            <div class="fc-summary">
-              <div class="fc-summary-row">
-                <span>총 사용 예정</span>
-                <span id="fc-total-used" style="font-weight:800;color:var(--orange);">0원</span>
-              </div>
-              <div class="fc-summary-row fc-summary-remaining">
-                <span>남은 금액</span>
-                <div style="display:flex;align-items:center;gap:6px;">
-                  <span id="fc-over-badge" class="fc-over-badge" style="display:none;">예산 초과</span>
-                  <span id="fc-remaining-val" style="font-weight:800;color:var(--green);">0원</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <button type="button" class="asset-fund-calc-btn" onclick="App.openFundCalcModal()" aria-label="자금분배계산기 열기">
+            자금분배계산기
+          </button>
         </div>
       </div>
       <div class="card" style="margin-top:20px;">
@@ -900,6 +843,52 @@ if (document.readyState === 'loading') {
   <div class="modal-actions">
     <button class="btn-cancel" onclick="App.closeModal()">취소</button>
     <button class="btn-save" onclick="App.saveAsset()">저장</button>
+  </div>
+</div>
+
+<div class="modal fund-calc-modal" id="modal-fund-calc" role="dialog" aria-modal="true" aria-labelledby="fund-calc-modal-title">
+  <div class="modal-header fund-calc-modal-header">
+    <span id="fund-calc-modal-title">💰 자금분배계산기</span>
+    <button type="button" class="modal-close-btn" onclick="App.closeModal()" aria-label="닫기">×</button>
+  </div>
+  <div class="fund-calc-modal-body">
+    <div class="fc-amount-section">
+      <div class="fc-amount-label">
+        분배할 금액
+        <span id="fc-asset-linked-badge" class="fc-asset-link-badge" style="display:none;"></span>
+      </div>
+      <div class="fc-amount-row">
+        <input type="text" inputmode="numeric" id="fc-amount-input" class="fc-amount-input"
+          placeholder="예: 5,000,000"
+          oninput="App.numInputFmt(this);App.previewFundAmount(this.value)"
+          onchange="App.setFundAmount(this.value)"
+          onkeydown="if(event.key==='Enter'){App.setFundAmount(this.value);this.blur();}"/>
+        <span class="fc-amount-unit">원</span>
+      </div>
+      <div id="fc-amount-display" class="fc-amount-display"></div>
+      <div id="fc-linked-time" class="fc-linked-time" style="display:none;"></div>
+    </div>
+
+    <div class="fc-modal-tools">
+      <button type="button" class="fc-tool-btn" onclick="App.toggleAssetSelector()">🏦 자산에서 불러오기</button>
+      <button type="button" class="fc-reset-btn" onclick="App.resetFundCalc()">초기화</button>
+    </div>
+    <div id="fc-asset-selector" class="fc-asset-selector" style="display:none;"></div>
+
+    <div class="fc-items-heading">분배 항목</div>
+    <div id="fc-items-list" class="fc-items-list"></div>
+    <button type="button" class="fc-add-btn" onclick="App.addFundItem()">＋ 항목 추가</button>
+
+    <div class="fc-summary">
+      <div class="fc-summary-row"><span>총 사용 예정</span><strong id="fc-total-used">0원</strong></div>
+      <div class="fc-summary-row fc-summary-remaining">
+        <span>남은 금액</span>
+        <strong><span id="fc-remaining-val">0원</span> <span id="fc-over-badge" class="fc-over-badge" style="display:none;">초과</span></strong>
+      </div>
+    </div>
+  </div>
+  <div class="modal-actions fund-calc-modal-actions">
+    <button type="button" class="btn-cancel" onclick="App.closeModal()">닫기</button>
   </div>
 </div>
 
