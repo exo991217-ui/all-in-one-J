@@ -130,17 +130,6 @@ function loadState(){
       if(S.stockAssetDirect===undefined)S.stockAssetDirect=false;
       if(S.stockAssetAutoId===undefined)S.stockAssetAutoId=null;
       if(!S.calFoodSync)S.calFoodSync={};
-      // 예산 카테고리 강제 리셋 (식비/생필품/문화여가/기타 각 20만)
-      if(!S._budget_reset_v2){
-        S.budgetCategories=[
-          {id:201,name:'식비',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-          {id:202,name:'생필품',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-          {id:203,name:'문화/여가',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-          {id:204,name:'기타',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-        ];
-        S.monthBudgets={};
-        S._budget_reset_v2=true;
-      }
       if(S.analysisYear===undefined)S.analysisYear=new Date().getFullYear();
       if(S.analysisMonth===undefined)S.analysisMonth=new Date().getMonth()+1;
       if(!S.expenseNatureSettings)S.expenseNatureSettings={};
@@ -152,36 +141,6 @@ function loadState(){
       if(!S.travels)S.travels={trips:[],bucketList:[]};
       if(!S.travels.trips)S.travels.trips=[];
       if(!S.travels.bucketList)S.travels.bucketList=[];
-      // 가계부 카테고리 기본값 재설정 (v1: 식비/생활/주거/교통/문화/저축투자/기타)
-      if(!S._lcat_reset_v1){
-        S.ledgerCategories=[
-          {id:1,name:'식비',isSavings:false},
-          {id:2,name:'생활',isSavings:false},
-          {id:3,name:'주거/공과',isSavings:false},
-          {id:4,name:'교통',isSavings:false},
-          {id:5,name:'문화/여가',isSavings:false},
-          {id:6,name:'저축/투자',isSavings:true},
-          {id:7,name:'기타',isSavings:false},
-        ];
-        S._lcat_reset_v1=true;
-      }
-      // 가계부 카테고리 이모지 버전으로 재설정 (v2: 11개 이모지 카테고리)
-      if(!S._lcat_reset_v2){
-        S.ledgerCategories=[
-          {id:1,name:'🍚 식비',isSavings:false},
-          {id:2,name:'🧴 생활용품',isSavings:false},
-          {id:3,name:'🏠 주거·공과금',isSavings:false},
-          {id:4,name:'🚗 교통·차량',isSavings:false},
-          {id:5,name:'💪 건강',isSavings:false},
-          {id:6,name:'🎨 문화·취미',isSavings:false},
-          {id:7,name:'👕 패션·미용',isSavings:false},
-          {id:8,name:'💰 금융',isSavings:false},
-          {id:9,name:'✈ 여행',isSavings:false},
-          {id:10,name:'🎁 경조사',isSavings:false},
-          {id:11,name:'📦 기타',isSavings:false},
-        ];
-        S._lcat_reset_v2=true;
-      }
       S.stocks=S.stocks.map(st=>{
         const isKrTicker=/^\d{6}$/.test(st.ticker);
         const defaultType=isKrTicker?'domestic':'foreign';
@@ -289,34 +248,6 @@ window.FB_MERGE = function(fbData) {
     if(S.analysisYear===undefined)S.analysisYear=new Date().getFullYear();
     if(S.analysisMonth===undefined)S.analysisMonth=new Date().getMonth()+1;
     if(!S.expenseNatureSettings)S.expenseNatureSettings={};
-    // 가계부 카테고리 이모지 버전으로 재설정 (v2)
-    if(!S._lcat_reset_v2){
-      S.ledgerCategories=[
-        {id:1,name:'🍚 식비',isSavings:false},
-        {id:2,name:'🧴 생활용품',isSavings:false},
-        {id:3,name:'🏠 주거·공과금',isSavings:false},
-        {id:4,name:'🚗 교통·차량',isSavings:false},
-        {id:5,name:'💪 건강',isSavings:false},
-        {id:6,name:'🎨 문화·취미',isSavings:false},
-        {id:7,name:'👕 패션·미용',isSavings:false},
-        {id:8,name:'💰 금융',isSavings:false},
-        {id:9,name:'✈ 여행',isSavings:false},
-        {id:10,name:'🎁 경조사',isSavings:false},
-        {id:11,name:'📦 기타',isSavings:false},
-      ];
-      S._lcat_reset_v2=true;
-    }
-    // 예산 카테고리 강제 리셋
-    if(!S._budget_reset_v2){
-      S.budgetCategories=[
-        {id:201,name:'식비',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-        {id:202,name:'생필품',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-        {id:203,name:'문화/여가',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-        {id:204,name:'기타',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
-      ];
-      S.monthBudgets={};
-      S._budget_reset_v2=true;
-    }
     if(S.ledgerFilter===undefined)S.ledgerFilter=null;
     S.ledgerTagFilter=null;
     if(!S.currentMonths.ledger)S.currentMonths.ledger={...S.currentMonths.dashboard};
@@ -1951,6 +1882,29 @@ function deleteDefaultItems(){
 }
 
 function renderIncome(){
+  const summaryMonth=S.currentMonths.income||S.currentMonths.dashboard;
+  const summaryIncome=getTotalIncome(summaryMonth.y,summaryMonth.m);
+  const summaryFixed=getTotalFixed(summaryMonth.y,summaryMonth.m);
+  const summaryVariable=getTotalVariable(summaryMonth.y,summaryMonth.m);
+  const summaryExpense=summaryFixed+summaryVariable+getFoodTotal(summaryMonth.y,summaryMonth.m);
+  const summaryBalance=summaryIncome-summaryExpense;
+  const summaryLabel=document.getElementById('asset-income-month-label');
+  const summaryIncomeEl=document.getElementById('asset-income-total');
+  const summaryExpenseEl=document.getElementById('asset-expense-total');
+  const summaryBalanceEl=document.getElementById('asset-income-balance');
+  const summarySub=document.getElementById('asset-income-sub');
+  if(summaryLabel)summaryLabel.textContent=summaryMonth.y+'년 '+summaryMonth.m+'월';
+  if(summaryIncomeEl)summaryIncomeEl.textContent=fmt(summaryIncome);
+  if(summaryExpenseEl)summaryExpenseEl.textContent=fmt(summaryExpense);
+  if(summaryBalanceEl){
+    summaryBalanceEl.textContent=fmt(Math.abs(summaryBalance));
+    summaryBalanceEl.style.color=summaryBalance<0?'var(--red)':'var(--blue)';
+  }
+  if(summarySub)summarySub.textContent=`수입 ${fmt(summaryIncome)} − 지출 ${fmt(summaryExpense)}`;
+  renderFundCalc();
+  return;
+
+  // 이전 수입/지출 전용 화면 렌더링은 자산 목록의 요약 카드로 통합되었습니다.
   const cm=S.currentMonths.income;
   document.getElementById('income-month-label').textContent=cm.y+'년 '+cm.m+'월';
 
@@ -2339,11 +2293,17 @@ function renderAssetStocks(){
 
 function renderAssets(){
   const total=getTotalAssets();
-  document.getElementById('asset-total-display').textContent=fmt(total);
-  document.getElementById('asset-count-display').textContent=S.assets.length+'개 항목';
+  const totalEl=document.getElementById('asset-total-display');
+  const countEl=document.getElementById('asset-count-display');
+  if(totalEl)totalEl.textContent=fmt(total);
+  if(countEl)countEl.textContent=S.assets.length+'개 항목';
   const list=document.getElementById('asset-list');
+  if(!list)return;
   if(S.assets.length===0){
-    list.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text-sub);"><div style="font-size:32px;margin-bottom:8px;">🏦</div><div>아직 자산이 없어요</div></div>`;return;
+    list.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text-sub);"><div style="font-size:32px;margin-bottom:8px;">🏦</div><div>아직 자산이 없어요</div></div>`;
+    renderAssetStocks();
+    renderIncome();
+    return;
   }
   // Group by category
   const cats=S.assetCategories||['계좌','적금','주식'];
@@ -2378,6 +2338,7 @@ function renderAssets(){
   });
   list.innerHTML=html;
   renderAssetStocks();
+  renderIncome();
 }
 
 // ===== STOCKS =====
@@ -3741,7 +3702,10 @@ function deleteItem(type,id){
   if(type==='income'){const cm=S.currentMonths.income;getMonthData(cm.y,cm.m).income=getMonthData(cm.y,cm.m).income.filter(i=>i.id!=id);}
   else if(type==='fixed'){const cm=S.currentMonths.income;getMonthData(cm.y,cm.m).fixed=getMonthData(cm.y,cm.m).fixed.filter(i=>i.id!=id);}
   else if(type==='variable'){const cm=S.currentMonths.income;getMonthData(cm.y,cm.m).variable=getMonthData(cm.y,cm.m).variable.filter(i=>i.id!=id);}
-  else if(type==='asset'){S.assets=S.assets.filter(a=>a.id!=id);if(S.fundCalc&&S.fundCalc.assetLinked){S.fundCalc.amount=getTotalAssets();S.fundCalc.assetLinkedAt=Date.now();}}
+  else if(type==='asset'){
+    S.assets=S.assets.filter(a=>a.id!=id);
+    if(S.fundCalc&&S.fundCalc.assetLinked)syncFundCalcToAssets();
+  }
   else if(type==='stock'){S.stocks=S.stocks.filter(s=>s.id!=id);syncStockAsset();}
   saveState();renderAll();
 }
