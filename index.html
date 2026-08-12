@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>장산</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234CAF82'/><rect x='8' y='28' width='84' height='44' rx='9' fill='white' opacity='.97'/><rect x='8' y='38' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><rect x='76' y='38' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><rect x='8' y='54' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><rect x='76' y='54' width='16' height='8' rx='3' fill='%234CAF82' opacity='.2'/><circle cx='50' cy='50' r='14' fill='none' stroke='%234CAF82' stroke-width='2' opacity='.2'/><text y='57' x='50' text-anchor='middle' font-size='24' font-family='Arial,sans-serif' fill='%234CAF82' font-weight='900'>%E2%82%A9</text></svg>">
-  <link rel="stylesheet" href="style_1786517790922.css"/>
+  <link rel="stylesheet" href="style.css"/>
   <!-- ===== 자동 인쇄 방지 ===== -->
   <script>
     // window.print() 자체를 무력화
@@ -231,6 +231,10 @@ if (document.readyState === 'loading') {
         <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         대시보드
       </li>
+      <li class="nav-item" data-tab="income">
+        <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 2H8L6 6h12l-2-4z"/><circle cx="12" cy="13" r="2"/></svg>
+        수입 / 지출
+      </li>
       <li class="nav-item" data-tab="credit">
         <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
         신용카드
@@ -430,8 +434,7 @@ if (document.readyState === 'loading') {
     </section>
 
     <!-- ===== INCOME / EXPENSE ===== -->
-    <!-- 수입/지출 전용 탭은 제거되었습니다. 기존 데이터 계산 로직은 대시보드·분석용으로만 유지합니다. -->
-    <section class="tab-content" id="tab-income" aria-hidden="true" style="display:none;">
+    <section class="tab-content" id="tab-income">
       <div class="page-header">
         <div>
           <h1 class="page-title">수입 / 지출 💰</h1>
@@ -505,6 +508,44 @@ if (document.readyState === 'loading') {
             <button class="add-btn" onclick="App.openVariableModal()">+ 추가</button>
           </div>
           <div id="variable-list" class="item-list"></div>
+        </div>
+        <div class="card fund-calc-card income-grid-funccalc" id="fund-calc-card">
+          <div class="card-header-row">
+            <div class="card-title-group"><span>💰 자금 분배 계산기</span></div>
+            <button class="add-btn" onclick="App.resetFundCalc()" style="background:#FFF0F0;color:var(--red);">초기화</button>
+          </div>
+          <div class="fc-amount-section">
+            <div class="fc-amount-label">
+              현재 보유 금액
+              <span id="fc-asset-linked-badge" class="fc-asset-link-badge" style="display:none;">🔗 총 자산 연동중</span>
+            </div>
+            <div class="fc-amount-row">
+              <input type="text" inputmode="numeric" id="fc-amount-input" class="fc-amount-input" placeholder="0"
+                oninput="App.numInputFmt(this);App.previewFundAmount(this.value)"
+                onchange="App.setFundAmount(this.value)"
+                onkeydown="if(event.key==='Enter')App.setFundAmount(this.value)"/>
+              <span class="fc-amount-unit">원</span>
+              <button class="add-btn" onclick="App.toggleAssetSelector()" style="white-space:nowrap;flex-shrink:0;">🏦 자산</button>
+            </div>
+            <div id="fc-linked-time" class="fc-linked-time" style="display:none;"></div>
+            <div id="fc-amount-display" class="fc-amount-display"></div>
+          </div>
+          <div id="fc-asset-selector" class="fc-asset-selector" style="display:none;"></div>
+          <div id="fc-items-list" class="fc-items-list"></div>
+          <button class="fc-add-btn" onclick="App.addFundItem()">+ 항목 추가</button>
+          <div class="fc-summary">
+            <div class="fc-summary-row">
+              <span>총 사용 예정</span>
+              <span id="fc-total-used" style="font-weight:800;color:var(--orange);">0원</span>
+            </div>
+            <div class="fc-summary-row fc-summary-remaining">
+              <span>남은 금액</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span id="fc-over-badge" class="fc-over-badge" style="display:none;">예산 초과</span>
+                <span id="fc-remaining-val" style="font-weight:800;color:var(--green);">0원</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -580,44 +621,6 @@ if (document.readyState === 'loading') {
           <div class="asset-sum-label">🏦 총 자산</div>
           <div class="asset-sum-amount" id="asset-total-display">0원</div>
           <div class="asset-sum-sub" id="asset-count-display">0개 항목</div>
-        </div>
-        <div class="card fund-calc-card asset-fund-card" id="fund-calc-card">
-          <div class="card-header-row">
-            <div class="card-title-group"><span>💰 자금 분배 계산기</span></div>
-            <button class="add-btn" onclick="App.resetFundCalc()" style="background:#FFF0F0;color:var(--red);">초기화</button>
-          </div>
-          <div class="fc-amount-section">
-            <div class="fc-amount-label">
-              현재 보유 금액
-              <span id="fc-asset-linked-badge" class="fc-asset-link-badge" style="display:none;">🔗 자산 연동중</span>
-            </div>
-            <div class="fc-amount-row">
-              <input type="text" inputmode="numeric" id="fc-amount-input" class="fc-amount-input" placeholder="0"
-                oninput="App.numInputFmt(this);App.previewFundAmount(this.value)"
-                onchange="App.setFundAmount(this.value)"
-                onkeydown="if(event.key==='Enter')App.setFundAmount(this.value)"/>
-              <span class="fc-amount-unit">원</span>
-              <button class="add-btn" onclick="App.toggleAssetSelector()" style="white-space:nowrap;flex-shrink:0;">🏦 자산</button>
-            </div>
-            <div id="fc-linked-time" class="fc-linked-time" style="display:none;"></div>
-            <div id="fc-amount-display" class="fc-amount-display"></div>
-          </div>
-          <div id="fc-asset-selector" class="fc-asset-selector" style="display:none;"></div>
-          <div id="fc-items-list" class="fc-items-list"></div>
-          <button class="fc-add-btn" onclick="App.addFundItem()">+ 항목 추가</button>
-          <div class="fc-summary">
-            <div class="fc-summary-row">
-              <span>총 사용 예정</span>
-              <span id="fc-total-used" style="font-weight:800;color:var(--orange);">0원</span>
-            </div>
-            <div class="fc-summary-row fc-summary-remaining">
-              <span>남은 금액</span>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <span id="fc-over-badge" class="fc-over-badge" style="display:none;">예산 초과</span>
-                <span id="fc-remaining-val" style="font-weight:800;color:var(--green);">0원</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       <div class="card" style="margin-top:20px;">
@@ -1143,7 +1146,7 @@ if (document.readyState === 'loading') {
   </div>
 </div>
 
-<script src="travel_1786517790921.js"></script>
-<script src="app_1786517790923.js"></script>
+<script src="travel.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
