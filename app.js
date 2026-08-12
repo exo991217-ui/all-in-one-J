@@ -152,8 +152,36 @@ function loadState(){
       if(!S.travels)S.travels={trips:[],bucketList:[]};
       if(!S.travels.trips)S.travels.trips=[];
       if(!S.travels.bucketList)S.travels.bucketList=[];
-      // 카테고리는 기존 사용자 데이터를 유지하고, id 기반 참조만 정규화한다.
-      normalizeLedgerCategories();
+      // 가계부 카테고리 기본값 재설정 (v1: 식비/생활/주거/교통/문화/저축투자/기타)
+      if(!S._lcat_reset_v1){
+        S.ledgerCategories=[
+          {id:1,name:'식비',isSavings:false},
+          {id:2,name:'생활',isSavings:false},
+          {id:3,name:'주거/공과',isSavings:false},
+          {id:4,name:'교통',isSavings:false},
+          {id:5,name:'문화/여가',isSavings:false},
+          {id:6,name:'저축/투자',isSavings:true},
+          {id:7,name:'기타',isSavings:false},
+        ];
+        S._lcat_reset_v1=true;
+      }
+      // 가계부 카테고리 이모지 버전으로 재설정 (v2: 11개 이모지 카테고리)
+      if(!S._lcat_reset_v2){
+        S.ledgerCategories=[
+          {id:1,name:'🍚 식비',isSavings:false},
+          {id:2,name:'🧴 생활용품',isSavings:false},
+          {id:3,name:'🏠 주거·공과금',isSavings:false},
+          {id:4,name:'🚗 교통·차량',isSavings:false},
+          {id:5,name:'💪 건강',isSavings:false},
+          {id:6,name:'🎨 문화·취미',isSavings:false},
+          {id:7,name:'👕 패션·미용',isSavings:false},
+          {id:8,name:'💰 금융',isSavings:false},
+          {id:9,name:'✈ 여행',isSavings:false},
+          {id:10,name:'🎁 경조사',isSavings:false},
+          {id:11,name:'📦 기타',isSavings:false},
+        ];
+        S._lcat_reset_v2=true;
+      }
       S.stocks=S.stocks.map(st=>{
         const isKrTicker=/^\d{6}$/.test(st.ticker);
         const defaultType=isKrTicker?'domestic':'foreign';
@@ -261,8 +289,23 @@ window.FB_MERGE = function(fbData) {
     if(S.analysisYear===undefined)S.analysisYear=new Date().getFullYear();
     if(S.analysisMonth===undefined)S.analysisMonth=new Date().getMonth()+1;
     if(!S.expenseNatureSettings)S.expenseNatureSettings={};
-    // Firebase 데이터도 카테고리 이름이 아닌 고정 id 기준으로 보존한다.
-    normalizeLedgerCategories();
+    // 가계부 카테고리 이모지 버전으로 재설정 (v2)
+    if(!S._lcat_reset_v2){
+      S.ledgerCategories=[
+        {id:1,name:'🍚 식비',isSavings:false},
+        {id:2,name:'🧴 생활용품',isSavings:false},
+        {id:3,name:'🏠 주거·공과금',isSavings:false},
+        {id:4,name:'🚗 교통·차량',isSavings:false},
+        {id:5,name:'💪 건강',isSavings:false},
+        {id:6,name:'🎨 문화·취미',isSavings:false},
+        {id:7,name:'👕 패션·미용',isSavings:false},
+        {id:8,name:'💰 금융',isSavings:false},
+        {id:9,name:'✈ 여행',isSavings:false},
+        {id:10,name:'🎁 경조사',isSavings:false},
+        {id:11,name:'📦 기타',isSavings:false},
+      ];
+      S._lcat_reset_v2=true;
+    }
     // 예산 카테고리 강제 리셋
     if(!S._budget_reset_v2){
       S.budgetCategories=[
@@ -384,45 +427,6 @@ function numInputParse(val){
 }
 function genId(){return Date.now()+Math.floor(Math.random()*9999);}
 function mkey(y,m){return y+'-'+m;}
-function escapeHtml(value){
-  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-}
-
-// 카테고리는 이름이 아니라 고정 id를 기준으로 보존한다.
-// 예전 버전의 강제 초기화 로직은 사용자가 만든 카테고리를 매번 덮어썼다.
-function normalizeLedgerCategories(){
-  const source=Array.isArray(S.ledgerCategories)
-    ? S.ledgerCategories
-    : DEFAULT_DATA().ledgerCategories;
-  const usedIds=new Set();
-  const usedNames=new Set();
-  const categories=[];
-  source.forEach(raw=>{
-    if(!raw||typeof raw!=='object')return;
-    const name=String(raw.name??'').trim();
-    if(!name||usedNames.has(name))return;
-    let id=raw.id;
-    while(id===undefined||id===null||usedIds.has(String(id)))id=genId();
-    usedIds.add(String(id));
-    usedNames.add(name);
-    categories.push({...raw,id,name,isSavings:raw.isSavings===true});
-  });
-  if(categories.length===0)categories.push({id:genId(),name:'기타',isSavings:false});
-
-  const byId=new Map(categories.map(c=>[String(c.id),c]));
-  const byName=new Map(categories.map(c=>[c.name,c]));
-  S.ledgerCategories=categories;
-  Object.keys(S.ledger||{}).forEach(key=>{
-    S.ledger[key]=(S.ledger[key]||[]).map(entry=>{
-      const category=(entry.categoryId!==undefined&&entry.categoryId!==null)
-        ? byId.get(String(entry.categoryId))
-        : byName.get(entry.category||'');
-      return category
-        ? {...entry,category:category.name,categoryId:category.id}
-        : entry;
-    });
-  });
-}
 
 function getMonthData(y,m){
   const key=mkey(y,m);
@@ -919,16 +923,11 @@ function toggleCalFoodSync(y,m){
 // ===== ASSET → FUND CALC SYNC (선택 항목만) =====
 function syncFundCalcToAssets(){
   if(!S.fundCalc||!S.fundCalc.assetLinked)return;
-  const ids=(S.fundCalc.linkedAssetIds||[]).map(String);
-  const validIds=ids.filter(id=>(S.assets||[]).some(a=>String(a.id)===id));
-  const total=(S.assets||[]).filter(a=>validIds.includes(String(a.id))).reduce((s,a)=>s+(parseFloat(a.amount)||0),0);
-  S.fundCalc.linkedAssetIds=validIds;
+  const ids=S.fundCalc.linkedAssetIds||[];
+  if(ids.length===0)return;
+  const total=(S.assets||[]).filter(a=>ids.includes(String(a.id))).reduce((s,a)=>s+(parseFloat(a.amount)||0),0);
   S.fundCalc.amount=total;
   S.fundCalc.assetLinkedAt=Date.now();
-  if(validIds.length===0){
-    S.fundCalc.assetLinked=false;
-    S.fundCalc.assetLinkedAt=null;
-  }
   saveState();
   renderFundCalc();
   const dashTab=document.getElementById('tab-dashboard');
@@ -1134,7 +1133,7 @@ function applyAssetLink(){
   const checks=document.querySelectorAll('.fc-asset-chk:checked');
   if(checks.length===0){alert('연동할 항목을 선택해 주세요.');return;}
   if(!S.fundCalc)S.fundCalc={amount:0,items:[],assetLinked:false,assetLinkedAt:null,linkedAssetIds:[]};
-   const ids=Array.from(checks).map(c=>String(c.dataset.id));
+  const ids=Array.from(checks).map(c=>c.dataset.id);
   S.fundCalc.linkedAssetIds=ids;
   S.fundCalc.assetLinked=true;
   // 선택 항목 합산
@@ -2342,7 +2341,6 @@ function renderAssets(){
   const total=getTotalAssets();
   document.getElementById('asset-total-display').textContent=fmt(total);
   document.getElementById('asset-count-display').textContent=S.assets.length+'개 항목';
-  renderFundCalc();
   const list=document.getElementById('asset-list');
   if(S.assets.length===0){
     list.innerHTML=`<div style="text-align:center;padding:32px;color:var(--text-sub);"><div style="font-size:32px;margin-bottom:8px;">🏦</div><div>아직 자산이 없어요</div></div>`;return;
@@ -3605,7 +3603,7 @@ function editCredit(id){
 function populateAssetCategorySelect(selectedCat){
   const sel=document.getElementById('ma-category');if(!sel)return;
   const cats=S.assetCategories||['계좌','적금','주식'];
-  sel.innerHTML=cats.map(c=>`<option value="${escapeHtml(c)}" ${c===selectedCat?'selected':''}>${escapeHtml(c)}</option>`).join('');
+  sel.innerHTML=cats.map(c=>`<option value="${c}" ${c===selectedCat?'selected':''}>${c}</option>`).join('');
 }
 
 function openAssetModal(){
@@ -3621,8 +3619,8 @@ function promptAddAssetCategory(){
   const name=prompt('새 분류 이름을 입력하세요:');
   if(!name||!name.trim())return;
   const trimmed=name.trim();
-   if(!S.assetCategories)S.assetCategories=['계좌','적금','주식'];
-   if(!S.assetCategories.includes(trimmed))S.assetCategories=[...S.assetCategories,trimmed];
+  if(!S.assetCategories)S.assetCategories=['계좌','적금','주식'];
+  if(!S.assetCategories.includes(trimmed))S.assetCategories.push(trimmed);
   saveState();populateAssetCategorySelect(trimmed);
 }
 
@@ -3743,19 +3741,12 @@ function deleteItem(type,id){
   if(type==='income'){const cm=S.currentMonths.income;getMonthData(cm.y,cm.m).income=getMonthData(cm.y,cm.m).income.filter(i=>i.id!=id);}
   else if(type==='fixed'){const cm=S.currentMonths.income;getMonthData(cm.y,cm.m).fixed=getMonthData(cm.y,cm.m).fixed.filter(i=>i.id!=id);}
   else if(type==='variable'){const cm=S.currentMonths.income;getMonthData(cm.y,cm.m).variable=getMonthData(cm.y,cm.m).variable.filter(i=>i.id!=id);}
-  else if(type==='asset'){
-    S.assets=S.assets.filter(a=>a.id!=id);
-    if(S.fundCalc&&S.fundCalc.assetLinked)syncFundCalcToAssets();
-  }
+  else if(type==='asset'){S.assets=S.assets.filter(a=>a.id!=id);if(S.fundCalc&&S.fundCalc.assetLinked){S.fundCalc.amount=getTotalAssets();S.fundCalc.assetLinkedAt=Date.now();}}
   else if(type==='stock'){S.stocks=S.stocks.filter(s=>s.id!=id);syncStockAsset();}
   saveState();renderAll();
 }
 
-function updateAssetAmount(id,val){
-  const a=S.assets.find(a=>a.id==id);
-  if(a)a.amount=numInputParse(val);
-  saveState();renderAssets();renderDashboard();syncFundCalcToAssets();
-}
+function updateAssetAmount(id,val){const a=S.assets.find(a=>a.id==id);if(a)a.amount=numInputParse(val);saveState();renderAssets();renderDashboard();syncFundCalcToAssets();}
 function updateStockPrice(id,val){const st=S.stocks.find(s=>s.id==id);if(st)st.currentPrice=numInputParse(val);syncStockAsset();saveState();renderAssetStocks();renderDashboard();}
 function updateStockBuyAmount(id,val){const st=S.stocks.find(s=>s.id==id);if(st)st.buyAmount=numInputParse(val);syncStockAsset();saveState();renderAssetStocks();renderDashboard();}
 function updateStockCurrentAmount(id,val){const st=S.stocks.find(s=>s.id==id);if(st)st.currentAmount=numInputParse(val);syncStockAsset();saveState();renderAssetStocks();renderDashboard();}
@@ -4081,7 +4072,7 @@ function applyLedgerAutomations(y,m){
 
 function _syncAutoModalCatSelect(selected){
   const cats=S.ledgerCategories||[];
-  const makeOpts=(sel)=>cats.map(c=>`<option value="${escapeHtml(c.name)}" ${c.name===sel?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+  const makeOpts=(sel)=>cats.map(c=>`<option value="${c.name}" ${c.name===sel?'selected':''}>${c.name}</option>`).join('');
   const modal=document.getElementById('ma2-cat-sel');
   if(modal){
     modal.innerHTML=makeOpts(selected);
@@ -4295,7 +4286,7 @@ function _syncLedgerCatSelects(selectedForEdit){
   const lqSel=document.getElementById('lq-category');
   if(lqSel){
     const cur=lqSel.value;
-     lqSel.innerHTML=cats.map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
+    lqSel.innerHTML=cats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
     if([...lqSel.options].some(o=>o.value===cur))lqSel.value=cur;
     if(!lqSel.dataset.iconBound){
       lqSel.dataset.iconBound='1';
@@ -4307,9 +4298,9 @@ function _syncLedgerCatSelects(selectedForEdit){
   if(selectedForEdit!==undefined){
     const mleSel=document.getElementById('mle-category');
     if(mleSel){
-       let opts=cats.map(c=>`<option value="${escapeHtml(c.name)}" ${c.name===selectedForEdit?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+      let opts=cats.map(c=>`<option value="${c.name}" ${c.name===selectedForEdit?'selected':''}>${c.name}</option>`).join('');
       if(selectedForEdit&&!cats.some(c=>c.name===selectedForEdit)){
-        opts=`<option value="${escapeHtml(selectedForEdit)}" selected>${escapeHtml(selectedForEdit)}</option>`+opts;
+        opts=`<option value="${selectedForEdit}" selected>${selectedForEdit}</option>`+opts;
       }
       mleSel.innerHTML=opts;
       if(!mleSel.dataset.iconBound){
@@ -5215,7 +5206,7 @@ function renderLcatPanel(){
     return `<div class="lcat-row" data-drag-id="${c.id}">
       <button class="lcat-icon-trigger" title="아이콘 변경" onclick="App._openIconPicker(event,${c.id})">${_getCatSVG(c.name)}</button>
       <button class="lcat-color-trigger" title="색상" onclick="App._openColorPicker(event,${c.id})" style="background:${c.color||'transparent'};border:2px solid ${c.color?c.color+'88':'var(--border)'};width:16px;height:16px;min-width:16px;border-radius:50%;cursor:pointer;flex-shrink:0;padding:0;"></button>
-      <input class="lcat-name-input" type="text" value="${escapeHtml(c.name)}"
+      <input class="lcat-name-input" type="text" value="${c.name}"
         onchange="App.saveLcatName(${c.id},this.value)"
         onkeydown="if(event.key==='Enter')this.blur()"/>
       <button class="icon-btn lcat-del-btn" onclick="App.deleteLcatEntry(${c.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
@@ -5237,24 +5228,11 @@ function addLcatEntry(){
   const name=inp.value.trim();if(!name)return alert('카테고리명을 입력해주세요');
   if(!S.ledgerCategories)S.ledgerCategories=[];
   if(S.ledgerCategories.some(c=>c.name===name))return alert('이미 있는 카테고리입니다');
-  S.ledgerCategories=[...S.ledgerCategories,{id:genId(),name,isSavings:false}];
+  S.ledgerCategories.push({id:genId(),name,isSavings:false});
   saveState();renderLcatPanel();
 }
 
 function deleteLcatEntry(id){
-  const category=(S.ledgerCategories||[]).find(c=>c.id==id);
-  if(!category)return;
-  const usedInLedger=Object.values(S.ledger||{}).some(entries=>
-    (entries||[]).some(entry=>entry.categoryId==id||entry.category===category.name)
-  );
-  const usedInMonthly=Object.values(S.monthlyData||{}).some(month=>
-    [...(month.variable||[]),...(month.fixed||[]),...(month.income||[])]
-      .some(item=>item.category===category.name)
-  );
-  const usedInAutomation=(S.automations||[]).some(item=>item.category===category.name);
-  if(usedInLedger||usedInMonthly||usedInAutomation){
-    return alert('이 카테고리를 사용하는 내역이 있어 삭제할 수 없습니다.\n내역을 보존하려면 카테고리 이름을 수정해 주세요.');
-  }
   if(!confirm('카테고리를 삭제하시겠어요?'))return;
   S.ledgerCategories=(S.ledgerCategories||[]).filter(c=>c.id!=id);
   saveState();renderLcatPanel();
@@ -5262,25 +5240,19 @@ function deleteLcatEntry(id){
 
 function toggleLcatSavings(id,checked){
   const c=(S.ledgerCategories||[]).find(c=>c.id==id);if(!c)return;
-  S.ledgerCategories=S.ledgerCategories.map(item=>item.id==id?{...item,isSavings:!!checked}:item);
+  c.isSavings=checked;
   saveState();renderLcatPanel();renderSavingsRate();renderDashboard();
 }
 
 function saveLcatName(id,name){
   const c=(S.ledgerCategories||[]).find(c=>c.id==id);if(!c)return;
   const newName=name.trim();if(!newName||newName===c.name)return;
-  if((S.ledgerCategories||[]).some(item=>item.id!=id&&item.name===newName)){
-    return alert('이미 같은 이름의 카테고리가 있습니다.');
-  }
   const oldName=c.name;
-  S.ledgerCategories=S.ledgerCategories.map(item=>item.id==id?{...item,name:newName}:item);
+  c.name=newName;
   // 가계부 항목 일괄 반영: categoryId 또는 이름 일치하는 모든 항목
   Object.keys(S.ledger||{}).forEach(key=>{
     (S.ledger[key]||[]).forEach(e=>{
-      if(e.categoryId==id||e.category===oldName){
-        e.category=newName;
-        e.categoryId=id;
-      }
+      if(e.categoryId==id||e.category===oldName)e.category=newName;
     });
   });
   // 변동지출 항목 일괄 반영
