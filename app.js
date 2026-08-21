@@ -3479,6 +3479,9 @@ function saveVariable(){
 
 function _addCreditAutoEntries(card){
   const monthly=Math.ceil(card.amount/card.months);
+  const category=card.category||'신용카드';
+  const categoryObj=(S.ledgerCategories||[]).find(c=>c.name===category);
+  const tags=Array.isArray(card.tags)?card.tags:[];
   for(let i=0;i<card.months;i++){
     let mm=card.startMonth+i,yy=card.startYear;
     while(mm>12){mm-=12;yy++;}
@@ -3489,7 +3492,7 @@ function _addCreditAutoEntries(card){
     if(!S.ledger[pk])S.ledger[pk]=[];
     S.ledger[pk].push({
       id:genId(),creditAutoId:autoId,
-      date:dateStr,type:'expense',category:'신용카드',
+      date:dateStr,type:'expense',category,categoryId:categoryObj?categoryObj.id:undefined,tags:tags.slice(),
       memo:card.card+' — '+card.item+(card.months>1?' ('+(i+1)+'/'+card.months+'회)':''),
       amount:monthly
     });
@@ -3499,7 +3502,7 @@ function _addCreditAutoEntries(card){
     mdata.variable.push({
       id:genId(),
       name:card.item+(card.months>1?' ('+(i+1)+'/'+card.months+'회)':''),
-      category:'신용카드',amount:monthly,
+      category,amount:monthly,tags:tags.slice(),
       autoFromCredit:true,creditId:card.id,creditAutoId:autoId
     });
   }
@@ -3509,6 +3512,8 @@ function saveCredit(){
   const editId=parseInt(document.getElementById('mc-edit-id').value)||0;
   const cardSelId=document.getElementById('mc-card').value;
   const item=document.getElementById('mc-item').value.trim();
+  const category=document.getElementById('mc-category').value||'신용카드';
+  const tags=[...new Set((document.getElementById('mc-tags').value||'').split(/[,\n]+/).map(t=>t.replace(/^#/,'').trim()).filter(Boolean))];
   const amount=numInputParse(document.getElementById('mc-amount').value);
   const months=parseInt(document.getElementById('mc-months').value)||1;
   const startYear=parseInt(document.getElementById('mc-start-year').value)||2026;
@@ -3527,13 +3532,13 @@ function saveCredit(){
         S.monthlyData[key].variable=S.monthlyData[key].variable.filter(v=>v.creditId!==editId);
       }
     }
-    existing.card=cardName;existing.item=item;existing.amount=amount;
+    existing.card=cardName;existing.item=item;existing.category=category;existing.tags=tags;existing.amount=amount;
     existing.months=months;existing.startYear=startYear;existing.startMonth=startMonth;existing.startDay=startDay;
     existing.paidMonths=[];
     _addCreditAutoEntries(existing);
   } else {
     const creditId=genId();
-    const newCard={id:creditId,card:cardName,item,amount,months,startYear,startMonth,startDay,paidMonths:[]};
+    const newCard={id:creditId,card:cardName,item,category,tags,amount,months,startYear,startMonth,startDay,paidMonths:[]};
     S.creditCards.push(newCard);
     _addCreditAutoEntries(newCard);
   }
@@ -3544,12 +3549,16 @@ function openCreditModal(){
   document.getElementById('mc-edit-id').value='';
   document.getElementById('mc-edit-label').textContent='추가';
   document.getElementById('mc-item').value='';
+  document.getElementById('mc-tags').value='';
   document.getElementById('mc-amount').value='';
   document.getElementById('mc-months').value='';
   document.getElementById('mc-start-day').value='';
   const now=new Date();
   document.getElementById('mc-start-year').value=now.getFullYear();
   document.getElementById('mc-start-month').value=now.getMonth()+1;
+  const catSel=document.getElementById('mc-category');
+  if(catSel)catSel.innerHTML=(S.ledgerCategories||[]).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  if(catSel&&(!catSel.value||!(S.ledgerCategories||[]).some(c=>c.name===catSel.value)))catSel.value=(S.ledgerCategories||[])[0]?.name||'신용카드';
   openModal('credit');
 }
 
@@ -3559,11 +3568,15 @@ function editCredit(id){
   document.getElementById('mc-edit-label').textContent='수정';
   const cardSetting=S.cardSettings.find(c=>c.name===card.card);
   document.getElementById('mc-item').value=card.item;
+  document.getElementById('mc-tags').value=(card.tags||[]).join(', ');
   document.getElementById('mc-amount').value=(card.amount||0).toLocaleString('ko-KR');
   document.getElementById('mc-months').value=card.months;
   document.getElementById('mc-start-year').value=card.startYear;
   document.getElementById('mc-start-month').value=card.startMonth;
   document.getElementById('mc-start-day').value=card.startDay||1;
+  const catSel=document.getElementById('mc-category');
+  if(catSel)catSel.innerHTML=(S.ledgerCategories||[]).map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  if(catSel)catSel.value=card.category||'신용카드';
   openModal('credit');
   if(cardSetting){const sel=document.getElementById('mc-card');if(sel)sel.value=cardSetting.id;}
 }
