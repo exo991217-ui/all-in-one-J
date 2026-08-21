@@ -538,7 +538,7 @@ function renderChecklistPanel(type, items, label, accent, bg) {
           <button onclick="TravelApp.toggleChecklistGroup('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;color:${accent};flex-shrink:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${isExpanded?90:0}deg);transition:transform .18s;display:block;"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
-           <input type="checkbox" ${item.checked?'checked':''} ${locked?'disabled':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
+           <input type="checkbox" ${item.checked?'checked':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
           <span style="font-size:13px;font-weight:700;color:${allSubDone?'#aaa':'var(--text-main)'};text-decoration:${allSubDone?'line-through':'none'};flex:1;">${item.text}</span>
           <span style="font-size:10px;font-weight:700;background:${accent}22;color:${accent};border-radius:20px;padding:1px 7px;flex-shrink:0;">${subDone}/${item.subItems.length}</span>
            ${locked?'':`<button onclick="TravelApp.editChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="수정">✎</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',-1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="위로">↑</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="아래로">↓</button><button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;flex-shrink:0;" title="삭제">✕</button>`}
@@ -547,7 +547,7 @@ function renderChecklistPanel(type, items, label, accent, bg) {
           ${item.subItems.map(si => `
             <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:10px;background:${si.checked?'#fafafa':'transparent'};">
               <div style="width:1px;height:13px;background:#ddd;flex-shrink:0;border-radius:1px;"></div>
-               <input type="checkbox" ${si.checked?'checked':''} ${locked?'disabled':''} style="width:13px;height:13px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistSubItem('${type}','${item.id}','${si.id}',this.checked)"/>
+               <input type="checkbox" ${si.checked?'checked':''} style="width:13px;height:13px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistSubItem('${type}','${item.id}','${si.id}',this.checked)"/>
               <span style="font-size:12px;color:${si.checked?'#aaa':'var(--text-main)'};text-decoration:${si.checked?'line-through':'none'};flex:1;">${si.text}</span>
                ${locked?'':`<button onclick="TravelApp.deleteChecklistSubItem('${type}','${item.id}','${si.id}')" style="background:none;border:none;cursor:pointer;color:#ddd;font-size:11px;padding:0;">✕</button>`}
             </div>`).join('')}
@@ -563,7 +563,7 @@ function renderChecklistPanel(type, items, label, accent, bg) {
       </div>`;
     } else {
       return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:12px;background:${item.checked?'#fafafa':'transparent'};" draggable="${!locked}" ondragstart="TravelApp._checklistDragStart(event,'${type}','${item.id}')" ondragover="event.preventDefault()" ondrop="TravelApp._checklistDrop(event,'${type}','${item.id}')">
-        <input type="checkbox" ${item.checked?'checked':''} ${locked?'disabled':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
+        <input type="checkbox" ${item.checked?'checked':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
         <span style="font-size:13px;color:${item.checked?'#aaa':'var(--text-main)'};text-decoration:${item.checked?'line-through':'none'};flex:1;">${item.text}</span>
         ${locked?'':`<button onclick="TravelApp.addChecklistGroupToItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:9px;padding:0 2px;border-radius:50%;line-height:1;" title="하위분류 추가">⊕</button><button onclick="TravelApp.editChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="수정">✎</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',-1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="위로">↑</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="아래로">↓</button><button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;">✕</button>`}
       </div>`;
@@ -2643,7 +2643,6 @@ function _rerenderTips() {
 }
 
 function toggleChecklistItem(type, id, checked) {
-  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const cl = (S.travels.checklist && S.travels.checklist[type]) || [];
   const item = cl.find(i => i.id === id);
   if (!item) return;
@@ -2653,7 +2652,6 @@ function toggleChecklistItem(type, id, checked) {
 }
 
 function toggleChecklistSubItem(type, parentId, subId, checked) {
-  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const cl = (S.travels.checklist && S.travels.checklist[type]) || [];
   const item = cl.find(i => i.id === parentId);
   if (!item || !item.subItems) return;
@@ -2711,7 +2709,6 @@ function deleteChecklistSubItem(type, parentId, subId) {
 }
 
 function checkAllChecklist(type, checked) {
-  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   ((S.travels.checklist || {})[type] || []).forEach(item => {
     item.checked = checked;
     if (item.subItems) item.subItems.forEach(si => si.checked = checked);
