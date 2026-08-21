@@ -44,6 +44,7 @@ function initTravelState() {
   }
   if (!S.travels.checklist.common) S.travels.checklist.common = [];
   if (!S.travels.checklist.overseas) S.travels.checklist.overseas = [];
+  if (!S.travels.checklistLocks) S.travels.checklistLocks = { common: false, overseas: false };
   // ── 여행 팁 게시글 ──────────────────────────────────────
   if (!S.travels.travelTips) S.travels.travelTips = [];
 }
@@ -87,6 +88,7 @@ let _tipsTagFilter = '전체';
 let _tipPendingTags = [];
 let _tipEditingId = null;
 let _checklistExpandedGroups = {}; // { itemId: boolean }
+let _checklistDrag = null;
 
 const TRIP_TYPE_ICONS = { domestic: '🏔', foreign: '✈️' };
 
@@ -524,29 +526,30 @@ function _countChecklistDone(items) {
 function renderChecklistPanel(type, items, label, accent, bg) {
   const { done, total } = _countChecklistDone(items);
   const allDone = total > 0 && done === total;
+  const locked = !!((S.travels.checklistLocks||{})[type]);
   const itemsHtml = (items || []).map(item => {
     const hasSubs = item.subItems && item.subItems.length > 0;
     const isExpanded = _checklistExpandedGroups[item.id] !== false;
     if (hasSubs) {
       const subDone = item.subItems.filter(s => s.checked).length;
       const allSubDone = item.subItems.length > 0 && subDone === item.subItems.length;
-      return `<div style="margin-bottom:4px;">
+      return `<div style="margin-bottom:4px;" draggable="${!locked}" ondragstart="TravelApp._checklistDragStart(event,'${type}','${item.id}')" ondragover="event.preventDefault()" ondrop="TravelApp._checklistDrop(event,'${type}','${item.id}')">
         <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:${bg};border-radius:14px;">
           <button onclick="TravelApp.toggleChecklistGroup('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;color:${accent};flex-shrink:0;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${isExpanded?90:0}deg);transition:transform .18s;display:block;"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
-          <input type="checkbox" ${item.checked?'checked':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
+           <input type="checkbox" ${item.checked?'checked':''} ${locked?'disabled':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
           <span style="font-size:13px;font-weight:700;color:${allSubDone?'#aaa':'var(--text-main)'};text-decoration:${allSubDone?'line-through':'none'};flex:1;">${item.text}</span>
           <span style="font-size:10px;font-weight:700;background:${accent}22;color:${accent};border-radius:20px;padding:1px 7px;flex-shrink:0;">${subDone}/${item.subItems.length}</span>
-          <button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;flex-shrink:0;" title="삭제">✕</button>
+           ${locked?'':`<button onclick="TravelApp.editChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="수정">✎</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',-1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="위로">↑</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="아래로">↓</button><button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;flex-shrink:0;" title="삭제">✕</button>`}
         </div>
         ${isExpanded ? `<div style="padding-left:26px;margin-top:2px;">
           ${item.subItems.map(si => `
             <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:10px;background:${si.checked?'#fafafa':'transparent'};">
               <div style="width:1px;height:13px;background:#ddd;flex-shrink:0;border-radius:1px;"></div>
-              <input type="checkbox" ${si.checked?'checked':''} style="width:13px;height:13px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistSubItem('${type}','${item.id}','${si.id}',this.checked)"/>
+               <input type="checkbox" ${si.checked?'checked':''} ${locked?'disabled':''} style="width:13px;height:13px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistSubItem('${type}','${item.id}','${si.id}',this.checked)"/>
               <span style="font-size:12px;color:${si.checked?'#aaa':'var(--text-main)'};text-decoration:${si.checked?'line-through':'none'};flex:1;">${si.text}</span>
-              <button onclick="TravelApp.deleteChecklistSubItem('${type}','${item.id}','${si.id}')" style="background:none;border:none;cursor:pointer;color:#ddd;font-size:11px;padding:0;">✕</button>
+               ${locked?'':`<button onclick="TravelApp.deleteChecklistSubItem('${type}','${item.id}','${si.id}')" style="background:none;border:none;cursor:pointer;color:#ddd;font-size:11px;padding:0;">✕</button>`}
             </div>`).join('')}
           <div id="tp-sub-form-${type}-${item.id}" style="display:none;align-items:center;gap:6px;padding:4px 0 2px 10px;">
             <input type="text" id="tp-sub-inp-${type}-${item.id}" placeholder="하위 항목..." style="flex:1;border:1.5px solid ${accent}55;border-radius:8px;padding:4px 8px;font-size:12px;outline:none;" onkeydown="if(event.key==='Enter')TravelApp.addChecklistSubItem('${type}','${item.id}')"/>
@@ -559,11 +562,10 @@ function renderChecklistPanel(type, items, label, accent, bg) {
         </div>` : ''}
       </div>`;
     } else {
-      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:12px;background:${item.checked?'#fafafa':'transparent'};">
-        <input type="checkbox" ${item.checked?'checked':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
+      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:12px;background:${item.checked?'#fafafa':'transparent'};" draggable="${!locked}" ondragstart="TravelApp._checklistDragStart(event,'${type}','${item.id}')" ondragover="event.preventDefault()" ondrop="TravelApp._checklistDrop(event,'${type}','${item.id}')">
+        <input type="checkbox" ${item.checked?'checked':''} ${locked?'disabled':''} style="width:15px;height:15px;accent-color:${accent};cursor:pointer;flex-shrink:0;" onchange="TravelApp.toggleChecklistItem('${type}','${item.id}',this.checked)"/>
         <span style="font-size:13px;color:${item.checked?'#aaa':'var(--text-main)'};text-decoration:${item.checked?'line-through':'none'};flex:1;">${item.text}</span>
-        <button onclick="TravelApp.addChecklistGroupToItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:9px;padding:0 2px;border-radius:50%;line-height:1;" title="하위분류 추가">⊕</button>
-        <button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;">✕</button>
+        ${locked?'':`<button onclick="TravelApp.addChecklistGroupToItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:9px;padding:0 2px;border-radius:50%;line-height:1;" title="하위분류 추가">⊕</button><button onclick="TravelApp.editChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="수정">✎</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',-1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="위로">↑</button><button onclick="TravelApp.moveChecklistItem('${type}','${item.id}',1)" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:11px;padding:0;" title="아래로">↓</button><button onclick="TravelApp.deleteChecklistItem('${type}','${item.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0;line-height:1;">✕</button>`}
       </div>`;
     }
   }).join('');
@@ -578,8 +580,8 @@ function renderChecklistPanel(type, items, label, accent, bg) {
       <div style="display:flex;gap:5px;flex-wrap:wrap;">
         <button onclick="TravelApp.checkAllChecklist('${type}',true)" style="font-size:11px;font-weight:600;padding:4px 12px;background:white;border:1.5px solid ${accent}44;border-radius:20px;cursor:pointer;color:${accent};">전체 체크</button>
         <button onclick="TravelApp.checkAllChecklist('${type}',false)" style="font-size:11px;font-weight:600;padding:4px 12px;background:white;border:1.5px solid ${accent}44;border-radius:20px;cursor:pointer;color:${accent};">전체 해제</button>
-        <button onclick="TravelApp.lockChecklist('${type}')" style="font-size:11px;font-weight:600;padding:4px 12px;background:${accent}15;border:1.5px solid ${accent}30;border-radius:20px;cursor:pointer;color:${accent};">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>잠금
+         <button onclick="TravelApp.lockChecklist('${type}')" style="font-size:11px;font-weight:600;padding:4px 12px;background:${accent}15;border:1.5px solid ${accent}30;border-radius:20px;cursor:pointer;color:${accent};">
+           ${locked?'🔓 잠금 해제':'🔒 잠금'}
         </button>
       </div>
     </div>
@@ -593,10 +595,10 @@ function renderChecklistPanel(type, items, label, accent, bg) {
         <button onclick="TravelApp.addChecklistItem('${type}')" style="background:${accent};color:white;border:none;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">추가</button>
         <button onclick="document.getElementById('tp-add-form-${type}').style.display='none'" style="background:none;border:1.5px solid #ddd;border-radius:10px;padding:7px 10px;font-size:12px;cursor:pointer;color:#aaa;">취소</button>
       </div>
-      <button onclick="(function(){var f=document.getElementById('tp-add-form-${type}');if(f){f.style.display='flex';var i=document.getElementById('tp-add-inp-${type}');if(i)i.focus();}})()" style="width:100%;margin-top:10px;padding:9px;background:transparent;border:1.5px dashed ${accent}35;border-radius:14px;cursor:pointer;color:${accent};font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;" onmouseover="this.style.background='${bg}'" onmouseout="this.style.background='transparent'">
+       ${locked?'':`<button onclick="(function(){var f=document.getElementById('tp-add-form-${type}');if(f){f.style.display='flex';var i=document.getElementById('tp-add-inp-${type}');if(i)i.focus();}})()" style="width:100%;margin-top:10px;padding:9px;background:transparent;border:1.5px dashed ${accent}35;border-radius:14px;cursor:pointer;color:${accent};font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;" onmouseover="this.style.background='${bg}'" onmouseout="this.style.background='transparent'">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         항목 추가
-      </button>
+       </button>`}
     </div>
   </div>`;
 }
@@ -2641,6 +2643,7 @@ function _rerenderTips() {
 }
 
 function toggleChecklistItem(type, id, checked) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const cl = (S.travels.checklist && S.travels.checklist[type]) || [];
   const item = cl.find(i => i.id === id);
   if (!item) return;
@@ -2650,6 +2653,7 @@ function toggleChecklistItem(type, id, checked) {
 }
 
 function toggleChecklistSubItem(type, parentId, subId, checked) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const cl = (S.travels.checklist && S.travels.checklist[type]) || [];
   const item = cl.find(i => i.id === parentId);
   if (!item || !item.subItems) return;
@@ -2665,6 +2669,7 @@ function toggleChecklistGroup(type, id) {
 }
 
 function addChecklistItem(type) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const input = document.getElementById('tp-add-inp-' + type);
   if (!input) return;
   const text = input.value.trim();
@@ -2676,6 +2681,7 @@ function addChecklistItem(type) {
 }
 
 function addChecklistSubItem(type, parentId) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const input = document.getElementById('tp-sub-inp-' + type + '-' + parentId);
   if (!input) return;
   const text = input.value.trim();
@@ -2688,12 +2694,14 @@ function addChecklistSubItem(type, parentId) {
 }
 
 function deleteChecklistItem(type, id) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   if (!S.travels.checklist || !S.travels.checklist[type]) return;
   S.travels.checklist[type] = S.travels.checklist[type].filter(i => i.id !== id);
   saveState(); _rerenderTips();
 }
 
 function deleteChecklistSubItem(type, parentId, subId) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const item = ((S.travels.checklist || {})[type] || []).find(i => i.id === parentId);
   if (item && item.subItems) {
     item.subItems = item.subItems.filter(s => s.id !== subId);
@@ -2703,6 +2711,7 @@ function deleteChecklistSubItem(type, parentId, subId) {
 }
 
 function checkAllChecklist(type, checked) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   ((S.travels.checklist || {})[type] || []).forEach(item => {
     item.checked = checked;
     if (item.subItems) item.subItems.forEach(si => si.checked = checked);
@@ -2711,14 +2720,49 @@ function checkAllChecklist(type, checked) {
 }
 
 function lockChecklist(type) {
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:10px 22px;border-radius:30px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);';
-  toast.textContent = '🔒 잠금 기능은 준비 중이에요!';
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2000);
+  if (!S.travels.checklistLocks) S.travels.checklistLocks = { common:false, overseas:false };
+  S.travels.checklistLocks[type] = !S.travels.checklistLocks[type];
+  saveState(); _rerenderTips();
+}
+
+function _checklistLockedToast() {
+  const toast=document.createElement('div');
+  toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:10px 22px;border-radius:30px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+  toast.textContent='🔒 잠금을 해제하면 수정할 수 있어요.';
+  document.body.appendChild(toast); setTimeout(()=>toast.remove(),1800);
+}
+
+function editChecklistItem(type,id) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
+  const item=((S.travels.checklist||{})[type]||[]).find(i=>i.id===id); if(!item)return;
+  const text=prompt('항목 이름을 수정하세요.',item.text);
+  if(text===null)return;
+  item.text=text.trim()||item.text; saveState(); _rerenderTips();
+}
+
+function moveChecklistItem(type,id,direction) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
+  const list=((S.travels.checklist||{})[type]||[]), index=list.findIndex(i=>i.id===id);
+  const next=index+direction; if(index<0||next<0||next>=list.length)return;
+  [list[index],list[next]]=[list[next],list[index]]; saveState(); _rerenderTips();
+}
+
+function _checklistDragStart(event,type,id) {
+  if ((S.travels.checklistLocks||{})[type]) { event.preventDefault(); return; }
+  _checklistDrag={type,id}; event.dataTransfer.effectAllowed='move';
+}
+function _checklistDrop(event,type,targetId) {
+  event.preventDefault();
+  if (!_checklistDrag || _checklistDrag.type!==type || _checklistDrag.id===targetId) return;
+  const list=((S.travels.checklist||{})[type]||[]);
+  const from=list.findIndex(i=>i.id===_checklistDrag.id), to=list.findIndex(i=>i.id===targetId);
+  if(from<0||to<0)return;
+  const [item]=list.splice(from,1); list.splice(to,0,item);
+  _checklistDrag=null; saveState(); _rerenderTips();
 }
 
 function addChecklistGroupToItem(type, id) {
+  if (S.travels.checklistLocks && S.travels.checklistLocks[type]) return _checklistLockedToast();
   const item = ((S.travels.checklist || {})[type] || []).find(i => i.id === id);
   if (!item) return;
   if (!item.subItems) item.subItems = [];
@@ -3009,6 +3053,10 @@ window.TravelApp = {
   deleteChecklistSubItem,
   checkAllChecklist,
   lockChecklist,
+  editChecklistItem,
+  moveChecklistItem,
+  _checklistDragStart,
+  _checklistDrop,
   addChecklistGroupToItem,
   // ── 팁 게시글 ──────────────────────────────────────────
   openTipWriter,
