@@ -403,14 +403,6 @@ if (document.readyState === 'loading') {
               </div>
             </div>
             <div class="dash-expand" id="dash-asset-expand"></div>
-            <div class="dash-row" onclick="App.toggleDashSection('stock')">
-              <div class="dash-row-left"><span class="dash-icon">📈</span><span>주식 평가액</span></div>
-              <div class="dash-row-right">
-                <span class="dash-value teal" id="dash-stock-total">0원</span>
-                <span class="expand-arrow" id="dash-stock-arrow">∨</span>
-              </div>
-            </div>
-            <div class="dash-expand" id="dash-stock-expand"></div>
           </div>
 
         </div><!-- /dash-main-col -->
@@ -513,22 +505,6 @@ if (document.readyState === 'loading') {
           <button class="add-btn" onclick="App.openAssetModal()">+ 추가</button>
         </div>
         <div id="asset-list" class="asset-list-items"></div>
-      </div>
-      <div class="card" id="asset-stocks-card" style="margin-top:20px;border-top:4px solid #00CEC9;">
-        <div class="card-header-row">
-          <div class="card-title-group">
-            <span>📈 주식 포트폴리오</span>
-            <span class="card-total" id="asset-stock-total-display" style="color:#00CEC9;">0원</span>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <button class="stock-refresh-btn" id="asset-stock-refresh-btn" onclick="App.fetchStockPrices()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg> 새로고침</button>
-            <button id="asset-stock-stop-btn" onclick="App.toggleStockSyncStop()" style="padding:7px 12px;border-radius:10px;border:1.5px solid var(--red);background:#FFF0F0;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;">⏹ 동기화 정지</button>
-            <button class="add-btn primary" onclick="App.openStockModal()">+ 종목 추가</button>
-          </div>
-        </div>
-        <div id="asset-stock-summary" class="asset-stock-summary"></div>
-        <div id="asset-stock-list" class="asset-stock-list"></div>
-        <div id="asset-stock-refresh-status" style="font-size:12px;color:var(--text-sub);margin-top:8px;text-align:right;"></div>
       </div>
     </section>
 
@@ -897,54 +873,6 @@ if (document.readyState === 'loading') {
   </div>
   <div class="modal-actions fund-calc-modal-actions">
     <button type="button" class="btn-cancel" onclick="App.closeModal()">닫기</button>
-  </div>
-</div>
-
-<div class="modal" id="modal-stock">
-  <div class="modal-header">📈 종목 <span id="modal-stock-edit-label">추가</span></div>
-  <input type="hidden" id="modal-stock-id"/>
-  <div class="form-group"><label>종목명</label><input type="text" id="ms-name" class="form-input" placeholder="삼성전자 / Apple / 금현물"/></div>
-  <div class="form-group">
-    <label>종목 유형</label>
-    <div style="display:flex;gap:12px;margin-top:6px;">
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
-        <input type="radio" name="ms-type" value="domestic" checked onchange="App.onStockTypeChange(this.value)"/> 🇰🇷 국내주식
-      </label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
-        <input type="radio" name="ms-type" value="foreign" onchange="App.onStockTypeChange(this.value)"/> 🌍 해외주식
-      </label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
-        <input type="radio" name="ms-type" value="gold" onchange="App.onStockTypeChange(this.value)"/> 🥇 금현물
-      </label>
-    </div>
-  </div>
-  <div id="ms-domestic-fields">
-    <div class="form-row">
-      <div class="form-group"><label>종목 코드</label><input type="text" id="ms-ticker" class="form-input" placeholder="005930"/></div>
-      <div class="form-group"><label>섹터</label><input type="text" id="ms-sector" class="form-input" placeholder="반도체"/></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>매수 단가 (원)</label><input type="text" inputmode="numeric" id="ms-buy" class="form-input" placeholder="156,700" oninput="App.numInputFmt(this)"/></div>
-      <div class="form-group"><label>현재가 (원)</label><input type="text" inputmode="numeric" id="ms-current" class="form-input" placeholder="156,700" oninput="App.numInputFmt(this)"/></div>
-    </div>
-    <div class="form-group"><label>보유 수량</label><input type="number" id="ms-qty" class="form-input" placeholder="1"/></div>
-  </div>
-  <div id="ms-manual-fields" style="display:none;">
-    <div class="form-row">
-      <div class="form-group" id="ms-ticker-group"><label>종목 코드 (선택)</label><input type="text" id="ms-ticker-manual" class="form-input" placeholder="AAPL" oninput="document.getElementById('ms-ticker').value=this.value"/></div>
-      <div class="form-group"><label>섹터</label><input type="text" id="ms-sector-manual" class="form-input" placeholder="ETF" oninput="document.getElementById('ms-sector').value=this.value"/></div>
-    </div>
-    <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;padding:8px;background:var(--bg);border-radius:8px;">
-      💡 해외주식·금현물은 매입금액과 평가금액을 직접 입력합니다 (자동 새로고침 없음)
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>매입금액 (원)</label><input type="text" inputmode="numeric" id="ms-buy-amount" class="form-input" placeholder="1,000,000" oninput="App.numInputFmt(this)"/></div>
-      <div class="form-group"><label>평가금액 (원)</label><input type="text" inputmode="numeric" id="ms-current-amount" class="form-input" placeholder="1,200,000" oninput="App.numInputFmt(this)"/></div>
-    </div>
-  </div>
-  <div class="modal-actions">
-    <button class="btn-cancel" onclick="App.closeModal()">취소</button>
-    <button class="btn-save" onclick="App.saveStock()">저장</button>
   </div>
 </div>
 
