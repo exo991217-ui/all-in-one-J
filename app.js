@@ -42,7 +42,8 @@ const DEFAULT_DATA=()=>{
     {id:104,name:'기타',budget:200000,synced:true,syncFrom:'',linkedCategories:[]},
   ],
   monthBudgets:{},
-  assetCategories:['계좌','적금','주식'],
+  assetCategories:['계좌','적금','예금','주식'],
+  _assetDepositCategoryMigratedV1:true,
   remainingBudgetSettings:{label:'현재 남은 예산',amount:0},
   fundCalc:{amount:0,items:[],assetLinked:false,assetLinkedAt:null,linkedAssetIds:[]},
   defaultItems:{income:[],fixed:[]},
@@ -102,7 +103,7 @@ function loadState(){
       if(!S.monthClosedArchive)S.monthClosedArchive={};
       if(!S.budgetCategories)S.budgetCategories=DEFAULT_DATA().budgetCategories;
       if(!S.monthBudgets)S.monthBudgets={};
-      if(!S.assetCategories)S.assetCategories=['계좌','적금','주식'];
+       if(!S.assetCategories)S.assetCategories=['계좌','적금','예금','주식'];
       if(!S.remainingBudgetSettings)S.remainingBudgetSettings={label:'현재 남은 예산',amount:0};
       // Migrate per-category sync: add synced/syncFrom/linkedCategories to old categories
       S.budgetCategories=S.budgetCategories.map(c=>({synced:true,syncFrom:'',linkedCategories:[],...c}));
@@ -180,7 +181,7 @@ function loadState(){
         S._migrated_v2=true;
       } else {S=DEFAULT_DATA();S._migrated_v2=true;}
     }
-    if(migrateNetWorthSnapshots())saveState();
+    if(ensureAssetDepositCategory())saveState();
   } catch(e){S=DEFAULT_DATA();S._migrated_v2=true;}
 }
 
@@ -215,7 +216,7 @@ window.FB_MERGE = function(fbData) {
     if(!S.monthClosedArchive)S.monthClosedArchive={};
     if(!S.budgetCategories)S.budgetCategories=D.budgetCategories;
     if(!S.monthBudgets)S.monthBudgets={};
-    if(!S.assetCategories)S.assetCategories=['계좌','적금','주식'];
+    if(!S.assetCategories)S.assetCategories=['계좌','적금','예금','주식'];
     if(!S.remainingBudgetSettings)S.remainingBudgetSettings={label:'현재 남은 예산',amount:0};
     if(!S.ledgerCategories)S.ledgerCategories=D.ledgerCategories;
     if(!S.keywordRules)S.keywordRules=[];
@@ -243,7 +244,7 @@ window.FB_MERGE = function(fbData) {
     if(S.fundCalc.assetLinked===undefined)S.fundCalc.assetLinked=false;
     if(S.fundCalc.assetLinkedAt===undefined)S.fundCalc.assetLinkedAt=null;
     if(!S.fundCalc.linkedAssetIds)S.fundCalc.linkedAssetIds=[];
-    if(migrateNetWorthSnapshots())saveState();
+    if(ensureAssetDepositCategory())saveState();
   } catch(e) { console.error('[FB_MERGE] 오류:', e); }
 };
 
@@ -479,36 +480,28 @@ function getTotalAssets(){return S.assets.reduce((s,a)=>s+(parseFloat(a.amount)|
 // 순자산의 단일 기준: 자산 목록에 표시되는 실제 자산 합계.
 function getNetWorth(){return getTotalAssets();}
 
-// 기존 버전의 마감 기록은 주식 평가액을 자산 합계에 중복해 저장했을 수 있다.
-// 기록 마이그레이션에만 과거 주식 데이터를 읽고, 현재 앱 기능에는 사용하지 않는다.
-function getLegacyStockValueForMigration(){
-  return (S.stocks||[]).reduce((sum,st)=>{
-    if(st.stockType==='foreign'||st.stockType==='gold')return sum+(parseFloat(st.currentAmount)||0);
-    return sum+(parseFloat(st.currentPrice)||0)*(parseFloat(st.quantity)||0);
-  },0);
+function ensureAssetDepositCategory(){
+  if(!S||S._assetDepositCategoryMigratedV1)return false;
+  if(!Array.isArray(S.assetCategories))S.assetCategories=['계좌','적금','주식'];
+  if(!S.assetCategories.includes('예금'))S.assetCategories.push('예금');
+  const defaultOrder=['계좌','적금','예금','주식'];
+  S.assetCategories=[
+    ...defaultOrder.filter(category=>S.assetCategories.includes(category)),
+    ...S.assetCategories.filter(category=>!defaultOrder.includes(category))
+  ];
+  S._assetDepositCategoryMigratedV1=true;
+  return true;
 }
 
-// 현재 데이터가 그 legacy 계산식과 정확히 일치할 때만 기존 기록을 안전하게 보정한다.
-function migrateNetWorthSnapshots(){
-  const assetTotal=getTotalAssets();
-  const stockValue=getLegacyStockValueForMigration();
-  const legacyTotal=assetTotal+stockValue;
-  let changed=false;
-  ['monthClosedArchive','closedMonths'].forEach(collection=>{
-    Object.values(S[collection]||{}).forEach(record=>{
-      if(!record||record.netWorth===undefined||record.netWorthVersion===2)return;
-      if(Math.round(Number(record.netWorth)||0)!==Math.round(legacyTotal))return;
-      record.netWorth=assetTotal;
-      record.assetTotal=assetTotal;
-      record.netWorthVersion=2;
-      changed=true;
-    });
-  });
-  return changed;
-}
-function getArchiveNetWorth(record){
+function getArchiveNetWorthValue(record){
   const value=record?.assetTotal??record?.netWorth;
-  return Number(value)||0;
+  if(value===undefined||value===null||value===''||!Number.isFinite(Number(value)))return null;
+  return Number(value);
+}
+function getArchiveNetWorthChange(current,previous){
+  const currentValue=getArchiveNetWorthValue(current);
+  const previousValue=getArchiveNetWorthValue(previous);
+  return currentValue===null||previousValue===null?null:currentValue-previousValue;
 }
 // Budget cats: per-category sync
 function monthNum(y,m){return y*12+m;}
@@ -2284,7 +2277,7 @@ function renderAssets(){
     return;
   }
   // Group by category
-  const cats=S.assetCategories||['계좌','적금','주식'];
+  const cats=S.assetCategories||['계좌','적금','예금','주식'];
   const grouped={};
   cats.forEach(c=>{grouped[c]=[];});
   grouped['기타']=grouped['기타']||[];
@@ -2293,7 +2286,7 @@ function renderAssets(){
     if(!grouped[cat])grouped[cat]=[];
     grouped[cat].push(a);
   });
-  const catIcons={'계좌':'🏦','적금':'💰','주식':'📈','기타':'📌'};
+  const catIcons={'계좌':'🏦','적금':'💰','예금':'🏧','주식':'📈','기타':'📌'};
   let html='';
   [...cats,'기타'].filter((c,i,arr)=>arr.indexOf(c)===i).forEach(cat=>{
     const items=grouped[cat]||[];
@@ -3459,8 +3452,11 @@ function editCredit(id){
 
 function populateAssetCategorySelect(selectedCat){
   const sel=document.getElementById('ma-category');if(!sel)return;
-  const cats=S.assetCategories||['계좌','적금','주식'];
-  sel.innerHTML=cats.map(c=>`<option value="${c}" ${c===selectedCat?'selected':''}>${c}</option>`).join('');
+  const cats=Array.isArray(S.assetCategories)?S.assetCategories:['계좌','적금','예금','주식'];
+  const selected=selectedCat||cats[0]||'기타';
+  const options=cats.includes(selected)?cats:[...cats,selected];
+  sel.innerHTML=options.map(c=>`<option value="${escapeAssetCategoryText(c)}">${escapeAssetCategoryText(c)}</option>`).join('');
+  sel.value=selected;
 }
 
 function openAssetModal(){
@@ -3468,17 +3464,86 @@ function openAssetModal(){
   document.getElementById('ma-name').value='';
   document.getElementById('ma-amount').value='';
   document.getElementById('modal-asset-edit-label').textContent='추가';
-  populateAssetCategorySelect('계좌');
+  populateAssetCategorySelect((S.assetCategories||[]).includes('계좌')?'계좌':(S.assetCategories||[])[0]||'기타');
   openModal('asset');
 }
 
-function promptAddAssetCategory(){
-  const name=prompt('새 분류 이름을 입력하세요:');
+let _assetCategoryReturnSelection='계좌';
+function openAssetCategoryManager(){
+  _assetCategoryReturnSelection=document.getElementById('ma-category')?.value||'계좌';
+  renderAssetCategoryManager();
+  openModal('asset-categories');
+}
+
+function closeAssetCategoryManager(){
+  populateAssetCategorySelect(_assetCategoryReturnSelection);
+  openModal('asset');
+}
+
+function escapeAssetCategoryText(value){
+  return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function renderAssetCategoryManager(){
+  const list=document.getElementById('asset-category-manager-list');
+  if(!list)return;
+  const cats=Array.isArray(S.assetCategories)?S.assetCategories:[];
+  list.innerHTML=cats.length?cats.map((category,index)=>`
+    <div class="asset-cat-manager-row">
+      <span class="asset-cat-manager-name">${escapeAssetCategoryText(category)}</span>
+      <div class="asset-cat-manager-actions">
+        <button type="button" class="asset-cat-manager-btn" aria-label="${escapeAssetCategoryText(category)} 아래로 이동" title="아래로 이동" ${index===cats.length-1?'disabled':''} onclick="App.moveAssetCategory(${index},1)">▾</button>
+        <button type="button" class="asset-cat-manager-btn" aria-label="${escapeAssetCategoryText(category)} 위로 이동" title="위로 이동" ${index===0?'disabled':''} onclick="App.moveAssetCategory(${index},-1)">▴</button>
+        <button type="button" class="asset-cat-manager-btn delete" aria-label="${escapeAssetCategoryText(category)} 삭제" title="삭제" onclick="App.deleteAssetCategory(${index})">×</button>
+      </div>
+    </div>`).join(''):'<div class="asset-cat-manager-empty">등록된 분류가 없습니다.</div>';
+}
+
+function moveAssetCategory(index,direction){
+  const cats=S.assetCategories||[];
+  const target=index+direction;
+  if(index<0||index>=cats.length||target<0||target>=cats.length)return;
+  [cats[index],cats[target]]=[cats[target],cats[index]];
+  saveState();
+  renderAssetCategoryManager();
+  populateAssetCategorySelect(_assetCategoryReturnSelection);
+  renderAssets();
+}
+
+function addAssetCategory(){
+  const name=prompt('추가할 분류 이름을 입력하세요:');
   if(!name||!name.trim())return;
   const trimmed=name.trim();
-  if(!S.assetCategories)S.assetCategories=['계좌','적금','주식'];
-  if(!S.assetCategories.includes(trimmed))S.assetCategories.push(trimmed);
-  saveState();populateAssetCategorySelect(trimmed);
+  if(!Array.isArray(S.assetCategories))S.assetCategories=[];
+  if(S.assetCategories.includes(trimmed)){alert('이미 있는 분류입니다.');return;}
+  S.assetCategories.push(trimmed);
+  _assetCategoryReturnSelection=trimmed;
+  saveState();
+  renderAssetCategoryManager();
+  populateAssetCategorySelect(trimmed);
+  renderAssets();
+}
+
+function deleteAssetCategory(index){
+  const cats=S.assetCategories||[];
+  if(cats.length<=1){alert('분류는 최소 1개 이상 유지해야 합니다.');return;}
+  const category=cats[index];
+  if(category===undefined)return;
+  const affected=(S.assets||[]).filter(asset=>asset.category===category).length;
+  const message=affected
+    ?`“${category}” 분류를 삭제할까요?\n해당 분류의 자산 ${affected}개는 “기타”로 이동합니다.`
+    :`“${category}” 분류를 삭제할까요?`;
+  if(!confirm(message))return;
+  (S.assets||[]).forEach(asset=>{if(asset.category===category)asset.category='기타';});
+  cats.splice(index,1);
+  if(_assetCategoryReturnSelection===category){
+    _assetCategoryReturnSelection=cats.includes('계좌')?'계좌':cats[0]||'기타';
+  }
+  saveState();
+  renderAssetCategoryManager();
+  populateAssetCategorySelect(_assetCategoryReturnSelection);
+  renderAssets();
+  renderDashboard();
 }
 
 function saveAsset(){
@@ -4753,7 +4818,7 @@ function renderMonthlyArchive(){
     </div>`;
     return;
   }
-  el.innerHTML=keys.map(key=>{
+  el.innerHTML=keys.map((key,index)=>{
     const snap=archive[key];
     const y=snap.year;const m=snap.month;
     const theme=MONTH_THEMES[m]||MONTH_THEMES[5];
@@ -4825,8 +4890,10 @@ function renderMonthlyArchive(){
       </div>
       <div class="arch-card-body" id="arch-body-${key}" style="display:none;">
         ${(()=>{
-          const archNet=(snap.ledgerIncome||0)-(snap.ledgerExpense||0);
-          const archNetColor=archNet>=0?'var(--green)':'var(--red)';
+          const previousSnap=keys[index+1]?archive[keys[index+1]]:null;
+          const archNet=getArchiveNetWorthChange(snap,previousSnap);
+          const archNetColor=archNet===null?'var(--text-sub)':archNet>=0?'var(--green)':'var(--red)';
+          const archNetDisplay=archNet===null?'비교 기록 없음':`${archNet>=0?'+':''} ${fmt(Math.abs(archNet))}`;
           return `<div class="arch-stats-grid">
           <div class="arch-stat-box">
             <div class="arch-stat-label">💰 총 수입</div>
@@ -4841,8 +4908,8 @@ function renderMonthlyArchive(){
             <div class="arch-stat-val" style="color:#A29BFE;">${fmt(snap.savings||0)}</div>
           </div>
           <div class="arch-stat-box" style="background:${archNetColor}18;border:1.5px solid ${archNetColor}44;">
-            <div class="arch-stat-label">📈 순자산 증감</div>
-            <div class="arch-stat-val" style="color:${archNetColor};font-size:20px;font-weight:900;">${archNet>=0?'+':''} ${fmt(Math.abs(archNet))}</div>
+            <div class="arch-stat-label">📈 순자산 증감 (이전 마감 대비)</div>
+            <div class="arch-stat-val" style="color:${archNetColor};font-size:20px;font-weight:900;">${archNetDisplay}</div>
           </div>
         </div>`;})()}
         ${cats5.length>0?`
@@ -7091,15 +7158,12 @@ function renderArchive(){
   const totSavings=archived.reduce((s,[,d])=>s+(d.savings||0),0);
   // NaN 방지: savingsRate는 문자열 또는 숫자로 저장될 수 있으므로 parseFloat 처리
   const avgRate=archived.length>0?parseFloat((archived.reduce((s,[,d])=>s+(parseFloat(d.savingsRate)||0),0)/archived.length).toFixed(1)):0;
-  const totNetChange=totIncome-totExpense;
-  const netPct=totIncome>0?(totNetChange/totIncome*100).toFixed(1):0;
   // 가장 최근 마감 월의 순자산 (archived는 내림차순 정렬이므로 [0]이 가장 최근)
-  const lastNetWorth=archived[0]?getArchiveNetWorth(archived[0][1]):0;
-  const lastNetWorthColor=lastNetWorth>=0?'#4CAF82':'#F06292';
+  const lastNetWorthValue=archived[0]?getArchiveNetWorthValue(archived[0][1]):null;
+  const lastNetWorth=lastNetWorthValue??0;
+  const lastNetWorthColor=lastNetWorthValue===null?'var(--text-sub)':lastNetWorth>=0?'#4CAF82':'#F06292';
   const lastNetWorthY=archived[0]?archived[0][1].year||archived[0][0].split('-')[0]:'';
   const lastNetWorthM=archived[0]?archived[0][1].month||archived[0][0].split('-')[1]:'';
-  const netColor=totNetChange>=0?'#4CAF82':'#F06292';
-  const netVal=`${fmt(totNetChange)} (${netPct>0?'+':''}${netPct}%)`;
   const card=(label,val,color,sub)=>`<div style="background:white;border-radius:14px;border:1.5px solid var(--border);padding:14px 18px;box-shadow:0 2px 10px rgba(160,140,220,.08);">
       <div style="font-size:11px;color:var(--text-sub);margin-bottom:4px;">${label}</div>
       <div style="font-size:18px;font-weight:900;color:${color};">${val}</div>
@@ -7114,11 +7178,12 @@ function renderArchive(){
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
     ${card('총 저축 누계',fmt(totSavings),'#5E4BC4','')}
     ${card('평균 저축률',avgRate+'%',avgRate>=30?'#4CAF82':'#FFB347','')}
-    ${card(`최근 마감 월 순자산 (${lastNetWorthY}년 ${lastNetWorthM}월)`,fmt(lastNetWorth),lastNetWorthColor,'')}
+    ${card(`최근 마감 월 순자산 (${lastNetWorthY}년 ${lastNetWorthM}월)`,lastNetWorthValue===null?'기록 없음':fmt(lastNetWorth),lastNetWorthColor,'')}
   </div>`;
-  const rowsHtml=archived.map(([key,data])=>{
+  const rowsHtml=archived.map(([key,data],index)=>{
     const{year:y,month:mo,ledgerIncome:income,ledgerExpense:expense,savings,savingsRate,note,categories}=data;
-    const netWorth=getArchiveNetWorth(data);
+    const netWorthValue=getArchiveNetWorthValue(data);
+    const netWorth=netWorthValue??0;
     const isOpen=(_archExpandedKey===key);
     const srNum=parseFloat(savingsRate)||0;
     const rateColor=srNum>=50?'#4CAF82':srNum>=30?'#FFB347':'#F06292';
@@ -7131,10 +7196,12 @@ function renderArchive(){
     const catRows=cats.map(c=>`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span style="font-weight:600;">${c.name}</span><span style="font-weight:700;">${fmt(c.amount)}</span></div><div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.min(100,c.amount/(maxCat||1)*100)}%;background:linear-gradient(90deg,#A29BFE,#74B9FF);border-radius:3px;"></div></div></div>`).join('');
     const natCards=ANA_NATURES.map(n=>{const amt=natureMap[n.key]||0;const pct=incomeBase>0?Math.round(amt/incomeBase*100):0;return`<div class="ana2-closed-nature-card" style="background:${n.light};border:1.5px solid ${n.color}22;"><div style="font-size:10px;color:var(--text-sub);">${n.label}</div><div style="font-size:15px;font-weight:900;color:${n.color};">${pct}%</div><div style="font-size:10px;color:var(--text-sub);">${fmt(amt)}</div></div>`;}).join('');
     const scoreHtml=_buildScoreBox(score,grade,scoreColor,feedback,prevScore);
-    const netChange=(income||0)-(expense||0);
-    const netChgColor=netChange>=0?'#4CAF82':'#F06292';
-    const netWorthColor=(netWorth||0)>=0?'#4CAF82':'#F06292';
-    const netWorthDisplay=`<span style="font-weight:700;color:${netWorthColor};white-space:nowrap;">${fmt(netWorth||0)}</span> <span style="font-size:11px;color:${netChgColor};white-space:nowrap;">(${netChange>=0?'+':''}${fmt(netChange)})</span>`;
+    const previousArchive=archived[index+1]?archived[index+1][1]:null;
+    const netChange=getArchiveNetWorthChange(data,previousArchive);
+    const netChgColor=netChange===null?'var(--text-sub)':netChange>=0?'#4CAF82':'#F06292';
+    const netWorthColor=netWorthValue===null?'var(--text-sub)':netWorth>=0?'#4CAF82':'#F06292';
+    const netChangeText=netChange===null?'(비교 기록 없음)':`(${netChange>=0?'+':''}${fmt(netChange)})`;
+    const netWorthDisplay=`<span style="font-weight:700;color:${netWorthColor};white-space:nowrap;">${netWorthValue===null?'기록 없음':fmt(netWorthValue)}</span> <span style="font-size:11px;color:${netChgColor};white-space:nowrap;">${netChangeText}</span>`;
     const detailHtml=isOpen?`<tr><td colspan="7" style="padding:0;border-top:none;">
       <div class="ana2-closed-detail" style="margin:0;border-radius:0 0 12px 12px;border:1.5px solid #A29BFE44;border-top:none;background:#FDFCFF;">
         <div class="ana2-closed-kpi-grid">
@@ -7142,7 +7209,7 @@ function renderArchive(){
           <div class="ana2-kpi-box" style="border-color:#F0629244;"><div class="ana2-kpi-label">총 지출</div><div class="ana2-kpi-val" style="color:#F06292;">${fmt(expense||0)}</div></div>
           <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축액</div><div class="ana2-kpi-val" style="color:#A29BFE;">${fmt(savings||0)}</div></div>
           <div class="ana2-kpi-box" style="border-color:#A29BFE44;"><div class="ana2-kpi-label">저축률</div><div class="ana2-kpi-val" style="color:#A29BFE;">${srNum}%</div></div>
-          <div class="ana2-kpi-box" style="border-color:#4DB6AC44;"><div class="ana2-kpi-label">마감 시 순자산</div><div class="ana2-kpi-val" style="color:#4DB6AC;">${fmt(netWorth||0)}</div></div>
+           <div class="ana2-kpi-box" style="border-color:#4DB6AC44;"><div class="ana2-kpi-label">마감 시 순자산</div><div class="ana2-kpi-val" style="color:#4DB6AC;">${netWorthValue===null?'기록 없음':fmt(netWorthValue)}</div></div>
         </div>
         ${scoreHtml}
         <div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:8px;">재무 성격 요약</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">${natCards}</div></div>
@@ -7185,7 +7252,7 @@ function renderArchive(){
             <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);">지출</th>
             <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);">저축액</th>
             <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-sub);">저축률</th>
-            <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--text-sub);">순자산 (증감)</th>
+            <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:700;color:var(--text-sub);">순자산 (이전 마감 대비 증감)</th>
             <th style="width:26px;"></th>
           </tr>
         </thead>
@@ -7498,7 +7565,8 @@ window.App={
   toggleSidebar,closeSidebar,
   toggleNavGroup:(g)=>{if(window.TravelApp)TravelApp.toggleNavGroup(g);},
   editAuto,saveAuto,deleteAuto,toggleAuto,
-  openAssetModal,promptAddAssetCategory,
+  openAssetModal,openAssetCategoryManager,closeAssetCategoryManager,
+  renderAssetCategoryManager,addAssetCategory,moveAssetCategory,deleteAssetCategory,
   openFundCalcModal,
   renderWeeklySpend,
   toggleCalFoodSync,
