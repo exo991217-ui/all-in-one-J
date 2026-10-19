@@ -268,32 +268,6 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .asset-name{font-weight:600}
 .asset-amount{font-weight:800;font-size:15px;color:var(--blue)}
 
-/* ===== STOCKS ===== */
-.stock-header-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.stock-refresh-btn{padding:7px 14px;border-radius:20px;border:none;background:var(--teal-light);color:var(--teal);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
-.stock-refresh-btn:hover{background:var(--teal);color:white}
-.stock-refresh-btn.loading{opacity:.6;pointer-events:none}
-.stock-summary-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:0}
-.stock-sum-item{background:white;border-radius:var(--radius-sm);border:1.5px solid var(--border);padding:16px 20px;box-shadow:var(--shadow)}
-.stock-sum-label{font-size:12px;color:var(--text-sub);font-weight:600}
-.stock-sum-val{font-size:20px;font-weight:800;margin-top:4px;color:var(--text-main)}
-.stock-table{width:100%;border-collapse:collapse;font-size:13.5px}
-.stock-table thead tr{background:linear-gradient(90deg,#F5F2FF,#EEF4FF)}
-.stock-table th{padding:12px 16px;text-align:right;font-size:12px;font-weight:700;color:var(--text-sub)}
-.stock-table th:first-child{text-align:left}
-.stock-table td{padding:14px 16px;border-bottom:1px solid var(--border);text-align:right}
-.stock-table td:first-child{text-align:left}
-.stock-table tbody tr:last-child td{border-bottom:none}
-.stock-table tbody tr:hover td{background:#FAFAFF}
-.stock-name{font-weight:700;font-size:14px}
-.stock-ticker{font-size:11px;color:var(--text-sub)}
-.stock-sector{font-size:10px;color:var(--blue);margin-top:2px}
-.profit-pos{color:var(--red);font-weight:700}
-.profit-neg{color:var(--blue);font-weight:700}
-.profit-zero{color:var(--text-sub);font-weight:700}
-.stock-price-input{width:100px;border:1.5px solid var(--border);border-radius:8px;padding:4px 8px;font-size:13px;text-align:right;font-family:var(--font)}
-.stock-price-input.refreshed{border-color:var(--teal);background:var(--teal-light)}
-
 /* Close month analysis */
 .cm-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
 .cm-stat-box{background:var(--bg);border-radius:10px;padding:12px 14px;border:1.5px solid var(--border)}
@@ -751,7 +725,6 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
   .asset-income-stat strong{font-size:13px}
   .installment-grid{grid-template-columns:1fr}
   .dash-ledger-grid{grid-template-columns:1fr 1fr}
-  .stock-summary-bar{grid-template-columns:1fr}
   .cal-year-grid{grid-template-columns:1fr;grid-auto-flow:row;grid-template-rows:none}
   .food-panel-fields{grid-template-columns:1fr}
   .page-header{flex-direction:column;gap:10px}
@@ -766,10 +739,8 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
   /* 모바일 추가·수정·삭제 버튼 숨김 (dashboard/assets/소비캘린더) */
   #tab-dashboard .add-btn,#tab-dashboard .icon-btn,
   #tab-assets .add-btn,#tab-assets .icon-btn,
-  .stock-refresh-btn,.savings-add-main-btn,
+  .savings-add-main-btn,
   #tab-calendar .add-btn,#tab-calendar .icon-btn{display:none!important;}
-  .stock-table{font-size:12px}
-  .stock-table th,.stock-table td{padding:8px}
   .modal{min-width:calc(100vw - 32px);left:50%;transform:translate(-50%,-50%)}
   .fund-calc-modal{min-width:0}
   .banner-amount{font-size:28px}
@@ -1024,41 +995,9 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .fc-summary-remaining{border-top:1.5px solid var(--border);margin-top:5px;padding-top:8px;font-size:14px;font-weight:700;color:var(--text-main);}
 .fc-over-badge{font-size:11px;background:var(--red);color:white;border-radius:5px;padding:2px 6px;font-weight:700;}
 
-/* ===== ASSET STOCKS SECTION ===== */
-.asset-stock-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
-.asset-stock-sum-item{background:var(--bg);border-radius:8px;padding:10px 12px;border:1.5px solid var(--border);}
-.asset-stock-sum-label{font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:3px;}
-.asset-stock-sum-val{font-size:14px;font-weight:800;}
-.asset-stock-list{display:flex;flex-direction:column;}
-.asset-stock-item{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed var(--border);font-size:13px;}
-.asset-stock-item:last-child{border-bottom:none;}
-.asset-stock-name{flex:1;min-width:0;}
-.asset-stock-name-text{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.asset-stock-ticker{font-size:11px;color:var(--text-sub);}
-.asset-stock-price-input{width:85px;border:1.5px solid var(--border);border-radius:8px;padding:4px 6px;font-size:12px;text-align:right;font-family:var(--font);transition:border-color .2s;}
-.asset-stock-price-input:focus{outline:none;border-color:#00CEC9;}
-.asset-stock-val{min-width:75px;text-align:right;font-weight:700;font-size:13px;}
-.asset-stock-rate{min-width:65px;text-align:right;font-weight:700;font-size:12px;}
-.asset-stock-actions{display:flex;gap:3px;flex-shrink:0;}
-
 @media(max-width:680px){
-  .asset-stock-summary{grid-template-columns:1fr 1fr;}
-  .asset-stock-summary .asset-stock-sum-item:last-child{grid-column:1/-1;}
   .fc-amount-row{flex-wrap:wrap;}
   .fc-item-amount{width:80px;}
-  .asset-stock-val,.asset-stock-rate{min-width:55px;font-size:11px;}
-  .asset-stock-price-input{width:70px;}
-}
-
-/* ===== 주식 직접 설정 토글 ===== */
-.stock-direct-toggle{
-  display:flex;align-items:center;gap:5px;
-  font-size:12px;color:var(--text-sub);cursor:pointer;
-  padding:4px 8px;border:1px solid var(--border);border-radius:8px;
-  background:var(--white);white-space:nowrap;
-}
-.stock-direct-toggle input[type=checkbox]{
-  accent-color:var(--t2);width:14px;height:14px;cursor:pointer;
 }
 
 /* ===== 소비 캘린더 식비 동기화 버튼 ===== */
@@ -1075,75 +1014,6 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
   font-size:11px;color:var(--green);background:var(--green-light);
   padding:3px 8px;border-radius:6px;margin:2px 0 4px;
   display:flex;align-items:center;gap:4px;
-}
-
-/* ===== 주식 포트폴리오 3섹션 레이아웃 ===== */
-.stk-split-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  padding:4px 0;
-}
-.stk-right-col{
-  display:flex;flex-direction:column;gap:12px;
-}
-@media(max-width:540px){
-  .stk-split-grid{grid-template-columns:1fr;}
-  .stk-right-col{flex-direction:column;}
-}
-.stk-col{
-  display:flex;flex-direction:column;gap:8px;
-}
-.stk-col-header{
-  font-size:13px;font-weight:700;
-  padding:6px 10px;border-radius:8px;
-  display:flex;align-items:center;gap:6px;
-}
-.stk-col-header.kr{background:#EEF4FF;color:#1A237E;}
-.stk-col-header.us{background:#FFF5EE;color:#BF360C;}
-.stk-col-header.gold{background:#FFF8E7;color:#7B5E00;}
-.stk-col-count{
-  font-size:11px;font-weight:500;
-  background:rgba(255,255,255,.7);
-  padding:1px 6px;border-radius:10px;margin-left:auto;
-}
-.stk-col-empty{
-  text-align:center;color:var(--text-sub);font-size:12px;
-  padding:16px 0;
-}
-.stk-card{
-  background:var(--white);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:10px 12px;
-  display:flex;flex-direction:column;gap:4px;
-}
-.stk-card-top{
-  display:flex;align-items:flex-start;justify-content:space-between;gap:4px;
-}
-.stk-card-name{
-  font-size:13px;font-weight:700;color:var(--text);word-break:break-all;
-}
-.stk-card-actions{display:flex;gap:2px;flex-shrink:0;}
-.stk-card-ticker{
-  font-size:10px;color:var(--text-sub);margin-bottom:2px;
-}
-.stk-card-row{
-  display:flex;align-items:center;justify-content:space-between;
-  font-size:11px;gap:4px;
-}
-.stk-card-label{color:var(--text-sub);flex-shrink:0;}
-.stk-card-val{font-weight:600;color:var(--text);}
-.stk-price-input{
-  width:90px;font-size:11px;
-  border:1px solid var(--border);border-radius:6px;
-  padding:2px 6px;text-align:right;
-  background:var(--bg);color:var(--text);
-}
-.stk-price-input:focus{outline:none;border-color:var(--t2);}
-.stk-card-profit{
-  font-size:12px;font-weight:700;
-  text-align:right;margin-top:2px;
 }
 
 /* ===== 데이터 삭제 사이드바 버튼 ===== */
@@ -1703,8 +1573,6 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 /* ── SVG 아이콘 버튼 정렬 보조 ── */
 .icon-btn{display:inline-flex;align-items:center;justify-content:center}
 .icon-btn svg,.cal-event-edit svg,.cal-event-delete svg{vertical-align:middle;display:block}
-.stock-refresh-btn{display:inline-flex;align-items:center;gap:5px}
-.stock-refresh-btn svg{flex-shrink:0}
 
 /* ── 호버 클릭 편집 ── */
 .item-hover-edit{cursor:pointer;transition:background .15s,box-shadow .15s;}
@@ -1734,11 +1602,6 @@ body{font-family:var(--font);background:linear-gradient(145deg,#5E4BC422 0%,#D1C
 .ledger-entry .ledger-entry-right .icon-btn{opacity:0;transition:opacity .13s;}
 .ledger-entry:hover .ledger-entry-right .icon-btn{opacity:1;}
 .ledger-entry:hover .ledger-entry-right .icon-btn:hover{color:#e74c3c;}
-
-/* 주식 카드의 수정/삭제 버튼 */
-.stk-card-actions{opacity:0;transition:opacity .13s;}
-.stk-card:hover .stk-card-actions{opacity:1;}
-.stk-card-actions .icon-btn:hover{color:#e74c3c;}
 
 /* 자동화 카드의 수정/삭제 버튼 */
 .auto-card .auto-card-right .icon-btn{opacity:0;transition:opacity .13s;}
